@@ -12,6 +12,9 @@ public/taxonomie/
 public/pyodide/
 public/wheels/
 
+# Selbstsigniertes Entwickler-Zertifikat fuer tools/serve-website.py
+tools/.devcert/
+
 # Sonstiges
 node_modules/
 *.log
