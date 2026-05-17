@@ -1102,8 +1102,7 @@ function renderEbilanz(m) {
         box.innerHTML = '<div class="meldung m-info">' + esc(status) + '</div>';
       });
     }).then(function (log) {
-      box.innerHTML = '<div class="karte"><h2>Arelle-Ergebnis</h2>' +
-        '<pre class="arelle-log">' + esc(log || '(keine Ausgabe)') + '</pre></div>';
+      box.innerHTML = arelleErgebnis(log);
     }).catch(function (e) {
       box.innerHTML = '<div class="meldung m-fehler">Arelle-Prüfung fehlgeschlagen: ' +
         esc((e && e.message) || String(e)) + '</div>';
@@ -1135,6 +1134,29 @@ function ebilanzValErgebnis(e) {
   (e.warnungen || []).forEach(function (w) {
     h += '<div class="meldung m-warnung">' + esc(w) + '</div>';
   });
+  return h;
+}
+/* Wertet das Arelle-Protokoll aus und zeigt ein klares Urteil + Rohprotokoll. */
+function arelleErgebnis(log) {
+  var fehler = 0, warnung = 0;
+  String(log || '').split(/\r?\n/).forEach(function (z) {
+    var m = z.match(/^\[(\w+)\]/);
+    if (!m) return;
+    var lvl = m[1].toUpperCase();
+    if (lvl === 'ERROR' || lvl === 'CRITICAL') fehler++;
+    else if (lvl === 'WARNING') warnung++;
+  });
+  var h = '<div class="karte"><h2>Arelle-Ergebnis (amtliche Taxonomie)</h2>';
+  if (fehler === 0) {
+    h += '<div class="status-ampel ampel-gut">✓ Gültig &ndash; keine Beanstandungen' +
+      (warnung ? ' (' + warnung + ' Hinweis' + (warnung === 1 ? '' : 'e') + ')' : '') +
+      ' gegen die amtliche Taxonomie.</div>';
+  } else {
+    h += '<div class="status-ampel ampel-fehler">✕ ' + fehler + ' Beanstandung(en)' +
+      (warnung ? ', ' + warnung + ' Hinweis(e)' : '') + ' gegen die Taxonomie.</div>';
+  }
+  h += '<div class="karte-hint" style="margin-top:8px">Vollständiges Arelle-Protokoll:</div>' +
+    '<pre class="arelle-log">' + esc(log || '(keine Ausgabe)') + '</pre></div>';
   return h;
 }
 function werteZeile(label, el, wert) {

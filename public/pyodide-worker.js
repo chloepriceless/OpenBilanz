@@ -58,7 +58,7 @@ onmessage = function (e) {
       '_opts = RuntimeOptions(entrypointFile="/instanz.xml",',
       '    internetConnectivity="offline", packages=["/taxonomie.zip"],',
       '    validate=True, keepOpen=False, logFile="logToBuffer",',
-      '    logFormat="[%(messageCode)s] %(message)s")',
+      '    logFormat="[%(levelname)s] [%(messageCode)s] %(message)s")',
       'with Session() as _s:',
       '    _s.run(_opts)',
       '    _log = _s.get_logs("text")',
