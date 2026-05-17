@@ -8,7 +8,7 @@
  * ========================================================================= */
 'use strict';
 
-var CACHE = 'openbilanz-v1';
+var CACHE = 'openbilanz-v2';
 
 var SHELL = [
   './', './index.html', './styles.css', './app.js', './manifest.webmanifest',

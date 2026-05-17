@@ -49,9 +49,10 @@ def main():
         sys.exit('Ordner public/ nicht gefunden.')
     zertifikat_sichern()
 
-    # .webmanifest korrekt ausliefern
+    # .webmanifest und .wasm korrekt ausliefern (WebAssembly braucht den MIME-Typ)
     http.server.SimpleHTTPRequestHandler.extensions_map['.webmanifest'] = \
         'application/manifest+json'
+    http.server.SimpleHTTPRequestHandler.extensions_map['.wasm'] = 'application/wasm'
 
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(CERT, KEY)
