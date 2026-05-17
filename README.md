@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/assets/marke.png" alt="OpenBilanz" width="420">
+</p>
+
 # OpenBilanz
 
 **Lokales Open-Source-Tool zur Erstellung von Eröffnungsbilanz und
