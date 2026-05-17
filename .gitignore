@@ -19,3 +19,5 @@ tools/.devcert/
 node_modules/
 *.log
 .DS_Store
+__pycache__/
+HANDOFF.md
