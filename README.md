@@ -204,6 +204,27 @@ tools/setup-taxonomie.sh      lädt das amtliche Taxonomie-Paket
 
 ---
 
+## Verwandte Projekte & Ressourcen
+
+- [laroche/trading-gmbh](https://github.com/laroche/trading-gmbh) — gemeinfreies
+  (CC0) Handbuch zur Gründung und zum Betrieb einer vermögensverwaltenden bzw.
+  Trading-GmbH; gute fachliche Ergänzung zum vv-GmbH-Teil von OpenBilanz.
+- [quambene/taxel](https://github.com/quambene/taxel) — Werkzeug, das eine
+  E-Bilanz aus CSV erzeugt, validiert und über ERiC ans Finanzamt übermittelt
+  (Rust, AGPL-3.0).
+- [scka-de/german-accounting](https://github.com/scka-de/german-accounting) —
+  maschinenlesbarer SKR03-/SKR04-Kontenrahmen als JSON (MIT).
+- [esteuer.de](https://www.esteuer.de/) — amtliche Quelle der
+  E-Bilanz-Kerntaxonomie (XBRL-Schemas, Änderungsnachweise).
+- [Arelle](https://arelle.org) — der XBRL-Validator, gegen den OpenBilanz die
+  erzeugte E-Bilanz prüft.
+
+Eine ausführliche Übersicht möglicher Weiterentwicklungen — darunter eine rein
+im Browser laufende Website-Variante ohne serverseitige Datenhaltung — steht in
+[ROADMAP.md](ROADMAP.md).
+
+---
+
 ## Lizenz & Mitwirken
 
 MIT-Lizenz — siehe [LICENSE](LICENSE). Zur Herkunft verwendeter Daten siehe

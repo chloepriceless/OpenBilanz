@@ -15,8 +15,8 @@ Code aus anderen Projekten uebernommen.
 | Inhalt | Herkunft | Rechtslage |
 |---|---|---|
 | Kontenrahmen SKR04 (Kontonummern und Bezeichnungen) | amtlich publizierter DATEV-Standardkontenrahmen | Tatsachen / Kontenplan; die hier getroffene Auswahl und das HGB-Mapping sind Eigenleistung |
-| HGB-, GmbHG-, EStG-, GewStG-, KStG-Paragraphen | gesetze-im-internet.de | Amtliche Werke, § 5 UrhG &ndash; kein Urheberrechtsschutz |
-| E-Bilanz-Taxonomie 6.9 (Elementnamen `de-gaap-ci` / `de-gcd`) | amtliche Kerntaxonomie der Finanzverwaltung | Amtliche Spezifikation; nur die Elementnamen werden verwendet, um konformes XBRL zu erzeugen |
+| HGB-, GmbHG-, EStG- (insb. § 5b EStG &ndash; Rechtsgrundlage der E-Bilanz), GewStG-, KStG-Paragraphen | gesetze-im-internet.de | Amtliche Werke, § 5 UrhG &ndash; kein Urheberrechtsschutz |
+| E-Bilanz-Taxonomie 6.9 (Elementnamen `de-gaap-ci` / `de-gcd`) | amtliche Kerntaxonomie 6.9 der Finanzverwaltung (esteuer.de; BMF-Schreiben vom 10.06.2025) | Amtliche Spezifikation; nur die Elementnamen werden verwendet, um konformes XBRL zu erzeugen |
 | ELSTER-`EBilanz`-Container-Struktur | amtliches ELSTER-XML-Schema | Amtliche Spezifikation |
 
 Das **Taxonomie-Paket selbst** (ca. 53 MB) ist **nicht** Teil des Repositorys
@@ -30,6 +30,7 @@ geladen.
 | [quambene/taxel](https://github.com/quambene/taxel) | AGPL-3.0 | Referenz fuer den Aufbau des ELSTER-`EBilanz`-Containers. Es wurde **kein** Code/keine Datei uebernommen. |
 | [alyf-de/SKR04](https://github.com/alyf-de/SKR04) | GPL-3.0 | Plausibilitaetspruefung des eigenen SKR04-zu-HGB-Mappings. Es wurde **kein** Code/keine Datei uebernommen. |
 | [laroche/trading-gmbh](https://github.com/laroche/trading-gmbh) | CC0-1.0 (gemeinfrei) | Abgleich der Konten fuer die vermoegensverwaltende GmbH. CC0 erlaubt jede Nutzung. |
+| [scka-de/german-accounting](https://github.com/scka-de/german-accounting) | MIT | Maschinenlesbarer SKR03-/SKR04-Datensatz; zum Gegenpruefen des eigenen Kontenrahmens. Es wurde **kein** Code/keine Datei uebernommen. |
 
 Da aus den GPL-/AGPL-Projekten **weder Quellcode noch Datendateien** in dieses
 Repository uebernommen wurden, entstehen daraus **keine Copyleft-Pflichten**.
