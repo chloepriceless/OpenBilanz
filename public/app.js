@@ -1270,6 +1270,8 @@ function renderBuchhaltung(m) {
   var a = S.aktiv;
   if (!a) { setView('start'); return; }
   if (!a.buchungen) a.buchungen = [];
+  if (!a.protokoll) a.protokoll = [];
+  a.buchungen.forEach(function (b, i) { if (!b.id) b.id = 'B-leg-' + i; });
   var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>';
   html += '<div class="kopf"><h1>Buchhaltung &ndash; ' + esc(a.bezeichnung) + '</h1>' +
     '<p>Erfassen Sie Buchungssätze nach dem Kontenrahmen SKR04. Aus den Kontensalden ' +
@@ -1296,19 +1298,34 @@ function renderBuchhaltung(m) {
     '</div></div>';
 
   /* Journal */
+  var offeneBu = a.buchungen.filter(function (b) { return !b.fest; }).length;
   html += '<div class="karte"><div class="karte-kopf"><div><h2>Buchungsjournal</h2>' +
-    '<div class="karte-hint">' + a.buchungen.length + ' Buchung(en)</div></div>' +
-    '<button class="btn" id="buUebernehmen">Salden in Bilanz/GuV übernehmen</button></div>';
+    '<div class="karte-hint">' + a.buchungen.length + ' Buchung(en)' +
+    (a.buchungen.length ? (offeneBu ? ', davon ' + offeneBu + ' nicht festgeschrieben'
+                                    : ' &middot; alle festgeschrieben') : '') +
+    '</div></div><div class="btn-reihe">' +
+    (offeneBu ? '<button class="btn" id="buFest">Buchungen festschreiben</button>' : '') +
+    '<button class="btn" id="buUebernehmen">Salden in Bilanz/GuV übernehmen</button>' +
+    '</div></div>';
   if (!a.buchungen.length) {
     html += '<div class="karte-hint">Noch keine Buchungen erfasst.</div>';
   } else {
     html += '<table class="liste"><thead><tr><th>Datum</th><th>Text</th><th>Soll</th>' +
       '<th>Haben</th><th class="rechts">Betrag</th><th></th></tr></thead><tbody>';
     a.buchungen.forEach(function (b, i) {
-      html += '<tr><td class="mono">' + datumDe(b.datum) + '</td><td>' + esc(b.text || '') + '</td>' +
+      var aktion;
+      if (b.fest) {
+        if (b.storniert) aktion = '<span class="bu-tag">storniert</span>';
+        else if (b.stornoVon) aktion = '<span class="bu-tag">Storno</span>';
+        else aktion = '<span class="btn btn-sm" data-storno="' + esc(b.id) + '">stornieren</span>';
+      } else {
+        aktion = '<span class="btn btn-sm btn-gefahr" data-del="' + i + '">löschen</span>';
+      }
+      html += '<tr><td class="mono">' + (b.fest ? '🔒 ' : '') + datumDe(b.datum) + '</td>' +
+        '<td>' + esc(b.text || '') + '</td>' +
         '<td class="mono">' + esc(b.soll) + '</td><td class="mono">' + esc(b.haben) + '</td>' +
         '<td class="rechts mono">' + geld(b.betrag) + '</td>' +
-        '<td class="rechts"><span class="btn btn-sm btn-gefahr" data-del="' + i + '">löschen</span></td></tr>';
+        '<td class="rechts">' + aktion + '</td></tr>';
     });
     html += '</tbody></table>';
   }
@@ -1318,10 +1335,21 @@ function renderBuchhaltung(m) {
   html += '<div class="karte"><h2>Summen- und Saldenliste</h2>' +
     saldenliste(a) + '</div>';
 
+  /* Änderungsprotokoll (GoBD) */
+  if (a.protokoll.length) {
+    html += '<div class="karte"><h2>Änderungsprotokoll</h2><table class="liste"><tbody>';
+    a.protokoll.slice().reverse().forEach(function (p) {
+      html += '<tr><td class="mono">' + datumDe((p.zeit || '').slice(0, 10)) +
+        '</td><td>' + esc(p.text) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
   m.querySelector('#buAdd').onclick = function () {
     var b = {
+      id: 'B-' + Date.now(),
       datum: document.getElementById('buDatum').value,
       betrag: Berechnung.num(document.getElementById('buBetrag').value),
       text: document.getElementById('buText').value,
@@ -1335,6 +1363,36 @@ function renderBuchhaltung(m) {
   m.querySelectorAll('[data-del]').forEach(function (el) {
     el.onclick = function () {
       a.buchungen.splice(parseInt(el.dataset.del, 10), 1);
+      speichereStill().then(function () { renderBuchhaltung(m); });
+    };
+  });
+  var buFest = m.querySelector('#buFest');
+  if (buFest) buFest.onclick = function () {
+    if (!confirm('Alle noch nicht festgeschriebenen Buchungen festschreiben? ' +
+      'Danach sind sie unveränderlich — Korrekturen nur noch per Stornobuchung.')) return;
+    var n = 0;
+    a.buchungen.forEach(function (b) {
+      if (!b.fest) { b.fest = true; b.festAm = new Date().toISOString(); n++; }
+    });
+    a.protokoll.push({ zeit: new Date().toISOString(),
+      text: n + ' Buchung(en) festgeschrieben' });
+    speichereStill().then(function () { renderBuchhaltung(m); });
+  };
+  m.querySelectorAll('[data-storno]').forEach(function (el) {
+    el.onclick = function () {
+      var orig = null, k;
+      for (k = 0; k < a.buchungen.length; k++) {
+        if (a.buchungen[k].id === el.dataset.storno) { orig = a.buchungen[k]; break; }
+      }
+      if (!orig || orig.storniert) return;
+      orig.storniert = true;
+      a.buchungen.push({
+        id: 'B-' + Date.now(), datum: new Date().toISOString().slice(0, 10),
+        betrag: orig.betrag, text: 'Storno: ' + (orig.text || orig.id),
+        soll: orig.haben, haben: orig.soll, stornoVon: orig.id
+      });
+      a.protokoll.push({ zeit: new Date().toISOString(),
+        text: 'Stornobuchung zu „' + (orig.text || orig.id) + '" erstellt' });
       speichereStill().then(function () { renderBuchhaltung(m); });
     };
   });
