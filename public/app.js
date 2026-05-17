@@ -1148,14 +1148,18 @@ function arelleErgebnis(log) {
   });
   var h = '<div class="karte"><h2>Arelle-Ergebnis (amtliche Taxonomie)</h2>';
   if (fehler === 0) {
-    h += '<div class="status-ampel ampel-gut">✓ Gültig &ndash; keine Beanstandungen' +
+    h += '<div class="status-ampel ampel-gut">✓ Strukturell gültig &ndash; keine ' +
+      'formalen Beanstandungen' +
       (warnung ? ' (' + warnung + ' Hinweis' + (warnung === 1 ? '' : 'e') + ')' : '') +
       ' gegen die amtliche Taxonomie.</div>';
   } else {
-    h += '<div class="status-ampel ampel-fehler">✕ ' + fehler + ' Beanstandung(en)' +
+    h += '<div class="status-ampel ampel-fehler">✕ ' + fehler + ' formale Beanstandung(en)' +
       (warnung ? ', ' + warnung + ' Hinweis(e)' : '') + ' gegen die Taxonomie.</div>';
   }
-  h += '<div class="karte-hint" style="margin-top:8px">Vollständiges Arelle-Protokoll:</div>' +
+  h += '<div class="karte-hint" style="margin-top:8px">Arelle prüft den <b>formalen ' +
+    'Aufbau</b> (XBRL-Struktur, Taxonomie-Konformität) &ndash; nicht die inhaltliche ' +
+    'Plausibilität wie Bilanzgleichung oder Pflichtangaben. Dafür ist „Jetzt prüfen".</div>' +
+    '<div class="karte-hint" style="margin-top:8px">Vollständiges Arelle-Protokoll:</div>' +
     '<pre class="arelle-log">' + esc(log || '(keine Ausgabe)') + '</pre></div>';
   return h;
 }
