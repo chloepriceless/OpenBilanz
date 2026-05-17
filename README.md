@@ -19,6 +19,17 @@ Rechner. Geeignet für die kleine **operativ tätige** GmbH und die
 > jeden Abschluss vor Abgabe an das Finanzamt fachlich prüfen lassen.
 > Siehe [Haftungsausschluss](#haftungsausschluss).
 
+> 🚧 **Work in Progress.** OpenBilanz steckt noch in aktiver Entwicklung. Nicht
+> alle Funktionen sind ausgereift, Schnittstellen und Berechnungen können sich
+> ändern, und Fehler sind wahrscheinlich. Noch nicht für den produktiven
+> Einsatz ohne fachliche Prüfung gedacht.
+
+> 🙏 **Gegenprüfung erwünscht.** Wer Erfahrung mit HGB-Rechnungslegung,
+> E-Bilanz oder Steuerrecht hat: Ich würde mich sehr freuen, wenn jemand mit
+> mehr Fachwissen die Berechnungen, die HGB-Gliederung und die erzeugte
+> E-Bilanz einmal gegenchecken könnte. Rückmeldungen, Hinweise und Korrekturen
+> gern über die Issues oder einen Pull Request.
+
 ---
 
 ## Schnellstart
