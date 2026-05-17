@@ -177,6 +177,7 @@ Zugriff auf den Rechner des Nutzers.
 
 | Funktion | Beschreibung | Nutzen | Aufwand |
 |---|---|---|---|
+| **GmbH-Untertypen: Immobilien, Trading & Hybrid** | Die GmbH-Profile feiner abbilden, weil die Steuervergünstigungen unterschiedlich empfindlich sind. **Immobilien-GmbH** („Häuser-GmbH"): die *erweiterte Grundstückskürzung* (§ 9 Nr. 1 S. 2 GewStG) verlangt **Ausschließlichkeit** — kommt ein operativer Teil hinzu, entfällt sie **vollständig**; dafür ein deutlicher Warnhinweis im Tool. **Trading-GmbH** (Aktien/Wertpapiere): die § 8b-KStG-Behandlung der Aktiengewinne ist **nicht** an Ausschließlichkeit gebunden — sie bleibt auch bei zusätzlicher operativer Tätigkeit erhalten (**hybride GmbH**). Operativer Teil und Aktienteil werden je mit ihren eigenen Regeln getrennt ausgewiesen. | H | M |
 | **Anlagenverzeichnis & AfA** | Anlagengitter mit linearer **und** degressiver AfA (degressive AfA für bewegliche WG mit Anschaffung 01.07.2025–31.12.2027 wieder zulässig: 3× linear, max. 30 %); speist Bilanz, GuV-Abschreibungen und den Anlagenspiegel (§ 284 Abs. 3 HGB). | H | M |
 | **DATEV-Export (EXTF)** | Buchungsstapel im DATEV-Format exportieren — macht OpenBilanz anschlussfähig an den Steuerberater. Format dokumentiert; `ledermann/datev` (MIT) als Layout-Referenz. | H | S–M |
 | **Bankimport CAMT.053** | Kontoauszüge als CAMT.053 (ISO 20022) importieren; MT940 wurde von deutschen Banken zum 23.11.2025 abgeschaltet. Mit Regelwerk halbautomatisch in SKR04 buchen. | H | M |
