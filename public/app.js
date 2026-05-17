@@ -1484,7 +1484,10 @@ function exportiereBackup() {
 
 /* Backup-Datei einlesen und übernehmen (ersetzt den aktuellen Stand). */
 function importiereBackup() {
-  FileIO.importieren().then(function (buf) {
+  var dateiPromise;
+  try { dateiPromise = FileIO.importieren(); }
+  catch (e) { fehlerToast(e); return; }
+  dateiPromise.then(function (buf) {
     return OBZ.entpacken(buf, function () {
       return new Promise(function (resolve) { dialogPasswortAbfrage(resolve); });
     });

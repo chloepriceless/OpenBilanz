@@ -77,10 +77,18 @@
     return new Promise(function (resolve, reject) {
       var inp = document.createElement('input');
       inp.type = 'file'; inp.accept = '.obz';
+      inp.style.display = 'none';
+      document.body.appendChild(inp);   /* manche Browser oeffnen den Dialog nur fuer ein im DOM haengendes input */
       inp.onchange = function () {
         var f = inp.files && inp.files[0];
+        inp.remove();
         if (!f) return reject(new Error('Keine Datei gewaehlt.'));
         f.arrayBuffer().then(resolve, reject);
+      };
+      inp.oncancel = function () {
+        inp.remove();
+        var ab = new Error('Auswahl abgebrochen'); ab.name = 'AbortError';
+        reject(ab);
       };
       inp.click();
     });
