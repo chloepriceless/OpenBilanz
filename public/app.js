@@ -93,7 +93,7 @@ function renderNav() {
     if (offen) {
       var istEB = a.art === 'EROEFFNUNGSBILANZ';
       n.push(navUnter('editor', istEB ? 'Bilanz' : 'Bilanz &amp; GuV'));
-      n.push(navUnter('buchhaltung', 'Buchhaltung'));
+      if (!istEB) n.push(navUnter('buchhaltung', 'Buchhaltung'));
       if (!istEB) n.push(navUnter('steuer', 'Steuern'));
       n.push(navUnter('ebilanz', 'E-Bilanz'));
       n.push(navUnter('druck', 'Druckansicht'));
@@ -104,6 +104,8 @@ function renderNav() {
   n.push(navItem('stammdaten', '⌂', 'Unternehmensdaten'));
   n.push('<div class="nav-grp">Hilfe</div>');
   n.push(navItem('fristen', '⚠', 'Fristen &amp; Pflichten'));
+  n.push(navItem('hilfe', '?', 'Buchungshilfe'));
+  n.push(navItem('beschluesse', '§', 'Gesellschafterbeschlüsse'));
   document.getElementById('nav').innerHTML = n.join('');
 
   document.querySelectorAll('#nav .nav-item, #nav .nav-unter').forEach(function (el) {
@@ -144,6 +146,8 @@ function setView(view) {
   else if (view === 'steuer')     renderSteuer(m);
   else if (view === 'buchhaltung')renderBuchhaltung(m);
   else if (view === 'fristen')    renderFristen(m);
+  else if (view === 'hilfe')      renderHilfe(m);
+  else if (view === 'beschluesse')renderBeschluesse(m);
 }
 function oeffneAbschluss(id) {
   Store.ladeAbschluss(id).then(function (a) {
@@ -1269,6 +1273,7 @@ function steuerZeile(z) {
 function renderBuchhaltung(m) {
   var a = S.aktiv;
   if (!a) { setView('start'); return; }
+  if (a.art === 'EROEFFNUNGSBILANZ') { setView('editor'); return; }  // EB wird direkt erfasst
   if (!a.buchungen) a.buchungen = [];
   if (!a.protokoll) a.protokoll = [];
   a.buchungen.forEach(function (b, i) { if (!b.id) b.id = 'B-leg-' + i; });
@@ -1296,6 +1301,9 @@ function renderBuchhaltung(m) {
     '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" id="buAdd">' +
     'Buchung hinzufügen</button></div>' +
     '</div></div>';
+
+  /* Anfangsbestände / Eröffnungsbuchungen */
+  html += eroeffnungsBox(a);
 
   /* Journal */
   var offeneBu = a.buchungen.filter(function (b) { return !b.fest; }).length;
@@ -1403,6 +1411,202 @@ function renderBuchhaltung(m) {
       setView('editor');
     });
   };
+  var ebQuelle = m.querySelector('#ebQuelle');
+  var ebVorschau = m.querySelector('#ebVorschau');
+  if (ebQuelle && ebVorschau) {
+    var ebVorschauZeigen = function () {
+      ebVorschau.innerHTML = '<div class="karte-hint" style="margin-top:10px">Lädt …</div>';
+      Store.ladeAbschluss(ebQuelle.value).then(function (q) {
+        ebVorschau.innerHTML = eroeffnungsVorschauHtml(q);
+      });
+    };
+    ebVorschauZeigen();
+    ebQuelle.onchange = ebVorschauZeigen;
+  }
+  var ebBtn = m.querySelector('#ebUebernehmen');
+  if (ebBtn) ebBtn.onclick = function () {
+    eroeffnungUebernehmen(a, m.querySelector('#ebQuelle').value, m);
+  };
+}
+
+/* ===========================================================================
+ * Eröffnungsbuchungen / Saldenvortrag
+ * ---------------------------------------------------------------------------
+ * Eine Jahresabschluss-Buchhaltung beginnt nicht bei null: die Bestände der
+ * Eröffnungsbilanz (bzw. des Vorjahres) werden zu Jahresbeginn als Eröffnungs-
+ * buchungen gegen das Eröffnungsbilanzkonto 9000 übernommen (Bilanzidentität,
+ * § 252 Abs. 1 Nr. 1 HGB).
+ * ========================================================================= */
+
+/* HGB-Positions-Label (mit Nummer) zu einer Positions-ID. */
+function posLabel(id) {
+  var n = Positionen.finde(Positionen.AKTIVA, id) ||
+          Positionen.finde(Positionen.PASSIVA, id);
+  return n ? (n.nr + ' ' + n.label) : id;
+}
+
+/* Plant die Eröffnungsbuchungen aus einem Quell-Abschluss: je belegter
+ * Bilanzposition eine Buchung gegen das EBK 9000, das gezeichnete Kapital
+ * gegen Konto 2900. Liefert zusätzlich den zu übernehmenden Kapitalblock.
+ * Reine Planung - schreibt nichts. */
+function eroeffnungsPlan(quelle) {
+  var plan = [], warn = [];
+  var aktiva = (quelle.werte && quelle.werte.aktiva) || {};
+  var passiva = (quelle.werte && quelle.werte.passiva) || {};
+  var kap = Berechnung.kapitalRechnen(quelle.kapital);
+
+  function zeile(soll, haben, betrag, text) {
+    plan.push({ soll: soll, haben: haben, betrag: Berechnung.cent(betrag), text: text });
+  }
+  /* Gezeichnetes Kapital (Nennbetrag) -> Konto 2900 */
+  if (kap.gezeichnet >= 0.005) {
+    zeile('9000', '2900', kap.gezeichnet, 'Eröffnungsbuchung: Gezeichnetes Kapital');
+  }
+  /* Aktiv-Positionen: Soll Sachkonto / Haben EBK */
+  Object.keys(aktiva).forEach(function (id) {
+    var v = Berechnung.cent(aktiva[id]);
+    if (Math.abs(v) < 0.005) return;
+    var k = SKR04.EB_KONTO[id];
+    if (!k) { warn.push(posLabel(id)); return; }
+    if (v >= 0) zeile(k, '9000', v, 'Eröffnungsbuchung: ' + posLabel(id));
+    else        zeile('9000', k, -v, 'Eröffnungsbuchung: ' + posLabel(id));
+  });
+  /* Passiv-Positionen: Soll EBK / Haben Sachkonto */
+  Object.keys(passiva).forEach(function (id) {
+    if (id === 'P.A.I' || id === 'P.A.V') return;   // automatisch berechnet
+    var v = Berechnung.cent(passiva[id]);
+    if (Math.abs(v) < 0.005) return;
+    var k = SKR04.EB_KONTO[id];
+    if (!k) { warn.push(posLabel(id)); return; }
+    if (v >= 0) zeile('9000', k, v, 'Eröffnungsbuchung: ' + posLabel(id));
+    else        zeile(k, '9000', -v, 'Eröffnungsbuchung: ' + posLabel(id));
+  });
+  return { plan: plan, warn: warn, kapital: {
+    gezeichnet: kap.gezeichnet, eingezahlt: kap.eingezahlt,
+    eingefordertOffen: kap.eingefordertOffen } };
+}
+
+/* Karte „Anfangsbestände" in der Buchhaltung eines Jahresabschlusses. */
+function eroeffnungsBox(a) {
+  var bereits = a.buchungen.filter(function (b) { return b.eroeffnung; });
+  var h = '<div class="karte"><div class="karte-kopf"><div>' +
+    '<h2>Anfangsbestände &ndash; Eröffnungsbuchungen</h2>' +
+    '<div class="karte-hint">Saldenvortrag aus der Eröffnungsbilanz bzw. dem ' +
+    'Vorjahr (Bilanzidentität, § 252 Abs. 1 Nr. 1 HGB).</div></div></div>';
+
+  if (bereits.length) {
+    h += '<div class="box box-gut"><b>✓ Eröffnungsbuchungen vorhanden</b>' +
+      bereits.length + ' Eröffnungsbuchung(en) sind erfasst (im Journal am Text ' +
+      '&bdquo;Eröffnungsbuchung: …&ldquo; erkennbar). Zum Neu-Erzeugen diese zuerst ' +
+      'löschen &ndash; möglich, solange sie nicht festgeschrieben sind.</div></div>';
+    return h;
+  }
+  h += '<div class="box box-info"><b>Warum?</b>Eine Jahresabschluss-Buchhaltung ' +
+    'beginnt nicht bei null. Die Schlussbestände des Vorjahres &ndash; im ersten ' +
+    'Jahr die Eröffnungsbilanz &ndash; werden als Eröffnungsbuchungen gegen das ' +
+    'Eröffnungsbilanzkonto <b>9000</b> übernommen. Erst darauf baut die laufende ' +
+    'Buchhaltung auf, und erst dann geht die Bilanz auf.</div>';
+
+  var quellen = S.abschluesse.filter(function (x) {
+    return x.id !== a.id &&
+      (x.art === 'EROEFFNUNGSBILANZ' || x.art === 'JAHRESABSCHLUSS');
+  });
+  if (!quellen.length) {
+    h += '<div class="karte-hint">Kein anderer Abschluss vorhanden. Lege zuerst die ' +
+      'Eröffnungsbilanz an &ndash; danach lässt sie sich hier übernehmen.</div></div>';
+    return h;
+  }
+  var opts = quellen.map(function (x) {
+    return '<option value="' + esc(x.id) + '"' +
+      (a.vorjahrId === x.id ? ' selected' : '') + '>' + esc(x.bezeichnung) +
+      (x.art === 'EROEFFNUNGSBILANZ' ? ' — Eröffnungsbilanz' : ' — Jahresabschluss') +
+      '</option>';
+  }).join('');
+  h += '<div class="gitter g2">' +
+    feldWrap('Quelle', 'Eröffnungsbilanz oder Vorjahres-Abschluss',
+      '<select id="ebQuelle">' + opts + '</select>') +
+    '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" ' +
+    'id="ebUebernehmen">Anfangsbestände übernehmen</button></div>' +
+    '</div><div id="ebVorschau"></div></div>';
+  return h;
+}
+
+/* Vorschau-HTML der geplanten Eröffnungsbuchungen für eine Quelle. Dient
+ * zugleich als Anleitung für die manuelle Erfassung. Erwartet den VOLL
+ * geladenen Quell-Abschluss (S.abschluesse enthält nur Kurzinfos). */
+function eroeffnungsVorschauHtml(quelle) {
+  if (!quelle) {
+    return '<div class="karte-hint" style="margin-top:10px">Quelle konnte nicht ' +
+      'geladen werden.</div>';
+  }
+  var res = eroeffnungsPlan(quelle);
+  if (!res.plan.length) {
+    return '<div class="karte-hint" style="margin-top:10px">Die gewählte Quelle ' +
+      'enthält keine übertragbaren Bestände.</div>';
+  }
+  var h = '<div class="karte-hint" style="margin-top:12px">Geplante Eröffnungs' +
+    'buchungen &ndash; vor dem Übernehmen prüfbar, danach im Journal frei anpassbar. ' +
+    'Für die manuelle Erfassung: genau diese Sätze gegen Konto 9000 buchen.</div>';
+  h += '<table class="liste"><thead><tr><th>Soll</th><th>Haben</th>' +
+    '<th class="rechts">Betrag</th><th>Text</th></tr></thead><tbody>';
+  res.plan.forEach(function (p) {
+    h += '<tr><td class="mono">' + esc(p.soll) + '</td>' +
+      '<td class="mono">' + esc(p.haben) + '</td>' +
+      '<td class="rechts mono">' + geld(p.betrag) + '</td>' +
+      '<td>' + esc(p.text) + '</td></tr>';
+  });
+  h += '</tbody></table>';
+  if (res.warn.length) {
+    h += '<div class="box box-warn" style="margin-top:10px"><b>Nicht automatisch ' +
+      'übertragbar</b>Für diese Positionen gibt es kein Standardkonto &ndash; bitte ' +
+      'manuell gegen Konto 9000 buchen: ' + esc(res.warn.join('; ')) + '.</div>';
+  }
+  return h;
+}
+
+/* Erzeugt die Eröffnungsbuchungen aus der gewählten Quelle und übernimmt
+ * deren Kapitalblock. Lädt die Quelle zuvor vollständig nach (S.abschluesse
+ * enthält nur Kurzinfos ohne werte/kapital). */
+function eroeffnungUebernehmen(a, quelleId, m) {
+  Store.ladeAbschluss(quelleId).then(function (quelle) {
+    if (!quelle) { alert('Quelle konnte nicht geladen werden.'); return; }
+    eroeffnungAnwenden(a, quelle, m);
+  });
+}
+function eroeffnungAnwenden(a, quelle, m) {
+  var res = eroeffnungsPlan(quelle);
+  if (!res.plan.length) {
+    alert('Die gewählte Quelle enthält keine übertragbaren Bestände.'); return;
+  }
+  var txt = res.plan.length + ' Eröffnungsbuchung(en) aus „' +
+    (quelle.bezeichnung || 'Quelle') + '" erzeugen?\n\nDie Buchungen werden ins ' +
+    'Journal eingefügt und der Kapitalblock dieses Jahresabschlusses wird aus der ' +
+    'Quelle übernommen.';
+  if (res.warn.length) txt += '\n\nNicht übertragbar: ' + res.warn.join('; ');
+  if (!confirm(txt)) return;
+
+  var datum = a.gjVon || quelle.stichtag || a.stichtag ||
+              new Date().toISOString().slice(0, 10);
+  var stamp = Date.now();
+  res.plan.forEach(function (p, idx) {
+    a.buchungen.push({
+      id: 'B-EB-' + stamp + '-' + idx,
+      datum: datum, betrag: p.betrag, text: p.text,
+      soll: p.soll, haben: p.haben, eroeffnung: true
+    });
+  });
+  a.kapital = a.kapital || {};
+  a.kapital.gezeichnet = res.kapital.gezeichnet;
+  a.kapital.eingezahlt = res.kapital.eingezahlt;
+  a.kapital.eingefordertOffen = res.kapital.eingefordertOffen;
+  if (!a.vorjahrId) a.vorjahrId = quelle.id;
+  a.protokoll.push({ zeit: new Date().toISOString(),
+    text: res.plan.length + ' Eröffnungsbuchung(en) aus „' +
+      (quelle.bezeichnung || 'Quelle') + '" übernommen' });
+  speichereStill().then(function () {
+    hinweisToast('Eröffnungsbuchungen erzeugt. Mit „Salden übernehmen" in die Bilanz.');
+    renderBuchhaltung(m);
+  });
 }
 function kontenSalden(a) {
   var s = {};
@@ -1445,6 +1649,7 @@ function uebernehmeSalden(a) {
       if (!a.kapital.eingezahlt) a.kapital.eingezahlt = Berechnung.cent(-saldo);
       return;
     }
+    if (k.seite === 'EBK') return;               // Eröffnungsbilanzkonto: reines Verrechnungskonto
     if (k.seite === 'AKTIV') {
       aktiva[k.pos] = Berechnung.cent((aktiva[k.pos] || 0) + saldo);
     } else if (k.seite === 'PASSIV') {
@@ -1508,6 +1713,396 @@ function renderFristen(m) {
 }
 function fr(d, t) {
   return '<tr><td class="f-d">' + d + '</td><td>' + t + '</td></tr>';
+}
+
+/* ===========================================================================
+ * BUCHUNGSHILFE  -  erklaerte Standardfaelle mit konkreten Buchungssaetzen
+ * ========================================================================= */
+function renderHilfe(m) {
+  /* Karte mit erklaerendem Text und optionaler Buchungssatz-Tabelle.
+   * saetze: Array von [Soll-Konto, Haben-Konto, Geschaeftsvorfall]. */
+  function fall(titel, text, saetze) {
+    var h = '<div class="karte"><h2>' + titel + '</h2>';
+    if (text) h += '<div class="karte-hint" style="margin-bottom:10px">' + text + '</div>';
+    if (saetze && saetze.length) {
+      h += '<table class="liste"><thead><tr><th>Soll</th><th>Haben</th>' +
+        '<th>Geschäftsvorfall</th></tr></thead><tbody>';
+      saetze.forEach(function (s) {
+        h += '<tr><td class="mono">' + s[0] + '</td><td class="mono">' + s[1] +
+          '</td><td>' + s[2] + '</td></tr>';
+      });
+      h += '</tbody></table>';
+    }
+    return h + '</div>';
+  }
+
+  var html = '<div class="kopf"><h1>Buchungshilfe &amp; Standardfälle</h1>' +
+    '<p>Wie typische Geschäftsvorfälle einer GmbH gebucht werden — mit konkreten ' +
+    'Buchungssätzen nach dem Kontenrahmen SKR04.</p></div>';
+
+  html += '<div class="box box-info"><b>Grundprinzip</b>Jede Buchung hat ein Soll- und ' +
+    'ein Haben-Konto und denselben Betrag auf beiden Seiten. In der Buchhaltung erzeugt ' +
+    '„Salden in Bilanz/GuV übernehmen“ aus den Kontensalden automatisch Bilanz und GuV. ' +
+    'Eine HGB-Bilanzposition (z. B. „Sachanlagen“) bündelt dabei mehrere Konten.</div>';
+
+  html += fall('1. GmbH-Gründung &amp; Eröffnungsbilanz',
+    'Die <b>Eröffnungsbilanz</b> wird direkt erfasst — sie hat kein Buchungsjournal. ' +
+    'Standardfall: 25.000 € Stammkapital gezeichnet, 12.500 € auf die Bank eingezahlt, ' +
+    'die zweite Hälfte noch ausstehend und nicht eingefordert. Im Kapitalblock: ' +
+    '<i>Gezeichnetes Kapital</i> 25.000, <i>davon eingezahlt</i> 12.500, <i>davon ' +
+    'eingefordert aber unbezahlt</i> 0. Unter Aktiva <i>B.IV Kassenbestand/Bank</i> ' +
+    '12.500. Die nicht eingeforderten 12.500 € werden offen vom gezeichneten Kapital ' +
+    'abgesetzt (Nettomethode, § 272 Abs. 1 HGB) — die Bilanzsumme beträgt 12.500 €.',
+    null);
+
+  html += fall('2. Eröffnungsbuchungen — Saldenvortrag ins neue Jahr',
+    'Eine Jahresabschluss-Buchhaltung beginnt nicht bei null: die Bestände der ' +
+    'Eröffnungsbilanz (bzw. des Vorjahres) werden zu Jahresbeginn als Eröffnungs' +
+    'buchungen gegen das Eröffnungsbilanzkonto <b>9000</b> übernommen. In der ' +
+    'Buchhaltung macht das die Karte „Anfangsbestände“ automatisch. Schema:',
+    [['Sachkonto', '9000', 'jeder Aktiv-Bestand (Bank, Anlagen, Forderungen …)'],
+     ['9000', 'Sachkonto', 'jeder Passiv-Bestand (Verbindlichkeiten, Rückstellungen …)'],
+     ['9000', '2900', 'gezeichnetes Kapital (Nennbetrag) ins neue Jahr'],
+     ['1800', '9000', 'Beispiel: Bankguthaben 12.500 € ins neue Jahr']]);
+
+  html += fall('3. Anlagevermögen &amp; Abschreibung',
+    'Anlagegüter werden beim Kauf aktiviert und über die Nutzungsdauer abgeschrieben ' +
+    '(AfA). Geringwertige Wirtschaftsgüter (GWG) dürfen sofort abgeschrieben werden.',
+    [['0650', '1800', 'Büroeinrichtung gekauft, per Bank bezahlt'],
+     ['0440', '1800', 'Maschine gekauft, per Bank bezahlt'],
+     ['0670', '1800', 'geringwertiges Wirtschaftsgut (GWG) gekauft'],
+     ['6260', '0670', 'GWG sofort abgeschrieben'],
+     ['6220', '0650', 'jährliche Abschreibung (AfA) auf die Büroeinrichtung'],
+     ['6221', '0240', 'jährliche Abschreibung auf ein Gebäude']]);
+
+  html += '<div class="box box-info"><b>Aktivieren oder sofort als Aufwand?</b>' +
+    'Anschaffungen über 800 € netto werden als Anlagevermögen aktiviert und über die ' +
+    'Nutzungsdauer abgeschrieben. Bis 800 € netto sind es geringwertige Wirtschaftsgüter ' +
+    '(GWG) und dürfen sofort abgeschrieben werden. Für Computerhardware und Software ' +
+    'lässt die Finanzverwaltung eine Nutzungsdauer von einem Jahr zu (BMF-Schreiben vom ' +
+    '22.02.2022) — wirtschaftlich also ebenfalls Sofortabschreibung. Laufende Kosten ' +
+    '(Mobilfunk, Hosting, Abos) sind dagegen immer sofort Aufwand.</div>';
+
+  html += fall('4. Digitale Betriebsmittel &amp; IT-Kosten',
+    'Hardware, Software, Websites und laufende IT-Dienste — die häufigsten Fälle einer ' +
+    'modernen GmbH. Der vereinfachte Kontenrahmen hat kein eigenes „EDV-Kosten“-Konto; ' +
+    'laufende IT-Kosten laufen daher über „Telefon und Internet“ (6805) bzw. „sonstige ' +
+    'betriebliche Aufwendungen“ (6300).',
+    [['0650', '1800', 'PC, Mac oder Notebook gekauft (über 800 € netto, aktiviert)'],
+     ['6220', '0650', 'Computer-Hardware abgeschrieben (Nutzungsdauer 1 Jahr möglich)'],
+     ['0670', '1800', 'Smartphone/Handy bis 800 € netto gekauft (GWG)'],
+     ['6260', '0670', 'GWG (Handy) sofort abgeschrieben'],
+     ['0135', '1800', 'Software / Lizenz gekauft (aktiviert)'],
+     ['6200', '0135', 'gekaufte Software abgeschrieben'],
+     ['0135', '1800', 'Website von einer Agentur erstellen lassen (aktiviert)'],
+     ['6200', '0135', 'Website abgeschrieben (Nutzungsdauer i. d. R. 3 Jahre)'],
+     ['6805', '1800', 'Mobilfunk-/Telefonrechnung (laufend)'],
+     ['6805', '1800', 'Internetanschluss (laufend)'],
+     ['6300', '1800', 'Server-/Hosting-Gebühr (laufend)'],
+     ['6300', '1800', 'Domain-Jahresgebühr (laufend)'],
+     ['6300', '1800', 'Software-Abo / SaaS / Cloud-Dienst (laufend)'],
+     ['6300', '3300', 'IT-Dienstleistung auf Rechnung (z. B. Programmierung)']]);
+
+  html += fall('5. Laufende Einnahmen und Ausgaben',
+    'Typische Geschäftsvorfälle des Jahres. Wird eine Rechnung nicht sofort bezahlt, ' +
+    'läuft die Gegenbuchung über eine Forderung (1200) bzw. Verbindlichkeit (3300).',
+    [['1800', '4400', 'Umsatzerlös erhalten — Nettobetrag (19 % USt)'],
+     ['1800', '3806', 'darauf entfallende Umsatzsteuer 19 %'],
+     ['1200', '4400', 'Leistung auf Rechnung erbracht (noch offen)'],
+     ['1800', '1200', 'Kundenrechnung wird später bezahlt'],
+     ['6310', '1800', 'Miete für Geschäftsräume gezahlt'],
+     ['6020', '1800', 'Gehälter gezahlt'],
+     ['6110', '1800', 'Sozialversicherungsbeiträge gezahlt'],
+     ['6400', '1800', 'Versicherungsbeitrag gezahlt'],
+     ['6825', '1800', 'Rechts- und Beratungskosten (Anwalt, Steuerberater)'],
+     ['6650', '1800', 'Reisekosten gezahlt'],
+     ['6300', '1800', 'Bankgebühren / Kontoführung'],
+     ['6300', '3300', 'Lieferantenrechnung erhalten (noch offen)'],
+     ['3300', '1800', 'Lieferantenrechnung bezahlt'],
+     ['1800', '7100', 'Zinsen von der Bank erhalten'],
+     ['7600', '1800', 'Körperschaftsteuer-Vorauszahlung ans Finanzamt']]);
+
+  html += '<div class="box box-info"><b>Umsatzsteuer</b>Das Buchungsformular hat ein ' +
+    'Soll- und ein Haben-Konto. Eine Rechnung mit Umsatzsteuer wird daher in zwei ' +
+    'Buchungen erfasst: Nettoerlös auf das Erlöskonto (4400/4300), die Umsatzsteuer ' +
+    'getrennt auf das USt-Konto (3806/3801). Bei Eingangsrechnungen analog mit ' +
+    'Vorsteuer (1406/1401).</div>';
+
+  html += fall('6. Jahresabschluss abschließen',
+    'Sind alle Buchungen erfasst, in der Buchhaltung „Salden in Bilanz/GuV übernehmen“ ' +
+    'klicken — die Kontensalden füllen Bilanz und GuV. Anschließend „Buchungen ' +
+    'festschreiben“: festgeschriebene Buchungen sind unveränderlich (GoBD), Korrekturen ' +
+    'nur noch per Stornobuchung. Den passenden Gesellschafterbeschluss zur Feststellung ' +
+    'erzeugt der Reiter „Gesellschafterbeschlüsse“.', null);
+
+  html += '<div class="box box-warn"><b>Keine Steuer- oder Rechtsberatung</b>Diese ' +
+    'Beispiele sind eine vereinfachte Orientierung. Bei Sonderfällen (Sacheinlagen, ' +
+    'gemischte Nutzung, Rückstellungen, latente Steuern) im Zweifel fachlichen Rat ' +
+    'einholen.</div>';
+
+  m.innerHTML = html;
+}
+
+/* ===========================================================================
+ * GESELLSCHAFTERBESCHLÜSSE  -  Generator fuer Beschlussvorlagen
+ * ========================================================================= */
+function renderBeschluesse(m) {
+  var u = S.unternehmen || {};
+  var typen = [
+    ['feststellung', 'Feststellung des Jahresabschlusses'],
+    ['ergebnis',     'Ergebnisverwendung (Gewinn/Verlust)'],
+    ['einlagen',     'Einforderung ausstehender Einlagen'],
+    ['gf',           'Geschäftsführer (Bestellung / Abberufung / Entlastung)'],
+    ['freitext',     'Sonstiger Beschluss (Freitext)']
+  ];
+  var html = '<div class="kopf"><h1>Gesellschafterbeschlüsse</h1>' +
+    '<p>Erzeugt Beschlussvorlagen für die Gesellschafterversammlung — ausfüllen, ' +
+    'drucken oder als PDF speichern.</p></div>';
+  html += '<div class="box box-warn no-print"><b>Muster, keine Rechtsberatung</b>Die ' +
+    'erzeugten Texte sind unverbindliche Vorlagen. Ladungs- und Formvorschriften sowie ' +
+    'der Gesellschaftsvertrag sind eigenverantwortlich zu beachten.</div>';
+
+  html += '<div class="karte no-print"><h2>Beschluss</h2><div class="gitter g2">';
+  html += feldWrap('Art des Beschlusses', '', '<select id="bsTyp">' +
+    typen.map(function (t) { return '<option value="' + t[0] + '">' + t[1] + '</option>'; }).join('') +
+    '</select>');
+  html += feldWrap('Datum der Beschlussfassung', '', '<input type="date" id="bsDatum" value="' +
+    new Date().toISOString().slice(0, 10) + '">');
+  html += feldWrap('Ort der Beschlussfassung', '', '<input id="bsOrt" value="' +
+    esc(u.ort || '') + '">');
+  html += feldWrap('Gesellschafter', 'Namen durch Komma getrennt — für die Unterschriften',
+    '<input id="bsGesellschafter" placeholder="z. B. Max Mustermann, Erika Mustermann">');
+  html += '</div><div id="bsSpez" class="gitter g2" style="margin-top:2px"></div>' +
+    '<div class="btn-reihe"><button class="btn btn-pri" id="bsErzeugen">' +
+    'Beschluss erzeugen</button></div></div>';
+  html += '<div id="bsDok"></div>';
+  m.innerHTML = html;
+
+  var bsTyp = m.querySelector('#bsTyp');
+  function spez() { document.getElementById('bsSpez').innerHTML = bsSpezHtml(bsTyp.value); }
+  bsTyp.onchange = spez;
+  spez();
+  m.querySelector('#bsErzeugen').onclick = function () { bsErzeugen(m); };
+}
+
+/* Typ-spezifische Formularfelder. */
+function bsSpezHtml(typ) {
+  if (typ === 'feststellung' || typ === 'ergebnis') {
+    var jas = S.abschluesse.filter(function (x) { return x.art === 'JAHRESABSCHLUSS'; });
+    if (!jas.length) {
+      return '<div class="karte-hint">Noch kein Jahresabschluss vorhanden — bitte ' +
+        'zuerst einen Jahresabschluss anlegen.</div>';
+    }
+    var h = feldWrap('Jahresabschluss', 'Bilanzsumme und Ergebnis werden übernommen',
+      '<select id="bsAbschluss">' + jas.map(function (x) {
+        return '<option value="' + esc(x.id) + '">' + esc(x.bezeichnung) + '</option>';
+      }).join('') + '</select>');
+    if (typ === 'ergebnis') {
+      h += feldWrap('Ausschüttung an Gesellschafter (EUR)', 'leer = keine Ausschüttung',
+        '<input class="zahl" type="text" inputmode="decimal" id="bsAussch">');
+      h += feldWrap('Einstellung in Gewinnrücklagen (EUR)', 'leer = keine Einstellung',
+        '<input class="zahl" type="text" inputmode="decimal" id="bsRuecklage">');
+      h += '<div class="karte-hint" style="grid-column:1/-1">Der verbleibende Betrag ' +
+        'wird automatisch auf neue Rechnung vorgetragen.</div>';
+    }
+    return h;
+  }
+  if (typ === 'einlagen') {
+    var u = S.unternehmen || {};
+    return feldWrap('Gezeichnetes Kapital / Stammkapital (EUR)', '',
+        '<input class="zahl" type="text" inputmode="decimal" id="bsGez" value="' +
+        eingabeWert(u.stammkapital) + '">') +
+      feldWrap('Bereits eingezahlt (EUR)', '',
+        '<input class="zahl" type="text" inputmode="decimal" id="bsEinbez">') +
+      feldWrap('Jetzt einzufordern (EUR)', '',
+        '<input class="zahl" type="text" inputmode="decimal" id="bsEinf">') +
+      feldWrap('Zahlungsfrist', '', '<input type="date" id="bsFrist">');
+  }
+  if (typ === 'freitext') {
+    return feldWrap('Betreff / Überschrift', 'z. B. Sitzverlegung der Gesellschaft',
+        '<input id="bsFtTitel">') +
+      '<label class="feld" style="grid-column:1/-1"><span class="lbl">Beschlusstext</span>' +
+      '<textarea id="bsFtText" rows="7" placeholder="Die Gesellschafter beschließen …">' +
+      '</textarea></label>';
+  }
+  /* gf */
+  var un = S.unternehmen || {};
+  return feldWrap('Vorgang', '', '<select id="bsGfArt">' +
+      '<option value="bestellung">Bestellung zum Geschäftsführer</option>' +
+      '<option value="abberufung">Abberufung als Geschäftsführer</option>' +
+      '<option value="entlastung">Entlastung des Geschäftsführers</option>' +
+      '</select>') +
+    feldWrap('Name', '', '<input id="bsGfName" value="' +
+      esc((un.geschaeftsfuehrer || [])[0] || '') + '">') +
+    feldWrap('Wirkung zum / Datum', '', '<input type="date" id="bsGfDatum">') +
+    feldWrap('Geschäftsjahr', 'nur bei Entlastung, z. B. 2025', '<input id="bsGfJahr">');
+}
+
+/* Liest das Formular, erzeugt das Dokument (laedt bei Bedarf den Abschluss). */
+function bsErzeugen(m) {
+  var typ = m.querySelector('#bsTyp').value;
+  function wert(id) { var el = m.querySelector(id); return el ? el.value : ''; }
+  var gemein = {
+    datum: wert('#bsDatum'), ort: wert('#bsOrt'),
+    gesellschafter: wert('#bsGesellschafter').split(',')
+      .map(function (x) { return x.trim(); }).filter(Boolean)
+  };
+  if (typ === 'feststellung' || typ === 'ergebnis') {
+    var sel = m.querySelector('#bsAbschluss');
+    if (!sel) { alert('Bitte zuerst einen Jahresabschluss anlegen.'); return; }
+    var spez = { aussch: Berechnung.num(wert('#bsAussch')),
+                 ruecklage: Berechnung.num(wert('#bsRuecklage')) };
+    Store.ladeAbschluss(sel.value).then(function (ab) {
+      if (!ab) { alert('Jahresabschluss konnte nicht geladen werden.'); return; }
+      bsDokZeigen(m, beschlussDok(typ, gemein, spez, ab));
+    });
+    return;
+  }
+  if (typ === 'einlagen') {
+    bsDokZeigen(m, beschlussDok('einlagen', gemein, {
+      gez: Berechnung.num(wert('#bsGez')), einbez: Berechnung.num(wert('#bsEinbez')),
+      einf: Berechnung.num(wert('#bsEinf')), frist: wert('#bsFrist')
+    }, null));
+    return;
+  }
+  if (typ === 'freitext') {
+    bsDokZeigen(m, beschlussDok('freitext', gemein, {
+      titel: wert('#bsFtTitel'), text: wert('#bsFtText')
+    }, null));
+    return;
+  }
+  bsDokZeigen(m, beschlussDok('gf', gemein, {
+    art: wert('#bsGfArt'), name: wert('#bsGfName'),
+    datum: wert('#bsGfDatum'), jahr: wert('#bsGfJahr')
+  }, null));
+}
+
+function bsDokZeigen(m, dokHtml) {
+  var box = m.querySelector('#bsDok');
+  box.innerHTML = '<div class="btn-reihe no-print" style="margin:16px 0">' +
+    '<button class="btn btn-pri" id="bsDrucken">Drucken / als PDF speichern</button></div>' +
+    '<div class="dok">' + dokHtml + '</div>';
+  box.querySelector('#bsDrucken').onclick = function () { window.print(); };
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* Baut das vollstaendige Beschluss-Dokument. */
+function beschlussDok(typ, g, s, ab) {
+  function dat(iso, ersatz) { return iso ? datumDe(iso) : (ersatz || '—'); }
+  var u = S.unternehmen || {};
+  var firma = u.name || 'Gesellschaft';
+  var sitz = ((u.plz || '') + ' ' + (u.ort || '')).trim();
+  var h = '<h1>' + esc(firma) + '</h1>';
+  h += '<div class="dok-sub">' + (sitz ? esc(sitz) : '') +
+    (u.hrNummer ? (sitz ? ' &middot; ' : '') + esc(u.hrNummer) : '') + '</div>';
+  h += '<h1 style="margin-top:14px">Beschluss der Gesellschafterversammlung</h1>';
+  h += '<p>Die Gesellschafter der ' + esc(firma) + ' fassen am ' + dat(g.datum) +
+    (g.ort ? ' in ' + esc(g.ort) : '') + ' folgenden Beschluss:</p>';
+  h += beschlussText(typ, s, ab, dat);
+  h += '<p style="margin-top:26px">' + esc(g.ort || '') + ', den ' + dat(g.datum) + '</p>';
+  var namen = g.gesellschafter.length ? g.gesellschafter : ['', ''];
+  h += '<div style="display:flex;gap:46px;flex-wrap:wrap;margin-top:30px">';
+  namen.forEach(function (n) {
+    h += '<div style="min-width:210px">' +
+      '<div style="border-top:1px solid #444;padding-top:5px;font-size:13px">' +
+      (esc(n) || '&nbsp;') + '</div>' +
+      '<div style="font-size:11px;color:#666">Unterschrift Gesellschafter/in</div></div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+/* Liefert den eigentlichen Beschlusstext je Typ. */
+function beschlussText(typ, s, ab, dat) {
+  if (typ === 'feststellung') {
+    var r = Berechnung.berechne(ab);
+    var e = r.guv.jahresergebnis || 0;
+    return '<h2>Feststellung des Jahresabschlusses</h2>' +
+      '<p>Der von der Geschäftsführung aufgestellte Jahresabschluss zum ' +
+      dat(ab.stichtag) + ' — bestehend aus Bilanz, Gewinn- und Verlustrechnung sowie ' +
+      'Anhang — wird hiermit festgestellt.</p>' +
+      '<p>Die Bilanzsumme beträgt ' + geld(r.bilanz.summeAktiva) + ' EUR. Das ' +
+      'Geschäftsjahr schließt mit einem ' +
+      (e >= 0 ? 'Jahresüberschuss' : 'Jahresfehlbetrag') + ' von ' +
+      geld(Math.abs(e)) + ' EUR ab.</p>' +
+      '<p class="dok-fussnote">Rechtsgrundlage: § 42a Abs. 2 GmbHG.</p>';
+  }
+  if (typ === 'ergebnis') {
+    var r2 = Berechnung.berechne(ab);
+    var erg = r2.guv.jahresergebnis || 0;
+    if (erg < 0) {
+      return '<h2>Verwendung des Jahresergebnisses</h2>' +
+        '<p>Das Geschäftsjahr zum ' + dat(ab.stichtag) + ' schließt mit einem ' +
+        'Jahresfehlbetrag von ' + geld(-erg) + ' EUR.</p>' +
+        '<p>Der Jahresfehlbetrag wird auf neue Rechnung vorgetragen (Verlustvortrag).</p>' +
+        '<p class="dok-fussnote">Rechtsgrundlage: § 29 GmbHG.</p>';
+    }
+    var aussch = Berechnung.cent(s.aussch), ruecklage = Berechnung.cent(s.ruecklage);
+    var vortrag = Berechnung.cent(erg - aussch - ruecklage);
+    var zeile = function (lbl, betrag) {
+      return '<tr><td style="padding:3px 14px 3px 0">' + lbl + '</td>' +
+        '<td style="text-align:right;font-variant-numeric:tabular-nums">' +
+        geld(betrag) + ' EUR</td></tr>';
+    };
+    var h = '<h2>Verwendung des Jahresergebnisses</h2>' +
+      '<p>Das Geschäftsjahr zum ' + dat(ab.stichtag) + ' schließt mit einem ' +
+      'Jahresüberschuss von ' + geld(erg) + ' EUR. Über die Verwendung wird wie folgt ' +
+      'beschlossen:</p><table style="margin:8px 0 4px"><tbody>' +
+      zeile('Ausschüttung an die Gesellschafter', aussch) +
+      zeile('Einstellung in die Gewinnrücklagen', ruecklage) +
+      zeile('Vortrag auf neue Rechnung (Gewinnvortrag)', vortrag) +
+      '</tbody></table>';
+    if (aussch > 0) {
+      h += '<p>Die Ausschüttung wird im Verhältnis der Geschäftsanteile ausgezahlt.</p>';
+    }
+    if (vortrag < -0.005) {
+      h += '<p class="dok-fussnote" style="color:#a23">Hinweis: Ausschüttung und ' +
+        'Einstellung übersteigen den Jahresüberschuss um ' + geld(-vortrag) +
+        ' EUR — bitte die Beträge prüfen.</p>';
+    }
+    return h + '<p class="dok-fussnote">Rechtsgrundlage: § 29 GmbHG.</p>';
+  }
+  if (typ === 'einlagen') {
+    var aus = Berechnung.cent(s.gez - s.einbez);
+    var h2 = '<h2>Einforderung ausstehender Stammeinlagen</h2>' +
+      '<p>Das Stammkapital der Gesellschaft beträgt ' + geld(s.gez) + ' EUR. Hierauf ' +
+      'sind bisher ' + geld(s.einbez) + ' EUR eingezahlt; die ausstehenden Einlagen ' +
+      'belaufen sich auf ' + geld(aus) + ' EUR.</p>' +
+      '<p>Die Geschäftsführung wird angewiesen, von den Gesellschaftern ausstehende ' +
+      'Einlagen in Höhe von <b>' + geld(s.einf) + ' EUR</b> einzufordern. Die ' +
+      'eingeforderten Beträge sind bis zum ' + dat(s.frist, 'angegebenen Termin') +
+      ' auf ein Geschäftskonto der Gesellschaft einzuzahlen.</p>';
+    if (s.einf > aus + 0.005) {
+      h2 += '<p class="dok-fussnote" style="color:#a23">Hinweis: Der einzufordernde ' +
+        'Betrag übersteigt die ausstehenden Einlagen — bitte prüfen.</p>';
+    }
+    return h2 + '<p class="dok-fussnote">Rechtsgrundlage: § 46 Nr. 2 GmbHG.</p>';
+  }
+  if (typ === 'freitext') {
+    var ftTitel = esc(s.titel) || 'Beschluss';
+    var ftText = esc(s.text || '').replace(/\n/g, '<br>');
+    return '<h2>' + ftTitel + '</h2><p>' + (ftText || '[Beschlusstext]') + '</p>';
+  }
+  /* gf */
+  var name = esc(s.name) || '[Name]';
+  if (s.art === 'abberufung') {
+    return '<h2>Abberufung eines Geschäftsführers</h2>' +
+      '<p>' + name + ' wird mit Wirkung zum ' + dat(s.datum, 'sofort') +
+      ' als Geschäftsführer der Gesellschaft abberufen.</p>' +
+      '<p class="dok-fussnote">Rechtsgrundlage: § 46 Nr. 5 GmbHG.</p>';
+  }
+  if (s.art === 'entlastung') {
+    return '<h2>Entlastung der Geschäftsführung</h2>' +
+      '<p>Dem Geschäftsführer ' + name + ' wird für das Geschäftsjahr ' +
+      (esc(s.jahr) || '[Geschäftsjahr]') + ' Entlastung erteilt. Die Gesellschafter ' +
+      'billigen die Geschäftsführung dieses Zeitraums.</p>' +
+      '<p class="dok-fussnote">Rechtsgrundlage: § 46 Nr. 5 GmbHG.</p>';
+  }
+  return '<h2>Bestellung eines Geschäftsführers</h2>' +
+    '<p>' + name + ' wird mit Wirkung zum ' + dat(s.datum, 'sofort') +
+    ' zum Geschäftsführer der Gesellschaft bestellt. Die Vertretungsbefugnis richtet ' +
+    'sich nach dem Gesellschaftsvertrag.</p>' +
+    '<p class="dok-fussnote">Rechtsgrundlage: § 46 Nr. 5 GmbHG.</p>';
 }
 
 /* ===========================================================================

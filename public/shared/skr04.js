@@ -166,7 +166,14 @@
     { nr: '7600', name: 'Körperschaftsteuer', seite: 'AUFWAND', kat: 'ertragsteuer' },
     { nr: '7608', name: 'Solidaritätszuschlag', seite: 'AUFWAND', kat: 'ertragsteuer' },
     { nr: '7610', name: 'Gewerbesteuer', seite: 'AUFWAND', kat: 'ertragsteuer' },
-    { nr: '7685', name: 'Sonstige Steuern', seite: 'AUFWAND', kat: 'sonststeuer' }
+    { nr: '7685', name: 'Sonstige Steuern', seite: 'AUFWAND', kat: 'sonststeuer' },
+
+    /* ===== Klasse 9: Vortrags- und statistische Konten =============== */
+    /* Eröffnungsbilanzkonto (EBK): technisches Gegenkonto für Eröffnungs-
+     * buchungen / Saldenvorträge zu Jahresbeginn. Bewusst OHNE Bilanzseite
+     * (seite 'EBK') - es ist ein reines Verrechnungskonto, wird von
+     * uebernehmeSalden ignoriert und erscheint nicht in der Bilanz. */
+    { nr: '9000', name: 'Saldenvorträge Sachkonten (Eröffnungsbilanzkonto)', seite: 'EBK' }
   ];
 
   /* GuV-Kategorie -> Positions-ID je Verfahren (GKV / UKV / KLEINST).
@@ -189,6 +196,22 @@
     sonststeuer:       { GKV: 'gkv.16', UKV: 'ukv.15', KLEINST: 'kst.7', label: 'sonstige Steuern' }
   };
 
+  /* Standard-Sachkonto je HGB-Bilanzposition für automatische
+   * Eröffnungsbuchungen (Saldenvortrag). Eine HGB-Position ist gröber als
+   * ein Konto - das Tool wählt hier ein repräsentatives Konto; es lässt sich
+   * nach dem Übertrag im Journal frei ändern. Das gezeichnete Kapital wird
+   * gesondert über Konto 2900 gebucht. */
+  var EB_KONTO = {
+    'A.I': '0100', 'A.II': '0500', 'A.III': '0820',
+    'B.I': '1140', 'B.II': '1200', 'B.III': '1510', 'B.IV': '1800',
+    'C': '1900', 'D': '1950',
+    'P.A.II': '2920', 'P.A.III': '2960', 'P.A.IV': '2970',
+    'P.B.1': '3000', 'P.B.2': '3020', 'P.B.3': '3070',
+    'P.C.1': '3100', 'P.C.2': '3150', 'P.C.3': '3250', 'P.C.4': '3300',
+    'P.C.5': '3500', 'P.C.6': '3460', 'P.C.7': '3500', 'P.C.8': '3500',
+    'P.D': '3900', 'P.E': '3065'
+  };
+
   function kontoFinden(nr) {
     for (var i = 0; i < KONTEN.length; i++) if (KONTEN[i].nr === nr) return KONTEN[i];
     return null;
@@ -197,5 +220,6 @@
     return KONTEN.filter(function (k) { return k.vv; });
   }
 
-  return { KONTEN: KONTEN, KAT_GUV: KAT_GUV, kontoFinden: kontoFinden, vvKonten: vvKonten };
+  return { KONTEN: KONTEN, KAT_GUV: KAT_GUV, EB_KONTO: EB_KONTO,
+           kontoFinden: kontoFinden, vvKonten: vvKonten };
 });

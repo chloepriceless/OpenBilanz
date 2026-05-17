@@ -145,6 +145,23 @@ test('SKR04: vermögensverwaltende Konten vorhanden', function () {
   ok(SKR04.kontoFinden('0820'), 'Beteiligungen (0820) fehlt');
   ok(SKR04.kontoFinden('7000'), 'Erträge aus Beteiligungen (7000) fehlt');
 });
+test('SKR04: Eröffnungsbilanzkonto 9000 ohne Bilanzseite', function () {
+  var ebk = SKR04.kontoFinden('9000');
+  ok(ebk, 'Konto 9000 (EBK) fehlt');
+  eq(ebk.seite, 'EBK', 'Konto 9000 muss seite EBK haben (kein AKTIV/PASSIV)');
+  ok(!ebk.pos && !ebk.kat, 'EBK darf keine Bilanz-/GuV-Zuordnung haben');
+});
+test('SKR04: EB_KONTO-Mapping verweist auf gültige Positionen und Bestandskonten', function () {
+  var alle = Positionen.AKTIVA.concat(Positionen.PASSIVA);
+  ok(SKR04.EB_KONTO, 'EB_KONTO-Mapping fehlt');
+  Object.keys(SKR04.EB_KONTO).forEach(function (pos) {
+    ok(Positionen.finde(alle, pos), 'EB_KONTO: unbekannte HGB-Position ' + pos);
+    var konto = SKR04.kontoFinden(SKR04.EB_KONTO[pos]);
+    ok(konto, 'EB_KONTO[' + pos + '] -> Konto ' + SKR04.EB_KONTO[pos] + ' fehlt');
+    ok(konto.seite === 'AKTIV' || konto.seite === 'PASSIV',
+       'EB_KONTO[' + pos + '] -> Konto ' + konto.nr + ' ist kein Bestandskonto');
+  });
+});
 
 /* ---- Taxonomie-Mapping ----------------------------------------------- */
 test('Taxonomie: Bilanz-Elemente sind nicht leer', function () {
