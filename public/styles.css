@@ -1,0 +1,227 @@
+/* OpenBilanz - Stylesheet */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#1c2733; --ink-mut:#5f6f7e;
+  --line:#d6dde4; --line-2:#e7ecf0;
+  --akzent:#1f5a8f; --akzent-d:#16456e; --akzent-l:#e8f0f7;
+  --gut:#1f7a4d; --gut-bg:#e6f4ec;
+  --warn:#9a6a00; --warn-bg:#fbf0d6;
+  --fehler:#b3261e; --fehler-bg:#fbe5e4;
+  --radius:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Segoe UI",Roboto,-apple-system,Helvetica,Arial,sans-serif;
+  background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;
+}
+code{font-family:"SFMono-Regular",Consolas,monospace;font-size:.86em;
+  background:var(--line-2);padding:1px 5px;border-radius:4px}
+a{color:var(--akzent)}
+
+#app{display:flex;min-height:100vh}
+
+/* ---- Sidebar ---- */
+.sidebar{
+  width:248px;flex:0 0 248px;background:#152634;color:#cdd8e1;
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+}
+.brand{display:flex;gap:11px;align-items:center;padding:20px 18px;border-bottom:1px solid #25394a}
+.brand-logo{
+  width:40px;height:40px;border-radius:9px;background:var(--akzent);
+  color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:16px
+}
+.brand-name{font-weight:600;color:#fff;font-size:15px}
+.brand-sub{font-size:11.5px;color:#8499a8}
+#nav{padding:12px 10px;flex:1;overflow:auto}
+.nav-grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+  color:#6f8493;margin:14px 10px 5px}
+.nav-item{
+  display:flex;gap:9px;align-items:center;padding:8px 11px;border-radius:6px;
+  cursor:pointer;color:#cdd8e1;font-size:13.5px;margin-bottom:1px
+}
+.nav-item:hover{background:#1f3445}
+.nav-item.aktiv{background:var(--akzent);color:#fff;font-weight:500}
+.nav-item .ic{width:17px;text-align:center;opacity:.85}
+.nav-sub{font-size:12.5px;padding-left:30px;color:#9fb0bd}
+.sidebar-foot{padding:13px 18px;border-top:1px solid #25394a;font-size:12px}
+.sidebar-foot #firmaName{color:#fff;font-weight:500}
+.sidebar-foot-sub{color:#7c91a0;font-size:11px;margin-top:2px}
+
+/* ---- Main ---- */
+.main{flex:1;padding:26px 34px;max-width:1180px;width:100%}
+.lade{padding:40px;color:var(--ink-mut)}
+.kopf{margin-bottom:20px}
+.kopf h1{font-size:22px;font-weight:600}
+.kopf p{color:var(--ink-mut);margin-top:3px;max-width:720px}
+.zurueck{display:inline-block;color:var(--akzent);cursor:pointer;font-size:13px;margin-bottom:8px}
+
+/* ---- Karten / Panels ---- */
+.karte{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;margin-bottom:18px}
+.karte h2{font-size:15px;font-weight:600;margin-bottom:3px}
+.karte h2 .reg{font-weight:400;color:var(--ink-mut);font-size:12.5px}
+.karte .karte-hint{color:var(--ink-mut);font-size:12.5px;margin-bottom:14px}
+.karte-kopf{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+
+.gitter{display:grid;gap:13px 18px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+
+label.feld{display:block}
+label.feld .lbl{display:block;font-size:12.5px;font-weight:500;margin-bottom:4px}
+label.feld .sub{font-weight:400;color:var(--ink-mut)}
+input,select,textarea{
+  width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;
+  font:inherit;color:var(--ink);background:#fff
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--akzent-l);border-color:var(--akzent)}
+input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
+input[readonly]{background:var(--line-2);color:var(--ink-mut)}
+textarea{min-height:64px;resize:vertical}
+.checkz{display:flex;gap:8px;align-items:flex-start;font-size:13px}
+.checkz input{width:auto;margin-top:2px}
+
+/* ---- Buttons ---- */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:6px;
+  border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;
+  font:inherit;font-weight:500;font-size:13px
+}
+.btn:hover{background:#f4f6f8}
+.btn-pri{background:var(--akzent);border-color:var(--akzent);color:#fff}
+.btn-pri:hover{background:var(--akzent-d)}
+.btn-gefahr{color:var(--fehler);border-color:#e6c4c2}
+.btn-gefahr:hover{background:var(--fehler-bg)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-reihe{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px}
+
+/* ---- Dashboard ---- */
+.kachel-reihe{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.kachel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px 17px;cursor:pointer}
+.kachel:hover{border-color:var(--akzent);box-shadow:0 1px 6px rgba(31,90,143,.1)}
+.kachel .k-tag{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-mut)}
+.kachel .k-titel{font-weight:600;margin:3px 0}
+.kachel .k-zahl{font-size:20px;font-weight:600;color:var(--akzent)}
+
+/* ---- Listen / Tabellen ---- */
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.liste th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--ink-mut);padding:7px 9px;border-bottom:2px solid var(--line)}
+.liste td{padding:9px;border-bottom:1px solid var(--line-2)}
+.liste tr:hover td{background:#f7f9fb}
+.rechts{text-align:right}.mitte{text-align:center}
+.mono{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:11px;font-size:11px;font-weight:600}
+.tag-eb{background:var(--akzent-l);color:var(--akzent-d)}
+.tag-ja{background:#ece7f6;color:#5b3fa0}
+.tag-entwurf{background:var(--warn-bg);color:var(--warn)}
+.tag-fest{background:var(--gut-bg);color:var(--gut)}
+
+/* ---- Bilanz-Editor ---- */
+.editor-grid{display:grid;grid-template-columns:1fr 332px;gap:18px;align-items:start}
+@media(max-width:1000px){.editor-grid{grid-template-columns:1fr}}
+.statusbox{position:sticky;top:18px}
+
+.bilanz-seiten{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.bilanz-seiten{grid-template-columns:1fr}}
+.seite-titel{font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.05em;
+  padding:7px 9px;background:#152634;color:#fff;border-radius:5px 5px 0 0}
+
+.pos-tab{width:100%;font-size:13px}
+.pos-tab td{padding:4px 6px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+.pos-tab .p-nr{width:34px;color:var(--ink-mut);font-size:12px;white-space:nowrap}
+.pos-tab .p-lbl{line-height:1.3}
+.pos-tab .p-wert{width:128px}
+.pos-tab input.zahl{padding:5px 7px;font-size:12.5px}
+.zeile-B{background:#f0f3f6}
+.zeile-B .p-lbl{font-weight:700;text-transform:uppercase;font-size:12px;letter-spacing:.02em}
+.zeile-R .p-lbl{font-weight:600;padding-left:8px}
+.zeile-N .p-lbl{padding-left:20px;color:#33424f}
+.zeile-auto .p-lbl{font-style:italic;color:var(--ink-mut);padding-left:8px}
+.zeile-summe td{border-top:2px solid #152634;font-weight:700;background:#eef3f7}
+.wert-ro{display:block;text-align:right;padding:5px 7px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+.mini-hint{font-size:11px;color:var(--ink-mut);padding:2px 6px 6px 20px}
+
+/* ---- Erklaerungen (Eroeffnungsbilanz) ---- */
+.erkl-zeile td{padding:1px 6px 8px 6px;border-bottom:1px solid var(--line-2)}
+.erkl{display:block;font-size:11.5px;line-height:1.5;color:#3a4a57;
+  background:var(--akzent-l);border-left:3px solid var(--akzent);
+  padding:7px 10px;border-radius:0 5px 5px 0}
+.erkl b{color:var(--akzent-d)}
+.erkl-box{display:flex;flex-direction:column;gap:6px;margin:10px 0 2px}
+
+/* ---- Statuspanel ---- */
+.status-zeile{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;
+  border-bottom:1px solid var(--line-2)}
+.status-zeile.gross{font-size:15px;font-weight:700;border-bottom:none;padding-top:9px}
+.status-ampel{padding:10px 12px;border-radius:6px;font-weight:600;font-size:13px;margin:10px 0}
+.ampel-gut{background:var(--gut-bg);color:var(--gut)}
+.ampel-fehler{background:var(--fehler-bg);color:var(--fehler)}
+.meldung{padding:9px 11px;border-radius:6px;font-size:12.5px;margin-bottom:7px}
+.m-fehler{background:var(--fehler-bg);color:#7c1f1a}
+.m-warnung{background:var(--warn-bg);color:#6f4c00}
+.m-info{background:var(--akzent-l);color:var(--akzent-d)}
+
+/* ---- GuV-Editor ---- */
+.guv-tab td{padding:5px 7px;border-bottom:1px solid var(--line-2)}
+.guv-tab .g-nr{width:34px;color:var(--ink-mut);font-size:12px}
+.guv-tab .g-wert{width:140px}
+.guv-tab .zeile-Z td,.guv-tab .zeile-S td{font-weight:700;background:#eef3f7;border-top:1px solid #b9c6d1}
+.guv-tab .art-A .g-lbl::before{content:"\2212 ";color:var(--fehler)}
+
+/* ---- Hinweisboxen ---- */
+.box{border-radius:7px;padding:12px 15px;margin-bottom:14px;font-size:13px}
+.box-info{background:var(--akzent-l);border:1px solid #bcd4e6}
+.box-warn{background:var(--warn-bg);border:1px solid #ecd9a8}
+.box-gut{background:var(--gut-bg);border:1px solid #b6dcc4}
+.box b{display:block;margin-bottom:3px}
+.box ul{margin:5px 0 0 18px}
+
+.frist-tab td{padding:7px 9px;border-bottom:1px solid var(--line-2);font-size:13px}
+.frist-tab .f-d{font-weight:600;white-space:nowrap}
+
+/* ---- Dialog ---- */
+.dialog-bg{position:fixed;inset:0;background:rgba(20,30,40,.5);display:flex;
+  align-items:center;justify-content:center;z-index:50;padding:20px}
+.dialog-bg[hidden]{display:none}
+.dialog{background:#fff;border-radius:10px;padding:22px;max-width:520px;width:100%;
+  max-height:88vh;overflow:auto}
+.dialog h3{font-size:16px;margin-bottom:5px}
+
+/* ---- Druckansicht ---- */
+.dok{background:#fff;color:#000;max-width:850px;margin:0 auto;padding:32px 40px;
+  border:1px solid var(--line);font-size:12.5px}
+.dok h1{font-size:17px;text-align:center;margin-bottom:2px}
+.dok .dok-sub{text-align:center;color:#333;margin-bottom:18px;font-size:12px}
+.dok h2{font-size:13.5px;margin:18px 0 7px;border-bottom:1.5px solid #000;padding-bottom:2px}
+.dok table{font-size:12px}
+.dok-bilanz{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.dok-bilanz .col{padding:0 10px}
+.dok-bilanz .col:first-child{border-right:1px solid #888}
+.dok-zeile{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #eee}
+.dok-zeile .dz-lbl{padding-right:10px}
+.dok-zeile.lvl-B{font-weight:700;text-transform:uppercase;font-size:11.5px;margin-top:5px}
+.dok-zeile.lvl-R{padding-left:12px}
+.dok-zeile.lvl-N{padding-left:24px;font-size:11.5px;color:#333}
+.dok-zeile.summe{font-weight:700;border-top:1.5px solid #000;border-bottom:2.5px double #000;margin-top:4px}
+.dok-zeile .dz-wert{font-variant-numeric:tabular-nums;white-space:nowrap}
+.dok-fuss{margin-top:24px;font-size:11px;color:#333;border-top:1px solid #888;padding-top:8px}
+.dok-unterschrift{margin-top:34px;display:flex;justify-content:space-between;font-size:11.5px}
+.dok-unterschrift .us{border-top:1px solid #000;padding-top:3px;width:230px;text-align:center}
+
+.werte-tab{font-size:12px}
+.werte-tab td,.werte-tab th{border:1px solid var(--line);padding:5px 8px}
+.werte-tab th{background:var(--line-2)}
+.werte-tab .el{font-family:monospace;font-size:11px;color:var(--akzent-d)}
+
+@media print{
+  .sidebar,.kopf,.zurueck,.btn,.btn-reihe,.no-print,#dialog{display:none !important}
+  body{background:#fff}
+  .main{padding:0;max-width:none}
+  .dok{border:none;max-width:none;padding:0}
+  .dok-bilanz .col:first-child{border-right:1px solid #000}
+}

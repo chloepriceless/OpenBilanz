@@ -1,0 +1,13 @@
+# Lokale Daten (Buchhaltung) - bei Bedarf separat sichern/versionieren.
+# Enthaelt Steuerdaten - bewusst NICHT im Repository. Zum revisionssicheren
+# Versionieren der eigenen Buchfuehrung diese Zeile entfernen.
+data/
+
+# E-Bilanz-Taxonomie (~53 MB, amtlich) - per tools/setup-taxonomie.sh laden
+taxonomie/*.zip
+taxonomie/german-gaap*/
+
+# Sonstiges
+node_modules/
+*.log
+.DS_Store

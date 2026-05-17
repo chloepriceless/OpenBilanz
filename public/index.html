@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenBilanz &ndash; Eröffnungsbilanz &amp; Jahresabschluss</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">OB</div>
+      <div>
+        <div class="brand-name">OpenBilanz</div>
+        <div class="brand-sub">Bilanz ohne Steuerberater</div>
+      </div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="sidebar-foot">
+      <div id="firmaName">&ndash;</div>
+      <div class="sidebar-foot-sub">Daten lokal in <code>./data</code></div>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="lade">Lade &hellip;</div>
+  </main>
+</div>
+
+<div id="dialog" class="dialog-bg" hidden>
+  <div class="dialog" id="dialogBox"></div>
+</div>
+
+<script src="shared/positionen.js"></script>
+<script src="shared/berechnung.js"></script>
+<script src="shared/taxonomie.js"></script>
+<script src="shared/skr04.js"></script>
+<script src="shared/steuer.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
