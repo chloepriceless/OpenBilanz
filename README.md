@@ -223,8 +223,11 @@ public/shared/store-adapter.js  Speicheradapter für beide Betriebsarten
 public/shared/obz.js          .obz-Sicherung: packen, optional verschlüsseln
 public/shared/fileio.js       Datei-Export/-Import (File System Access API)
 public/shared/validate-browser.js  E-Bilanz-Konsistenzprüfung im Browser
+public/pyodide-worker.js      Arelle-Validierung im Browser (experimentell)
 tests/run.js                  Test-Suite
 tools/setup-taxonomie.sh      lädt das amtliche Taxonomie-Paket
+tools/setup-pyodide.sh        lädt Pyodide + Arelle (experimentell)
+tools/serve-website.py        lokaler HTTPS-Server für die Website-Variante
 ```
 
 ---

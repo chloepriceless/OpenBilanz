@@ -70,9 +70,11 @@ Versionswechsel gegen die neue XSD prüfen. Siehe Beobachtungsliste (Abschnitt 5
 > mit optionaler Verschlüsselung (PBKDF2/AES-GCM), File System Access API mit
 > Download-Rückfall, Export-beim-Speichern, PWA (Manifest + Service Worker),
 > strenge CSP und der Dual-Mode (das Selbst-Hosting bleibt unverändert lauffähig)
-> sind implementiert. **Offen:** die vollständige Taxonomie-Validierung via
-> Arelle/Pyodide im Browser (Abschnitt 2 unten) — bis dahin prüft der
-> Website-Modus per JS-Konsistenzprüfung.
+> sind implementiert. Die vollständige Taxonomie-Validierung via Arelle/Pyodide
+> im Browser ist als **experimentelles Gerüst** angelegt (Setup-Skript
+> `tools/setup-pyodide.sh`, Web-Worker, Opt-in-Schaltfläche) und im Browser zu
+> erproben; bis dahin prüft der Website-Modus zuverlässig per
+> JS-Konsistenzprüfung.
 
 **Idee:** OpenBilanz als öffentliche Website betreiben, bei der **alle
 Nutzerdaten ausschließlich im Browser des Nutzers** bleiben — keine

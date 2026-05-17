@@ -124,5 +124,30 @@
     });
   }
 
-  return { pruefe: pruefe };
+  /* EXPERIMENTELL: vollstaendige Validierung gegen die amtliche Taxonomie
+   * via Arelle in einem Pyodide-Web-Worker. Setzt die per
+   * tools/setup-pyodide.sh bereitgestellten Assets voraus.
+   * xml = XBRL-Instanz; aufFortschritt(text) optional.
+   * Rueckgabe: Promise<String> mit der Arelle-Logausgabe. */
+  function pruefeTaxonomie(xml, aufFortschritt) {
+    return new Promise(function (resolve, reject) {
+      var w;
+      try { w = new Worker('pyodide-worker.js'); }
+      catch (e) { reject(new Error('Web Worker nicht verfuegbar.')); return; }
+      w.onmessage = function (ev) {
+        var d = ev.data || {};
+        if (d.typ === 'status') { if (aufFortschritt) aufFortschritt(d.text); }
+        else if (d.typ === 'ergebnis') { w.terminate(); resolve(d.log); }
+        else if (d.typ === 'fehler') { w.terminate(); reject(new Error(d.text)); }
+      };
+      w.onerror = function (ev) {
+        w.terminate();
+        reject(new Error('Pyodide-Worker-Fehler: ' + ((ev && ev.message) || 'unbekannt') +
+          ' — sind die Assets via tools/setup-pyodide.sh installiert?'));
+      };
+      w.postMessage({ typ: 'pruefe', xml: xml });
+    });
+  }
+
+  return { pruefe: pruefe, pruefeTaxonomie: pruefeTaxonomie };
 });

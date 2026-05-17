@@ -241,3 +241,8 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
   border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;font-family:inherit}
 .btn-mini:hover{background:#2f4759}
 @media print{ #backupLeiste{display:none !important} }
+
+/* ---- Arelle-Log (experimentelle Taxonomie-Pruefung) ---- */
+.arelle-log{font-family:monospace;font-size:11px;white-space:pre-wrap;
+  max-height:340px;overflow:auto;background:var(--bg);padding:10px;
+  border-radius:6px;border:1px solid var(--line);margin:0}

@@ -1016,15 +1016,23 @@ function renderEbilanz(m) {
   var valTitel = Store.modus === 'website' ? '2. E-Bilanz prüfen'
                                            : '2. Gegen die amtliche Taxonomie prüfen';
   var valHint = Store.modus === 'website'
-    ? 'Konsistenz- und Pflichtangaben-Prüfung im Browser. Die vollständige Prüfung ' +
-      'gegen die amtliche Taxonomie (Arelle) erfolgt im Selbst-Hosting-Modus.'
+    ? 'Schnelle Konsistenz- und Pflichtangaben-Prüfung im Browser.'
     : 'Validierung mit Arelle gegen die Taxonomie ' + Taxonomie.VERSION +
       ' &ndash; findet Fehler vor der Übermittlung.';
   html += '<div class="karte"><div class="karte-kopf"><div>' +
     '<h2>' + valTitel + '</h2>' +
     '<div class="karte-hint">' + valHint + '</div></div>' +
-    '<button class="btn btn-pri" id="valBtn">Jetzt prüfen</button></div>' +
-    '<div id="valErgebnis"></div></div>';
+    '<button class="btn btn-pri" id="valBtn">Jetzt prüfen</button></div>';
+  if (Store.modus === 'website') {
+    html += '<div class="karte-hint" style="margin-top:11px"><b>Experimentell:</b> ' +
+      'vollständige Validierung gegen die amtliche Taxonomie direkt im Browser ' +
+      '(Arelle via Pyodide). Erfordert einmalig den Download der Pyodide-/Arelle-' +
+      'Assets über <code>tools/setup-pyodide.sh</code>; der erste Lauf lädt ' +
+      'größere Dateien.</div>' +
+      '<button class="btn" id="valArelleBtn" style="margin-top:6px">' +
+      'Vollständige Taxonomie-Prüfung (Arelle)</button>';
+  }
+  html += '<div id="valErgebnis"></div></div>';
 
   /* 3. Übermittlung */
   html += '<div class="karte"><h2>3. Übermittlung ans Finanzamt</h2>' +
@@ -1083,6 +1091,22 @@ function renderEbilanz(m) {
       box.innerHTML = ebilanzValErgebnis(e);
     }).catch(function () {
       box.innerHTML = '<div class="meldung m-fehler">Prüfung nicht möglich.</div>';
+    });
+  };
+  var valArelle = m.querySelector('#valArelleBtn');
+  if (valArelle) valArelle.onclick = function () {
+    var box = document.getElementById('valErgebnis');
+    box.innerHTML = '<div class="meldung m-info">Arelle-Prüfung wird vorbereitet &hellip;</div>';
+    Store.erzeugeXBRL(S.unternehmen, a, 'instanz').then(function (r) {
+      return BrowserValidate.pruefeTaxonomie(r.xml, function (status) {
+        box.innerHTML = '<div class="meldung m-info">' + esc(status) + '</div>';
+      });
+    }).then(function (log) {
+      box.innerHTML = '<div class="karte"><h2>Arelle-Ergebnis</h2>' +
+        '<pre class="arelle-log">' + esc(log || '(keine Ausgabe)') + '</pre></div>';
+    }).catch(function (e) {
+      box.innerHTML = '<div class="meldung m-fehler">Arelle-Prüfung fehlgeschlagen: ' +
+        esc((e && e.message) || String(e)) + '</div>';
     });
   };
 }
