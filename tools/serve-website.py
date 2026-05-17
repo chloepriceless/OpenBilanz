@@ -44,19 +44,28 @@ def zertifikat_sichern():
     ])
 
 
+class Handler(http.server.SimpleHTTPRequestHandler):
+    """Statischer Datei-Handler. Unterbindet Browser-Caching, damit beim
+    Entwickeln/Testen stets der aktuelle Stand ausgeliefert wird."""
+    extensions_map = dict(http.server.SimpleHTTPRequestHandler.extensions_map)
+
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-cache, must-revalidate')
+        super().end_headers()
+
+
 def main():
     if not os.path.isdir(PUBLIC):
         sys.exit('Ordner public/ nicht gefunden.')
     zertifikat_sichern()
 
     # .webmanifest und .wasm korrekt ausliefern (WebAssembly braucht den MIME-Typ)
-    http.server.SimpleHTTPRequestHandler.extensions_map['.webmanifest'] = \
-        'application/manifest+json'
-    http.server.SimpleHTTPRequestHandler.extensions_map['.wasm'] = 'application/wasm'
+    Handler.extensions_map['.webmanifest'] = 'application/manifest+json'
+    Handler.extensions_map['.wasm'] = 'application/wasm'
 
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(CERT, KEY)
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=PUBLIC)
+    handler = functools.partial(Handler, directory=PUBLIC)
     httpd = http.server.ThreadingHTTPServer(('0.0.0.0', PORT), handler)
     httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
 
