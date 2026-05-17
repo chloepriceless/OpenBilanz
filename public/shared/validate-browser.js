@@ -14,10 +14,10 @@
  * Ergebnis-Form identisch zu lib/validate.js, damit die Anzeige beide kann.
  * ========================================================================= */
 (function (root, factory) {
-  var api = factory();
+  var api = factory(root);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.BrowserValidate = api;
-})(typeof self !== 'undefined' ? self : this, function () {
+})(typeof self !== 'undefined' ? self : this, function (root) {
   'use strict';
 
   function num(v) {

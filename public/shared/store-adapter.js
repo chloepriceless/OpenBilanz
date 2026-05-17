@@ -23,10 +23,10 @@
  * backupStatus/markiereExport/getMeta/setMeta fuer Export, Import und Backup.
  * ========================================================================= */
 (function (root, factory) {
-  var api = factory();
+  var api = factory(root);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.StoreAdapter = api;
-})(typeof self !== 'undefined' ? self : this, function () {
+})(typeof self !== 'undefined' ? self : this, function (root) {
   'use strict';
 
   function jfetch(p, opt) {
