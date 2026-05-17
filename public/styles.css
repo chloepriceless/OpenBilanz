@@ -2,7 +2,7 @@
 :root{
   --bg:#eef1f4; --panel:#ffffff; --ink:#1c2733; --ink-mut:#5f6f7e;
   --line:#d6dde4; --line-2:#e7ecf0;
-  --akzent:#1f5a8f; --akzent-d:#16456e; --akzent-l:#e8f0f7;
+  --akzent:#134276; --akzent-d:#0e3358; --akzent-l:#e6edf6;
   --gut:#1f7a4d; --gut-bg:#e6f4ec;
   --warn:#9a6a00; --warn-bg:#fbf0d6;
   --fehler:#b3261e; --fehler-bg:#fbe5e4;
@@ -25,13 +25,10 @@ a{color:var(--akzent)}
   width:248px;flex:0 0 248px;background:#152634;color:#cdd8e1;
   display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
 }
-.brand{display:flex;gap:11px;align-items:center;padding:20px 18px;border-bottom:1px solid #25394a}
-.brand-logo{
-  width:40px;height:40px;border-radius:9px;background:var(--akzent);
-  color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:16px
-}
-.brand-name{font-weight:600;color:#fff;font-size:15px}
-.brand-sub{font-size:11.5px;color:#8499a8}
+.brand{display:flex;flex-direction:column;gap:5px;align-items:flex-start;
+  padding:15px 18px;background:#fff;border-bottom:1px solid #25394a}
+.brand-img{width:185px;height:auto;display:block}
+.brand-sub{font-size:11.5px;color:#5a6b78}
 #nav{padding:12px 10px;flex:1;overflow:auto}
 .nav-grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;
   color:#6f8493;margin:14px 10px 5px}
@@ -193,8 +190,8 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 .dialog h3{font-size:16px;margin-bottom:5px}
 
 /* ---- Druckansicht ---- */
-.dok{background:#fff;color:#000;max-width:850px;margin:0 auto;padding:32px 40px;
-  border:1px solid var(--line);font-size:12.5px}
+.dok{background:#fff;color:#000;width:210mm;min-height:297mm;margin:0 auto;
+  padding:18mm;border:1px solid var(--line);font-size:12.5px}
 .dok h1{font-size:17px;text-align:center;margin-bottom:2px}
 .dok .dok-sub{text-align:center;color:#333;margin-bottom:18px;font-size:12px}
 .dok h2{font-size:13.5px;margin:18px 0 7px;border-bottom:1.5px solid #000;padding-bottom:2px}
@@ -210,6 +207,8 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 .dok-zeile.summe{font-weight:700;border-top:1.5px solid #000;border-bottom:2.5px double #000;margin-top:4px}
 .dok-zeile .dz-wert{font-variant-numeric:tabular-nums;white-space:nowrap}
 .dok-fuss{margin-top:24px;font-size:11px;color:#333;border-top:1px solid #888;padding-top:8px}
+.dok-zeile.dz-davon{padding-left:24px;font-size:11px;color:#333;font-style:italic}
+.dok-fussnote{font-size:11px;color:#333;margin:8px 10px 0;font-style:italic}
 .dok-unterschrift{margin-top:34px;display:flex;justify-content:space-between;font-size:11.5px}
 .dok-unterschrift .us{border-top:1px solid #000;padding-top:3px;width:230px;text-align:center}
 
@@ -218,10 +217,12 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 .werte-tab th{background:var(--line-2)}
 .werte-tab .el{font-family:monospace;font-size:11px;color:var(--akzent-d)}
 
+@page{size:A4;margin:18mm}
 @media print{
   .sidebar,.kopf,.zurueck,.btn,.btn-reihe,.no-print,#dialog{display:none !important}
   body{background:#fff}
   .main{padding:0;max-width:none}
-  .dok{border:none;max-width:none;padding:0}
+  /* @page liefert A4-Format + Rand; .dok fuellt nur noch den Druckbereich */
+  .dok{border:none;width:auto;min-height:0;margin:0;padding:0}
   .dok-bilanz .col:first-child{border-right:1px solid #000}
 }

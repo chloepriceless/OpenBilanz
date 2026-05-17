@@ -821,6 +821,15 @@ function dokInhalt(a, u, r, rv) {
   h += '<div class="col">' + dokSeite('passiva', r, rv) + '</div>';
   h += '</div>';
 
+  /* § 272 Abs. 1 S. 3 HGB: das eingeforderte, noch nicht eingezahlte Kapital
+     wird zusaetzlich als Fussnote zur Bilanz bezeichnet */
+  if (r.bilanz.kapital.eingefordertOffen > 0) {
+    h += '<p class="dok-fussnote">In den Forderungen und sonstigen ' +
+      'Vermögensgegenständen sind ' + geld(r.bilanz.kapital.eingefordertOffen) +
+      ' EUR eingefordertes, noch nicht eingezahltes Kapital enthalten ' +
+      '(§ 272 Abs. 1 Satz 3 HGB).</p>';
+  }
+
   /* GuV */
   if (!istEB) {
     h += '<h2>Gewinn- und Verlustrechnung</h2>' + dokGuv(a, r, rv);
@@ -831,32 +840,56 @@ function dokInhalt(a, u, r, rv) {
 
   /* Fuss */
   h += '<div class="dok-fuss">Aufgestellt nach den Vorschriften des HGB. ' +
-       'Erstellt am ' + datumDe(new Date().toISOString().slice(0, 10)) + ' mit OpenBilanz.</div>';
+       'Erstellt mit OpenBilanz.</div>';
   h += '<div class="dok-unterschrift"><div class="us">Ort, Datum</div>' +
        '<div class="us">Geschäftsführung' +
        ((u.geschaeftsfuehrer && u.geschaeftsfuehrer.length)
          ? '<br>' + esc(u.geschaeftsfuehrer.join(', ')) : '') + '</div></div>';
   return h;
 }
+/* § 265 Abs. 8 HGB: ein Posten ohne Betrag braucht nicht aufgefuehrt zu werden -
+   es sei denn, im Vorjahr stand unter diesem Posten ein Betrag. */
+function dzSichtbar(w, v) {
+  return Math.abs(Number(w) || 0) >= 0.005 || Math.abs(Number(v) || 0) >= 0.005;
+}
 function dokSeite(seite, r, rv) {
   var baum = seite === 'aktiva' ? Positionen.AKTIVA : Positionen.PASSIVA;
   var werte = seite === 'aktiva' ? r.bilanz.aktiva : r.bilanz.passiva;
   var werteV = rv ? (seite === 'aktiva' ? rv.bilanz.aktiva : rv.bilanz.passiva) : null;
+  var kap = r.bilanz.kapital, kapV = rv ? rv.bilanz.kapital : null;
   var h = '<div class="dok-zeile lvl-B" style="border:none"><span class="dz-lbl">' +
     (seite === 'aktiva' ? 'AKTIVA' : 'PASSIVA') + '</span>' +
     (rv ? '<span class="dz-wert" style="font-size:10px">Vorjahr</span>' : '') + '</div>';
   baum.forEach(function (b) {
-    if (b.id === 'F' && !(werte['F'] > 0)) return;
+    var grpSichtbar = dzSichtbar(werte[b.id], werteV ? werteV[b.id] : 0);
+    // Eigenkapital stets ausweisen, solange ein gezeichnetes Kapital besteht
+    if (b.id === 'P.A' && kap.gezeichnet > 0) grpSichtbar = true;
+    if (!grpSichtbar) return;
     h += dokZeile(b, werte, werteV, 'B');
     if (b.kinder) {
       b.kinder.forEach(function (k) {
-        var w = werte[k.id] || 0;
-        if (!w && k.auto) return;
+        // § 272 Abs. 1 S. 3 HGB: gezeichnetes Kapital mit offener Absetzung
+        // der nicht eingeforderten ausstehenden Einlagen
+        if (seite === 'passiva' && k.id === 'P.A.I' && kap.nichtEingefordert > 0) {
+          h += dokZeileWert(k.nr, k.label, kap.gezeichnet,
+                kapV ? kapV.gezeichnet : null, 'R');
+          h += dokDavonZeile('Nicht eingeforderte ausstehende Einlagen',
+                -kap.nichtEingefordert, kapV ? -kapV.nichtEingefordert : null);
+          h += dokDavonZeile('Eingefordertes Kapital', kap.eingefordertesKapital,
+                kapV ? kapV.eingefordertesKapital : null);
+          return;
+        }
+        if (!dzSichtbar(werte[k.id], werteV ? werteV[k.id] : 0)) return;
         h += dokZeile(k, werte, werteV, k.typ === 'R' ? 'R' : 'N');
+        // § 272 Abs. 1 S. 3 HGB: eingefordertes, noch nicht eingezahltes
+        // Kapital gesondert unter den Forderungen ausweisen
+        if (seite === 'aktiva' && k.id === 'B.II' && kap.eingefordertOffen > 0) {
+          h += dokDavonZeile('davon eingefordertes, noch nicht eingezahltes Kapital',
+                kap.eingefordertOffen, kapV ? kapV.eingefordertOffen : null);
+        }
       });
     }
   });
-  var sId = seite === 'aktiva' ? 'summeAktiva' : 'summePassiva';
   var sW = seite === 'aktiva' ? r.bilanz.summeAktiva : r.bilanz.summePassiva;
   var sV = rv ? (seite === 'aktiva' ? rv.bilanz.summeAktiva : rv.bilanz.summePassiva) : null;
   h += '<div class="dok-zeile summe"><span class="dz-lbl">' +
@@ -865,11 +898,18 @@ function dokSeite(seite, r, rv) {
   return h;
 }
 function dokZeile(node, werte, werteV, lvl) {
-  var w = werte[node.id] || 0;
   var v = werteV ? (werteV[node.id] || 0) : null;
+  return dokZeileWert(node.nr, node.label, werte[node.id] || 0, v, lvl);
+}
+function dokZeileWert(nr, label, w, v, lvl) {
   return '<div class="dok-zeile lvl-' + lvl + '"><span class="dz-lbl">' +
-    (node.nr ? node.nr + ' ' : '') + esc(node.label) + '</span>' +
-    '<span class="dz-wert">' + geld(w) + (werteV ? '  |  ' + geld(v) : '') + '</span></div>';
+    (nr ? esc(nr) + ' ' : '') + esc(label) + '</span><span class="dz-wert">' +
+    geld(w) + (v != null ? '  |  ' + geld(v) : '') + '</span></div>';
+}
+function dokDavonZeile(label, w, v) {
+  return '<div class="dok-zeile dz-davon"><span class="dz-lbl">' + esc(label) +
+    '</span><span class="dz-wert">' + geld(w) +
+    (v != null ? '  |  ' + geld(v) : '') + '</span></div>';
 }
 function dokGuv(a, r, rv) {
   var schema = Positionen.guvSchema(a.guvVerfahren);

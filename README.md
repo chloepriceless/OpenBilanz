@@ -9,6 +9,12 @@ Jahresabschluss-Funktion kommerzieller Dienste. Alle Daten bleiben auf deinem
 Rechner. Geeignet für die kleine **operativ tätige** GmbH und die
 **vermögensverwaltende** GmbH (Immobilien, Beteiligungen, Wertpapiere).
 
+> ⚠️ **Ohne Gewähr.** OpenBilanz wird ohne jede Gewähr für die Richtigkeit der
+> Berechnungen, Gliederungen und der erzeugten E-Bilanz bereitgestellt und
+> ersetzt keine Steuer- oder Rechtsberatung. Nutzung auf eigene Verantwortung —
+> jeden Abschluss vor Abgabe an das Finanzamt fachlich prüfen lassen.
+> Siehe [Haftungsausschluss](#haftungsausschluss).
+
 ---
 
 ## Schnellstart
@@ -188,11 +194,29 @@ tools/setup-taxonomie.sh      lädt das amtliche Taxonomie-Paket
 MIT-Lizenz — siehe [LICENSE](LICENSE). Zur Herkunft verwendeter Daten siehe
 [DRITTQUELLEN.md](DRITTQUELLEN.md), zum Mitwirken [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Wichtiger Hinweis
+---
 
-Dieses Tool unterstützt bei der **Erstellung** von Bilanz, GuV und E-Bilanz und
-setzt die gesetzlichen Gliederungs- und Rechenregeln um. Es ersetzt **keine
-Steuer- oder Rechtsberatung**. Für Bewertungsfragen (Abschreibungen,
-Rückstellungen, Sacheinlagen, latente Steuern), die Steuererklärungen und in
-Zweifelsfällen sollte fachlicher Rat eingeholt werden. Verantwortlich für
-Richtigkeit und fristgerechte Abgabe bleibt die Geschäftsführung.
+## Haftungsausschluss
+
+OpenBilanz ist ein freies Hilfsmittel zur **Erstellung** von Eröffnungsbilanz,
+Jahresabschluss und E-Bilanz und setzt die gesetzlichen Gliederungs- und
+Rechenregeln nach bestem Wissen um. Dennoch gilt:
+
+- Die Software wird **„wie besehen", ohne jede Gewähr** bereitgestellt. Es wird
+  **keine Gewähr für Richtigkeit, Vollständigkeit oder Aktualität** der
+  Berechnungen, der HGB-Gliederung, der Größenklassen-Einstufung, der
+  Steuerschätzung oder der erzeugten E-Bilanz übernommen.
+- OpenBilanz ist **keine Steuer-, Rechts- oder Buchführungsberatung** und
+  ersetzt diese nicht. Bewertungsfragen (Abschreibungen, Rückstellungen,
+  Sacheinlagen, latente Steuern) und Zweifelsfälle gehören in fachkundige Hand.
+- Die Nutzung erfolgt **auf eigenes Risiko und in eigener Verantwortung**.
+  Jeder Abschluss und jede E-Bilanz ist **vor der Verwendung — insbesondere vor
+  Abgabe an das Finanzamt oder der Offenlegung — durch eine fachkundige Person
+  (z. B. Steuerberater) zu prüfen**.
+- Es wird **keine Haftung** für unmittelbare oder mittelbare Schäden
+  übernommen, die aus der Nutzung entstehen — etwa Steuernachzahlungen, Zinsen,
+  Verspätungszuschläge oder Ordnungsgeld.
+- Verantwortlich für die Richtigkeit der Rechnungslegung und die fristgerechte
+  Abgabe bleibt allein die **Geschäftsführung**.
+
+Mit der Nutzung von OpenBilanz erkennst du diesen Haftungsausschluss an.
