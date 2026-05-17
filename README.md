@@ -215,7 +215,7 @@ MIT-Lizenz — siehe [LICENSE](LICENSE). Zur Herkunft verwendeter Daten siehe
 
 OpenBilanz ist ein freies Hilfsmittel zur **Erstellung** von Eröffnungsbilanz,
 Jahresabschluss und E-Bilanz und setzt die gesetzlichen Gliederungs- und
-Rechenregeln nach bestem Wissen um. Dennoch gilt:
+Rechenregeln nach bestem Wissen von KI/CLaude um. Dennoch gilt:
 
 - Die Software wird **„wie besehen", ohne jede Gewähr** bereitgestellt. Es wird
   **keine Gewähr für Richtigkeit, Vollständigkeit oder Aktualität** der
