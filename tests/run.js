@@ -242,6 +242,19 @@ test('Steuer: KSt 15 % + Soli 5,5 % korrekt', function () {
   eq(s.kst.betrag, 15000, 'KSt');
   eq(s.kst.soli, 825, 'Soli');
 });
+test('Steuer: KSt-Satz jahresabhängig (Investitionssofortprogramm)', function () {
+  eq(Steuer.kstSatz(2027), 0.15, 'Satz VZ 2027');
+  eq(Steuer.kstSatz(2028), 0.14, 'Satz VZ 2028');
+  eq(Steuer.kstSatz(2030), 0.12, 'Satz VZ 2030');
+  eq(Steuer.kstSatz(2033), 0.10, 'Satz ab VZ 2032');
+  eq(Steuer.kstSatz(0), 0.15, 'ohne VZ -> aktueller Satz');
+});
+test('Steuer: KSt-Betrag folgt dem VZ des Abschlusses', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', stichtag: '2028-12-31', steuer: { hebesatz: 400 } };
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 100000 });
+  eq(s.kst.satz, 0.14, 'Satz aus VZ 2028');
+  eq(s.kst.betrag, 14000, 'KSt VZ 2028');
+});
 
 /* ---- Lauf ------------------------------------------------------------- */
 console.log('OpenBilanz - Test-Suite\n');

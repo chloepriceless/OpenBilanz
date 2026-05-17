@@ -14,9 +14,10 @@
  * verbindliche Steuerberechnung. Hinzurechnungen/Kürzungen nach §§ 8/9 GewStG
  * sind nur teilweise abgebildet. Im Zweifel Steuerberater hinzuziehen.
  *
- * Sätze (Stand 2026): KSt 15 % (§ 23 KStG), Soli 5,5 % auf die KSt,
- * GewSt-Steuermesszahl 3,5 % (§ 11 GewStG). Kapitalgesellschaften haben
- * KEINEN gewerbesteuerlichen Freibetrag.
+ * Sätze: KSt 15 % bis VZ 2027, danach stufenweise Absenkung (14 % 2028 …
+ * 10 % ab 2032) nach dem steuerlichen Investitionssofortprogramm 2025;
+ * Soli 5,5 % auf die KSt, GewSt-Steuermesszahl 3,5 % (§ 11 GewStG).
+ * Kapitalgesellschaften haben KEINEN gewerbesteuerlichen Freibetrag.
  * ========================================================================= */
 (function (root, factory) {
   var api = factory();
@@ -25,9 +26,25 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var KST_SATZ = 0.15;       // § 23 Abs. 1 KStG
+  var KST_SATZ = 0.15;       // § 23 Abs. 1 KStG - Satz bis VZ 2027
   var SOLI_SATZ = 0.055;     // SolzG - 5,5 % der Körperschaftsteuer
   var GEWST_MESSZAHL = 0.035;// § 11 Abs. 2 GewStG
+
+  /* Körperschaftsteuersatz nach Veranlagungszeitraum. Das "Gesetz für ein
+   * steuerliches Investitionssofortprogramm" (2025) senkt den Satz ab VZ 2028
+   * stufenweise: 2028 -> 14 %, 2029 -> 13 %, 2030 -> 12 %, 2031 -> 11 %,
+   * ab 2032 -> 10 %. Ohne erkennbaren VZ gilt der aktuelle Satz (15 %). */
+  function kstSatz(vz) {
+    var j = parseInt(vz, 10);
+    if (!j || j <= 2027) return 0.15;
+    if (j >= 2032) return 0.10;
+    return { 2028: 0.14, 2029: 0.13, 2030: 0.12, 2031: 0.11 }[j];
+  }
+  /* Veranlagungszeitraum aus dem Abschluss: Jahr des Wirtschaftsjahr-Endes. */
+  function vzAus(abschluss) {
+    var d = (abschluss && (abschluss.gjBis || abschluss.stichtag)) || '';
+    return parseInt(String(d).slice(0, 4), 10) || 0;
+  }
 
   function n(v) {
     var x = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v)
@@ -81,10 +98,13 @@
         '(§ 8b Abs. 2/3 KStG)', betrag: -verFrei });
     }
     if (zvE < 0) zvE = 0;
-    var kst = cent(zvE * KST_SATZ);
+    var vz = vzAus(abschluss);
+    var satz = kstSatz(vz);
+    var kst = cent(zvE * satz);
     var soli = cent(kst * SOLI_SATZ);
     kstSchritte.push({ text: '= zu versteuerndes Einkommen', betrag: zvE, summe: true });
-    kstSchritte.push({ text: 'Körperschaftsteuer 15 %', betrag: kst });
+    kstSchritte.push({ text: 'Körperschaftsteuer ' + Math.round(satz * 100) + ' %' +
+      (vz && vz >= 2028 ? ' (VZ ' + vz + ')' : ''), betrag: kst });
     kstSchritte.push({ text: 'Solidaritätszuschlag 5,5 %', betrag: soli });
 
     /* ---- Gewerbesteuer ---- */
@@ -136,7 +156,7 @@
     var gesamt = cent(kst + soli + gewst);
     return {
       ergebnisVorSteuern: vorSteuern,
-      kst: { zvE: zvE, betrag: kst, soli: soli, schritte: kstSchritte },
+      kst: { zvE: zvE, betrag: kst, soli: soli, satz: satz, schritte: kstSchritte },
       gewst: { gewerbeertrag: gewerbeertragGerundet, messbetrag: messbetrag,
                betrag: gewst, hebesatz: hebesatz, schritte: gewSchritte },
       gesamtsteuer: gesamt,
@@ -145,6 +165,6 @@
     };
   }
 
-  return { berechne: berechne, KST_SATZ: KST_SATZ, SOLI_SATZ: SOLI_SATZ,
-           GEWST_MESSZAHL: GEWST_MESSZAHL, cent: cent };
+  return { berechne: berechne, kstSatz: kstSatz, KST_SATZ: KST_SATZ,
+           SOLI_SATZ: SOLI_SATZ, GEWST_MESSZAHL: GEWST_MESSZAHL, cent: cent };
 });
