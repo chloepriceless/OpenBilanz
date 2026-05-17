@@ -7,6 +7,11 @@ data/
 taxonomie/*.zip
 taxonomie/german-gaap*/
 
+# Website-Modus: gross gehostete Laufzeit-Assets - nicht im Repo
+public/taxonomie/
+public/pyodide/
+public/wheels/
+
 # Sonstiges
 node_modules/
 *.log

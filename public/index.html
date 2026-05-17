@@ -2,10 +2,21 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
+<!-- Strenge CSP: keine fremden Server, kein Inline-JavaScript. Damit kann der
+     Betreiber einer gehosteten OpenBilanz-Website keine Nutzerdaten empfangen.
+     connect-src 'self' = ausschliesslich eigene Domain (kein Datenabfluss).
+     'unsafe-inline' nur fuer Styles (rein kosmetisch, kein Abflussrisiko).
+     'wasm-unsafe-eval' fuer die kuenftige Browser-Validierung (Pyodide). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Betriebsmodus: 'website' (Browser/IndexedDB). server.js schreibt beim
+     Ausliefern auf 'selfhost' um. -->
+<meta name="openbilanz-mode" content="website">
+<meta name="theme-color" content="#152634">
 <title>OpenBilanz &ndash; Eröffnungsbilanz &amp; Jahresabschluss</title>
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -20,7 +31,8 @@
     <nav id="nav"></nav>
     <div class="sidebar-foot">
       <div id="firmaName">&ndash;</div>
-      <div class="sidebar-foot-sub">Daten lokal in <code>./data</code></div>
+      <div class="sidebar-foot-sub" id="datenHinweis">Daten lokal in <code>./data</code></div>
+      <div id="backupLeiste" hidden></div>
     </div>
   </aside>
 
@@ -38,6 +50,12 @@
 <script src="shared/taxonomie.js"></script>
 <script src="shared/skr04.js"></script>
 <script src="shared/steuer.js"></script>
+<script src="shared/xbrl.js"></script>
+<script src="shared/store-idb.js"></script>
+<script src="shared/validate-browser.js"></script>
+<script src="shared/obz.js"></script>
+<script src="shared/fileio.js"></script>
+<script src="shared/store-adapter.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

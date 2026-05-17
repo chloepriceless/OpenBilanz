@@ -226,3 +226,14 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
   .dok{border:none;width:auto;min-height:0;margin:0;padding:0}
   .dok-bilanz .col:first-child{border-right:1px solid #000}
 }
+
+/* ---- Backup-Leiste (Website-Modus, Seitenleiste) ---- */
+#backupLeiste{margin-top:9px}
+.backup-status{font-size:11px;color:#7c91a0;margin-bottom:6px}
+.backup-status.offen{color:#e3b341}
+.backup-status.gut{color:#5dc98f}
+.backup-btns{display:flex;gap:6px}
+.btn-mini{flex:1;background:#25394a;color:#dce6ee;border:1px solid #35506a;
+  border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;font-family:inherit}
+.btn-mini:hover{background:#2f4759}
+@media print{ #backupLeiste{display:none !important} }

@@ -16,7 +16,7 @@ var Berechnung = require('../public/shared/berechnung.js');
 var Taxonomie  = require('../public/shared/taxonomie.js');
 var SKR04      = require('../public/shared/skr04.js');
 var Steuer     = require('../public/shared/steuer.js');
-var XBRL       = require('../lib/xbrl.js');
+var XBRL       = require('../public/shared/xbrl.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }

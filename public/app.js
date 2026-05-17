@@ -6,11 +6,24 @@
 /* ---- Zustand ----------------------------------------------------------- */
 var S = { unternehmen: null, abschluesse: [], aktiv: null, view: 'start', erklaerungen: true };
 
-/* ---- API --------------------------------------------------------------- */
-function jget(p)        { return fetch(p).then(function (r) { return r.json(); }); }
-function jput(p, body)  { return fetch(p, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(body) }).then(function (r) { return r.json(); }); }
-function jdel(p)        { return fetch(p, { method: 'DELETE' }).then(function (r) { return r.json(); }); }
+/* ---- Persistenz -------------------------------------------------------- */
+window.OPENBILANZ_MODE = (function () {
+  var m = document.querySelector('meta[name="openbilanz-mode"]');
+  return (m && m.content) || 'website';
+})();
+var Store = StoreAdapter.waehle();   /* Website: IndexedDB - Selbst-Hosting: Node-API */
+var BackupHandle = null;             /* gemerktes Datei-Handle der .obz-Sicherung */
+var SitzungsPasswort = null;         /* optionales Backup-Passwort, nur im Sitzungsspeicher */
+
+/* Loest einen Datei-Download im Browser aus. */
+function ladeDatei(inhalt, name, mime) {
+  var blob = new Blob([inhalt], { type: mime || 'application/octet-stream' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+}
 
 /* ---- Formatierung ------------------------------------------------------ */
 function geld(n) {
@@ -50,13 +63,17 @@ function dialogZu() { document.getElementById('dialog').hidden = true; }
 
 /* ---- Start ------------------------------------------------------------- */
 function boot() {
-  jget('/api/state').then(function (st) {
+  Store.ladeState().then(function (st) {
     S.unternehmen = st.unternehmen;
     S.abschluesse = st.abschluesse || [];
     renderNav();
+    initBackupUI();
     if (!S.unternehmen) setView('stammdaten');
     else setView('start');
   });
+  if (Store.modus === 'website' && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
 }
 
 /* ---- Navigation -------------------------------------------------------- */
@@ -108,7 +125,7 @@ function setView(view) {
   else if (view === 'fristen')    renderFristen(m);
 }
 function oeffneAbschluss(id) {
-  jget('/api/abschluss?id=' + encodeURIComponent(id)).then(function (a) {
+  Store.ladeAbschluss(id).then(function (a) {
     if (!a || a.fehler) return;
     S.aktiv = a;
     setView('editor');
@@ -252,10 +269,11 @@ function renderStammdaten(m) {
       }
     });
     if (!neu.name) { alert('Bitte den Firmennamen eingeben.'); return; }
-    jput('/api/unternehmen', neu).then(function (gespeichert) {
+    Store.speichereUnternehmen(neu).then(function (gespeichert) {
       S.unternehmen = gespeichert;
       renderNav();
       hinweisToast('Stammdaten gespeichert.');
+      nachSpeichern();
       if (!S.abschluesse.length) dialogNeuerAbschluss('EROEFFNUNGSBILANZ');
       else setView('start');
     });
@@ -328,9 +346,10 @@ function dialogNeuerAbschluss(vorgabeArt) {
         .sort(function (x, y) { return y.stichtag.localeCompare(x.stichtag); })[0];
       if (vj) a.vorjahrId = vj.id;
     }
-    jput('/api/abschluss', a).then(function (gesp) {
+    Store.speichereAbschluss(a).then(function (gesp) {
       dialogZu();
-      jget('/api/state').then(function (st) {
+      nachSpeichern();
+      Store.ladeState().then(function (st) {
         S.abschluesse = st.abschluesse || [];
         S.aktiv = gesp;
         setView('editor');
@@ -697,12 +716,13 @@ function bindeEditor(m) {
   });
 }
 function speichereStill() {
-  return jput('/api/abschluss', S.aktiv).then(function (g) {
+  return Store.speichereAbschluss(S.aktiv).then(function (g) {
     if (g && !g.fehler) S.aktiv = g;
-    return jget('/api/state');
+    return Store.ladeState();
   }).then(function (st) {
     S.abschluesse = st.abschluesse || [];
     renderNav();
+    return nachSpeichern();
   });
 }
 
@@ -788,14 +808,15 @@ function renderDruck(m) {
   var vj = a.vorjahrId ? null : null; // Vorjahr wird unten geladen
   var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>' +
     '<div class="btn-reihe no-print" style="margin-bottom:14px">' +
-    '<button class="btn btn-pri" onclick="window.print()">Drucken / als PDF speichern</button>' +
+    '<button class="btn btn-pri" id="btnDrucken">Drucken / als PDF speichern</button>' +
     '</div>';
   html += '<div class="dok" id="dok">' + dokInhalt(a, u, r, null) + '</div>';
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
+  m.querySelector('#btnDrucken').onclick = function () { window.print(); };
 
   if (a.vorjahrId) {
-    jget('/api/abschluss?id=' + encodeURIComponent(a.vorjahrId)).then(function (vja) {
+    Store.ladeAbschluss(a.vorjahrId).then(function (vja) {
       if (vja && !vja.fehler) {
         var rv = Berechnung.berechne(vja);
         document.getElementById('dok').innerHTML = dokInhalt(a, u, r, rv);
@@ -975,11 +996,17 @@ function renderEbilanz(m) {
     '</div></div>';
 
   /* 2. Validieren */
+  var valTitel = Store.modus === 'website' ? '2. E-Bilanz prüfen'
+                                           : '2. Gegen die amtliche Taxonomie prüfen';
+  var valHint = Store.modus === 'website'
+    ? 'Konsistenz- und Pflichtangaben-Prüfung im Browser. Die vollständige Prüfung ' +
+      'gegen die amtliche Taxonomie (Arelle) erfolgt im Selbst-Hosting-Modus.'
+    : 'Validierung mit Arelle gegen die Taxonomie ' + Taxonomie.VERSION +
+      ' &ndash; findet Fehler vor der Übermittlung.';
   html += '<div class="karte"><div class="karte-kopf"><div>' +
-    '<h2>2. Gegen die amtliche Taxonomie prüfen</h2>' +
-    '<div class="karte-hint">Validierung mit Arelle gegen die Taxonomie ' +
-    Taxonomie.VERSION + ' &ndash; findet Fehler vor der Übermittlung.</div></div>' +
-    '<button class="btn btn-pri" id="valBtn">Jetzt validieren</button></div>' +
+    '<h2>' + valTitel + '</h2>' +
+    '<div class="karte-hint">' + valHint + '</div></div>' +
+    '<button class="btn btn-pri" id="valBtn">Jetzt prüfen</button></div>' +
     '<div id="valErgebnis"></div></div>';
 
   /* 3. Übermittlung */
@@ -1023,39 +1050,47 @@ function renderEbilanz(m) {
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
   m.querySelector('#dlEbilanz').onclick = function () {
-    window.location = '/api/xbrl?id=' + encodeURIComponent(a.id);
+    Store.erzeugeXBRL(S.unternehmen, a, 'ebilanz').then(function (r) {
+      ladeDatei(r.xml, r.dateiname, 'application/xml; charset=utf-8');
+    });
   };
   m.querySelector('#dlInstanz').onclick = function () {
-    window.location = '/api/xbrl?id=' + encodeURIComponent(a.id) + '&form=instanz';
+    Store.erzeugeXBRL(S.unternehmen, a, 'instanz').then(function (r) {
+      ladeDatei(r.xml, r.dateiname, 'application/xml; charset=utf-8');
+    });
   };
   m.querySelector('#valBtn').onclick = function () {
     var box = document.getElementById('valErgebnis');
-    box.innerHTML = '<div class="meldung m-info">Validierung läuft &hellip; ' +
-      'das Laden der Taxonomie dauert einige Sekunden.</div>';
-    jget('/api/validate?id=' + encodeURIComponent(a.id)).then(function (e) {
+    box.innerHTML = '<div class="meldung m-info">Prüfung läuft &hellip;</div>';
+    Store.validiere(S.unternehmen, a).then(function (e) {
       box.innerHTML = ebilanzValErgebnis(e);
     }).catch(function () {
-      box.innerHTML = '<div class="meldung m-fehler">Validierung nicht möglich.</div>';
+      box.innerHTML = '<div class="meldung m-fehler">Prüfung nicht möglich.</div>';
     });
   };
 }
 function ebilanzValErgebnis(e) {
   var h = '';
+  var amtlich = e.methode !== 'js-konsistenz';
   if (e.ok === true) {
-    h += '<div class="status-ampel ampel-gut">✓ Gültig &ndash; keine Beanstandungen ' +
-      'gegen die amtliche Taxonomie.</div>';
+    h += '<div class="status-ampel ampel-gut">✓ ' + (amtlich
+      ? 'Gültig &ndash; keine Beanstandungen gegen die amtliche Taxonomie.'
+      : 'Keine Beanstandungen in der Konsistenzprüfung.') + '</div>';
   } else if (e.ok === false) {
     h += '<div class="status-ampel ampel-fehler">✕ ' + e.fehler.length +
-      ' Beanstandung(en) gegen die Taxonomie:</div>';
+      ' Beanstandung(en):</div>';
     e.fehler.forEach(function (f) {
       h += '<div class="meldung m-fehler"><b>[' + esc(f.code) + ']</b> ' + esc(f.text) + '</div>';
     });
   } else {
-    h += '<div class="meldung m-warnung">Validierung nicht durchgeführt. ' +
+    h += '<div class="meldung m-warnung">Prüfung nicht durchgeführt. ' +
       (e.arelleVerfuegbar ? '' : 'Arelle ist nicht installiert (pip install arelle-release). ') +
       (e.taxonomiePaket ? '' : 'Taxonomie-Paket fehlt &ndash; siehe tools/setup-taxonomie.sh. ') +
       '</div>';
   }
+  (e.hinweise || []).forEach(function (hw) {
+    h += '<div class="meldung m-info">' + esc(hw) + '</div>';
+  });
   (e.warnungen || []).forEach(function (w) {
     h += '<div class="meldung m-warnung">' + esc(w) + '</div>';
   });
@@ -1348,6 +1383,183 @@ function renderFristen(m) {
 }
 function fr(d, t) {
   return '<tr><td class="f-d">' + d + '</td><td>' + t + '</td></tr>';
+}
+
+/* ===========================================================================
+ * BACKUP / EXPORT / IMPORT  (nur Website-Modus)
+ * ---------------------------------------------------------------------------
+ * Beim Speichern wird die IndexedDB beschrieben; ist eine Sicherungsdatei
+ * bekannt, wird diese zusätzlich lautlos aktualisiert. So lässt sich der Stand
+ * jederzeit auf ein anderes Gerät / in einen anderen Browser übernehmen.
+ * Die .obz-Datei ist das einzige verlässliche Backup.
+ * ========================================================================= */
+function initBackupUI() {
+  var leiste = document.getElementById('backupLeiste');
+  var hinweis = document.getElementById('datenHinweis');
+  if (!Store.unterstuetztExport) { if (leiste) leiste.hidden = true; return; }
+  if (hinweis) hinweis.hidden = true;
+  if (!leiste) return;
+  leiste.hidden = false;
+  leiste.innerHTML =
+    '<div class="backup-status" id="backupStatus">&ndash;</div>' +
+    '<div class="backup-btns">' +
+    '<button class="btn-mini" id="btnSichern">Sichern</button>' +
+    '<button class="btn-mini" id="btnImport">Backup öffnen</button></div>';
+  document.getElementById('btnSichern').onclick = function () { exportiereBackup(); };
+  document.getElementById('btnImport').onclick = function () { importiereBackup(); };
+  Store.getMeta('fileHandle').then(function (h) { BackupHandle = h || null; });
+  aktualisiereBackup();
+}
+
+/* Aktualisiert die Backup-Anzeige in der Seitenleiste. */
+function aktualisiereBackup() {
+  if (!Store.unterstuetztExport) return Promise.resolve();
+  return Store.backupStatus().then(function (b) {
+    var el = document.getElementById('backupStatus');
+    if (!el) return;
+    if (b.aenderungen > 0) {
+      el.className = 'backup-status offen';
+      el.textContent = '● ' + b.aenderungen + ' ungesicherte Änderung' +
+        (b.aenderungen === 1 ? '' : 'en');
+    } else if (b.exportiertAm) {
+      el.className = 'backup-status gut';
+      el.textContent = '✓ Gesichert am ' + datumDe(b.exportiertAm.slice(0, 10));
+    } else {
+      el.className = 'backup-status';
+      el.textContent = 'Noch kein Backup erstellt';
+    }
+  });
+}
+
+/* Nach jedem Speichern: Persistenz anfordern, bekannte Datei lautlos
+ * aktualisieren, Anzeige nachführen. */
+function nachSpeichern() {
+  if (!Store.unterstuetztExport) return Promise.resolve();
+  persistAnfordern();
+  if (BackupHandle && FileIO.unterstuetztPicker) {
+    return schreibeBackup(BackupHandle).then(aktualisiereBackup, function () {
+      return aktualisiereBackup();
+    });
+  }
+  return aktualisiereBackup();
+}
+
+var persistGeprueft = false;
+function persistAnfordern() {
+  if (persistGeprueft || !navigator.storage || !navigator.storage.persist) return;
+  persistGeprueft = true;
+  navigator.storage.persisted().then(function (schon) {
+    if (!schon) navigator.storage.persist();
+  });
+}
+
+/* Erzeugt die .obz-Bytes und schreibt sie (handle bekannt -> lautlos). */
+function schreibeBackup(handle) {
+  return Store.leseSnapshot().then(function (snap) {
+    return OBZ.packen(snap, SitzungsPasswort);
+  }).then(function (bytes) {
+    return FileIO.exportieren(bytes, 'openbilanz-backup.obz', handle);
+  }).then(function (neuHandle) {
+    if (neuHandle) { BackupHandle = neuHandle; return Store.setMeta('fileHandle', neuHandle); }
+  }).then(function () {
+    return Store.markiereExport();
+  });
+}
+
+/* Explizites Sichern über den Knopf in der Seitenleiste. */
+function exportiereBackup() {
+  if (BackupHandle) {
+    schreibeBackup(BackupHandle).then(function () {
+      aktualisiereBackup(); hinweisToast('Backup gespeichert.');
+    }, fehlerToast);
+    return;
+  }
+  dialogBackupPasswort(function (pw) {
+    SitzungsPasswort = pw || null;
+    schreibeBackup(null).then(function () {
+      aktualisiereBackup(); hinweisToast('Backup gespeichert.');
+    }, fehlerToast);
+  });
+}
+
+/* Backup-Datei einlesen und übernehmen (ersetzt den aktuellen Stand). */
+function importiereBackup() {
+  FileIO.importieren().then(function (buf) {
+    return OBZ.entpacken(buf, function () {
+      return new Promise(function (resolve) { dialogPasswortAbfrage(resolve); });
+    });
+  }).then(function (snapshot) {
+    dialogImportBestaetigen(snapshot, function () {
+      Store.schreibeSnapshot(snapshot).then(function () {
+        return Store.setMeta('fileHandle', null);   /* nicht die Quelldatei überschreiben */
+      }).then(function () {
+        BackupHandle = null;
+        SitzungsPasswort = null;
+        hinweisToast('Backup importiert.');
+        boot();
+      });
+    });
+  }, fehlerToast);
+}
+
+/* ---- Backup-Dialoge ---------------------------------------------------- */
+function dialogBackupPasswort(weiter) {
+  dialog('<h3>Backup speichern</h3>' +
+    '<p class="karte-hint">Die Sicherungsdatei (.obz) kann optional mit einem ' +
+    'Passwort geschützt werden. Ohne Passwort wird sie als lesbares JSON ' +
+    'gespeichert.</p>' +
+    feldWrap('Passwort', 'optional',
+      '<input type="password" id="bpPw" autocomplete="new-password">') +
+    '<div class="box box-warn"><b>Hinweis</b>Ein vergessenes Passwort kann nicht ' +
+    'wiederhergestellt werden.</div>' +
+    '<div class="btn-reihe"><button class="btn btn-pri" id="bpOk">Datei wählen &amp; sichern</button>' +
+    '<button class="btn" id="bpAb">Abbrechen</button></div>');
+  document.getElementById('bpAb').onclick = dialogZu;
+  document.getElementById('bpOk').onclick = function () {
+    var pw = document.getElementById('bpPw').value;
+    dialogZu();
+    weiter(pw);
+  };
+}
+function dialogPasswortAbfrage(weiter) {
+  dialog('<h3>Passwort erforderlich</h3>' +
+    '<p class="karte-hint">Diese Sicherung ist verschlüsselt.</p>' +
+    feldWrap('Passwort', '',
+      '<input type="password" id="paPw" autocomplete="current-password">') +
+    '<div class="btn-reihe"><button class="btn btn-pri" id="paOk">Entschlüsseln</button>' +
+    '<button class="btn" id="paAb">Abbrechen</button></div>');
+  document.getElementById('paAb').onclick = function () { dialogZu(); weiter(''); };
+  document.getElementById('paOk').onclick = function () {
+    var pw = document.getElementById('paPw').value;
+    dialogZu();
+    weiter(pw);
+  };
+}
+function dialogImportBestaetigen(snapshot, weiter) {
+  var anz = (snapshot.abschluesse || []).length;
+  var firma = (snapshot.unternehmen && snapshot.unternehmen.name) || 'ohne Firmenname';
+  var datum = snapshot.exportiertAm ? datumDe(snapshot.exportiertAm.slice(0, 10)) : 'unbekannt';
+  dialog('<h3>Backup importieren</h3>' +
+    '<p>Sicherung vom <b>' + esc(datum) + '</b> &ndash; ' + esc(firma) + ', ' +
+    anz + ' Abschluss' + (anz === 1 ? '' : 'e') + '.</p>' +
+    '<div class="box box-warn"><b>Achtung</b>Der Import ersetzt alle aktuell in ' +
+    'diesem Browser gespeicherten Daten.</div>' +
+    '<div class="btn-reihe"><button class="btn btn-pri" id="ibOk">Importieren</button>' +
+    '<button class="btn" id="ibAb">Abbrechen</button></div>');
+  document.getElementById('ibAb').onclick = dialogZu;
+  document.getElementById('ibOk').onclick = function () { dialogZu(); weiter(); };
+}
+
+/* Roter Hinweis-Toast für Fehler (ignoriert abgebrochene Dateiauswahl). */
+function fehlerToast(e) {
+  if (e && e.name === 'AbortError') return;
+  var d = document.createElement('div');
+  d.textContent = (e && e.message) || String(e || 'Fehler');
+  d.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);' +
+    'background:#a4262c;color:#fff;padding:10px 18px;border-radius:7px;z-index:99;' +
+    'font-size:13px;max-width:80%';
+  document.body.appendChild(d);
+  setTimeout(function () { d.remove(); }, 4500);
 }
 
 /* ---- Los ---------------------------------------------------------------- */

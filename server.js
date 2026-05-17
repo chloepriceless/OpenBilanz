@@ -12,7 +12,7 @@ var fs = require('fs');
 var path = require('path');
 
 var store = require('./lib/store.js');
-var xbrl = require('./lib/xbrl.js');
+var xbrl = require('./public/shared/xbrl.js');
 
 var PORT = parseInt(process.env.PORT, 10) || 3000;
 var PUBLIC = path.join(__dirname, 'public');
@@ -22,6 +22,7 @@ var MIME = {
   '.js':   'application/javascript; charset=utf-8',
   '.css':  'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.svg':  'image/svg+xml',
   '.png':  'image/png',
   '.ico':  'image/x-icon'
@@ -53,6 +54,13 @@ function statisch(res, urlPfad) {
   if (datei.indexOf(PUBLIC) !== 0) { res.writeHead(403); return res.end('Forbidden'); }
   fs.readFile(datei, function (err, buf) {
     if (err) { res.writeHead(404); return res.end('Nicht gefunden: ' + rel); }
+    /* Selbst-Hosting-Modus: den Betriebsmodus in index.html umschreiben, damit
+     * der Browser die Node-API statt IndexedDB nutzt. */
+    if (rel === '/index.html') {
+      buf = Buffer.from(String(buf).replace(
+        'name="openbilanz-mode" content="website"',
+        'name="openbilanz-mode" content="selfhost"'));
+    }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(datei)] || 'application/octet-stream' });
     res.end(buf);
   });
