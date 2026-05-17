@@ -34,7 +34,10 @@ Rechner. Geeignet für die kleine **operativ tätige** GmbH und die
 
 ## Schnellstart
 
-Voraussetzung: **Node.js ≥ 18** — keine npm-Abhängigkeiten, kein `npm install`.
+OpenBilanz lässt sich auf zwei Arten betreiben — die Anwendung ist dieselbe:
+
+**1. Selbst-Hosting (lokal, mit Node.js)** — Voraussetzung: **Node.js ≥ 18**,
+keine npm-Abhängigkeiten, kein `npm install`.
 
 ```bash
 git clone <repo-url> OpenBilanz
@@ -42,7 +45,14 @@ cd OpenBilanz
 ./start.sh                      # oder:  node server.js
 ```
 
-Dann im Browser öffnen: **http://localhost:3000**
+Dann im Browser öffnen: **http://localhost:3000**. Die Daten liegen als
+JSON-Dateien im Ordner `data/`.
+
+**2. Website-Modus (rein im Browser)** — der Ordner `public/` wird statisch
+ausgeliefert (z. B. GitHub Pages, Cloudflare Pages). Alle Daten bleiben dann
+**ausschließlich im Browser** des Nutzers (IndexedDB); es werden keinerlei
+Daten an einen Server übertragen. Sicherung und Gerätewechsel laufen über eine
+exportierbare `.obz`-Datei (optional passwortverschlüsselt).
 
 ---
 
@@ -159,7 +169,8 @@ Aufbewahrungspflichten (§ 257 HGB) zeigt das Tool unter „Fristen & Pflichten"
 
 ## Datenablage
 
-Alle Daten liegen als lesbare JSON-Dateien im Ordner **`data/`**:
+**Selbst-Hosting-Modus:** Alle Daten liegen als lesbare JSON-Dateien im Ordner
+**`data/`**:
 
 ```
 data/unternehmen.json          Stammdaten der GmbH
@@ -169,6 +180,13 @@ data/abschluesse/<id>.json     je ein Abschluss (Eröffnungsbilanz / Jahresabsch
 `data/` ist in `.gitignore` ausgenommen (Steuerdaten). Zum revisionssicheren
 Versionieren der eigenen Buchführung die Zeile `data/` aus `.gitignore`
 entfernen.
+
+**Website-Modus:** Die Daten liegen in der **IndexedDB des Browsers** und
+verlassen das Gerät nicht. Über „Sichern" wird eine vollständige
+`.obz`-Sicherungsdatei geschrieben — sie ist Backup und zugleich der Weg, einen
+Stand auf ein anderes Gerät oder in einen anderen Browser zu übertragen
+(„Backup öffnen"). Browser-Speicher ist **kein Ersatz für ein Backup**: die
+`.obz`-Datei regelmäßig sichern.
 
 ---
 
@@ -186,18 +204,25 @@ Arelle (siehe oben).
 ## Projektstruktur
 
 ```
-server.js                     Zero-Dependency-Webserver + JSON-API
+server.js                     Zero-Dependency-Webserver (nur Selbst-Hosting)
 start.sh                      Startskript
-lib/store.js                  Persistenz (JSON-Dateien)
-lib/xbrl.js                   E-Bilanz-XBRL und EBilanz-Container
-lib/validate.js               Validierung gegen die Taxonomie (Arelle)
+lib/store.js                  Persistenz JSON-Dateien (Selbst-Hosting)
+lib/validate.js               Validierung gegen die Taxonomie via Arelle (Selbst-Hosting)
 public/index.html, app.js     Oberfläche
 public/styles.css             Gestaltung inkl. Druck-Layout
+public/manifest.webmanifest   PWA-Manifest (Website-Modus)
+public/sw.js                  Service Worker, offline-fähig (Website-Modus)
 public/shared/positionen.js   HGB-Gliederung Bilanz/GuV (§§ 266, 275)
 public/shared/berechnung.js   Rechenkern (Summen, Bilanzgleichung, Größenklasse)
 public/shared/taxonomie.js    Mapping HGB-Position → E-Bilanz-Taxonomie 6.9
 public/shared/skr04.js        Kontenrahmen SKR04 inkl. vv-GmbH-Konten
 public/shared/steuer.js       Steuerschätzung KSt / Soli / GewSt
+public/shared/xbrl.js         E-Bilanz-XBRL und EBilanz-Container
+public/shared/store-idb.js    Browser-Persistenz via IndexedDB (Website-Modus)
+public/shared/store-adapter.js  Speicheradapter für beide Betriebsarten
+public/shared/obz.js          .obz-Sicherung: packen, optional verschlüsseln
+public/shared/fileio.js       Datei-Export/-Import (File System Access API)
+public/shared/validate-browser.js  E-Bilanz-Konsistenzprüfung im Browser
 tests/run.js                  Test-Suite
 tools/setup-taxonomie.sh      lädt das amtliche Taxonomie-Paket
 ```

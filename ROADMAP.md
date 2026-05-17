@@ -64,7 +64,15 @@ Versionswechsel gegen die neue XSD prüfen. Siehe Beobachtungsliste (Abschnitt 5
 
 ---
 
-## 2. Architektur-Idee: OpenBilanz als Website mit lokaler Datenhaltung
+## 2. Website-Variante mit lokaler Datenhaltung
+
+> ✅ **Umgesetzt (Kern-Variante).** IndexedDB-Datenhaltung, `.obz`-Export/Import
+> mit optionaler Verschlüsselung (PBKDF2/AES-GCM), File System Access API mit
+> Download-Rückfall, Export-beim-Speichern, PWA (Manifest + Service Worker),
+> strenge CSP und der Dual-Mode (das Selbst-Hosting bleibt unverändert lauffähig)
+> sind implementiert. **Offen:** die vollständige Taxonomie-Validierung via
+> Arelle/Pyodide im Browser (Abschnitt 2 unten) — bis dahin prüft der
+> Website-Modus per JS-Konsistenzprüfung.
 
 **Idee:** OpenBilanz als öffentliche Website betreiben, bei der **alle
 Nutzerdaten ausschließlich im Browser des Nutzers** bleiben — keine
@@ -99,6 +107,42 @@ XBRL-Erzeugung (`lib/xbrl.js`) ist reines JavaScript ohne Node-Abhängigkeiten.
   Standard; (2) Arelle-Vollvalidierung im optionalen Selbst-Hosting-Modus
   (`node server.js` bleibt erhalten); (3) experimentell Arelle im Browser via
   Pyodide.
+
+### Export beim Speichern (Geräte- und Browserwechsel)
+
+Da im Browser-Modell kein Server die Daten hält, ist eine **Export-Datei** der
+Weg, einen Stand auf ein anderes Gerät oder in einen anderen Browser zu
+übertragen. Vorgeschlagener Ablauf — beim Klick auf „Speichern" laufen zwei
+Schritte:
+
+1. **IndexedDB** wird geschrieben (sofort, ohne Rückfrage).
+2. Eine **Export-Datei** wird aktualisiert — ein vollständiger Schnappschuss
+   (Unternehmensdaten + alle Abschlüsse + Exportzeitpunkt), nicht nur die
+   geänderten Einträge.
+
+Auslieferung der Datei, zwei Wege mit automatischem Rückfall:
+
+- **File System Access API (Chrome/Edge):** Der Nutzer wählt einmalig eine
+  Datei (`openbilanz.obz`); das Datei-Handle wird in IndexedDB gemerkt, danach
+  überschreibt jedes Speichern lautlos dieselbe Datei — eine einzige, stets
+  aktuelle Backup-Datei.
+- **Download-Fallback (Firefox/Safari):** klassischer Datei-Download. Nicht bei
+  jedem Speichern (Download-Ordner läuft voll, Browser blockieren automatische
+  Mehrfach-Downloads), sondern über einen eigenen Knopf „Sitzung beenden &
+  Backup" bzw. „Backup exportieren".
+
+Fortsetzen auf einem anderen Gerät/Browser: dort „Backup öffnen" → die Datei
+befüllt die IndexedDB → Weiterarbeit am letzten Stand.
+
+Rahmenbedingungen:
+
+- **Import ersetzt den lokalen Stand** („die Datei ist die Wahrheit"). Das
+  trägt nur, wenn nicht in zwei Browsern gleichzeitig ohne zwischenzeitlichen
+  Abgleich gearbeitet wird — das Tool muss darauf hinweisen.
+- **Backup-Status anzeigen** („letzter Export: vor 3 Änderungen / vor 2 Tagen"),
+  damit auffällt, wenn die IndexedDB neuer ist als die Datei.
+- Vollautomatischer Export beim Tab-Schließen (`beforeunload`) ist unzuverlässig
+  — ein bewusster „Speichern"-Klick ist der verlässliche Auslöser.
 
 ### Migrationsaufwand
 
