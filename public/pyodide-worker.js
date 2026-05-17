@@ -30,16 +30,15 @@ function initialisieren() {
     importScripts('pyodide/pyodide.js');
     pyodide = await loadPyodide({ indexURL: 'pyodide/' });
 
-    melde('status', 'Python-Pakete werden geladen …');
-    await pyodide.loadPackage(['lxml', 'numpy', 'pillow', 'regex', 'pyparsing',
-      'python-dateutil', 'jsonschema', 'certifi', 'micropip']);
-
-    melde('status', 'Arelle wird installiert …');
+    melde('status', 'Arelle und Abhängigkeiten werden installiert …');
+    await pyodide.loadPackage('micropip');
     var liste = await (await fetch('wheels/wheels.json')).json();
     var urls = liste.map(function (w) { return 'wheels/' + w; });
+    /* Standard deps=True: micropip loest Arelles Abhaengigkeiten (lxml, regex,
+     * numpy …) aus der Pyodide-Distribution auf - ohne PyPI-Zugriff. */
     await pyodide.runPythonAsync(
       'import micropip\n' +
-      'await micropip.install(' + JSON.stringify(urls) + ', deps=False)\n');
+      'await micropip.install(' + JSON.stringify(urls) + ')\n');
 
     melde('status', 'Amtliche Taxonomie wird geladen …');
     var zip = new Uint8Array(await (await fetch('taxonomie/taxonomie.zip')).arrayBuffer());
@@ -58,7 +57,7 @@ onmessage = function (e) {
       'from arelle.RuntimeOptions import RuntimeOptions',
       '_opts = RuntimeOptions(entrypointFile="/instanz.xml",',
       '    internetConnectivity="offline", packages=["/taxonomie.zip"],',
-      '    validate=True, keepOpen=False,',
+      '    validate=True, keepOpen=False, logFile="logToBuffer",',
       '    logFormat="[%(messageCode)s] %(message)s")',
       'with Session() as _s:',
       '    _s.run(_opts)',
