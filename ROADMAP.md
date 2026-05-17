@@ -190,6 +190,7 @@ Zugriff auf den Rechner des Nutzers.
 |---|---|---|---|
 | **Broker-Import (Interactive Brokers Flex/XML)** | Depotauszüge in SKR04-Buchungssätze überführen — passt zum vv-GmbH-Fokus. `Daywalker7754/Generosity` zeigt die Zuordnung (GPL-2.0, nur Referenz). | H (vv-GmbH) | M |
 | **GoBD-Verfahrensdokumentation** | Geführter Fragebogen, der eine zugeschnittene Verfahrensdokumentation als PDF erzeugt. | M | S |
+| **Festschreibung & Unveränderbarkeit der Buchungen (GoBD)** | Buchungssätze nach GoBD (§ 146 AO) gegen nachträgliche Änderung sichern: festgeschriebene Buchungen sind nicht mehr editier-/löschbar, Korrekturen laufen ausschließlich über **Stornobuchungen**, dazu ein **Änderungsprotokoll**. Eine berichtigte E-Bilanz bleibt möglich. Heute sind die Buchungen frei editierbar — für eine prüfungsfeste Buchführung ist das zu ergänzen. | H | M |
 | **E-Rechnung empfangen/anzeigen** | Eingehende ZUGFeRD-/XRechnung-Dateien (EN 16931) parsen und Buchungsvorschläge bilden. Empfang ist seit 01.01.2025 Pflicht. | M | M |
 | **ERiC-Übermittlung (optionales Modul)** | E-Bilanz tatsächlich ans Finanzamt übermitteln. ERiC ist kostenlos, aber registrierungspflichtig und nicht weiterverteilbar — daher opt-in und nicht zero-dependency. | H | L |
 | **BWA / Auswertungen** | Betriebswirtschaftliche Auswertung aus vorhandenen Daten ableiten. | M | S |
