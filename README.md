@@ -71,6 +71,10 @@ exportierbare `.obz`-Datei (optional passwortverschlüsselt).
 | **Vermögensverwaltende GmbH**: Finanzanlagen, Beteiligungen, Mieterträge | ✅ |
 | **Steuerschätzung**: KSt, Soli, GewSt inkl. § 8b KStG und § 9 GewStG | ✅ |
 | **Buchhaltung** mit Kontenrahmen SKR04 (Buchungsjournal, Saldenliste) | ✅ |
+| **Eröffnungsbuchungen** — Saldenvortrag ins neue Jahr (Eröffnungsbilanzkonto 9000) | ✅ |
+| **GoBD-Festschreibung** — unveränderliche Buchungen, Storno, Änderungsprotokoll | ✅ |
+| **Buchungshilfe** — erklärte Standardfälle mit konkreten SKR04-Buchungssätzen | ✅ |
+| **Gesellschafterbeschlüsse** — Generator (Feststellung, Ergebnisverwendung, …) | ✅ |
 | Vorjahresspalte (§ 265 Abs. 2 HGB) | ✅ |
 | Test-Suite (`npm test`) | ✅ |
 
@@ -79,7 +83,9 @@ exportierbare `.obz`-Datei (optional passwortverschlüsselt).
 1. **Direkteingabe** der Bilanzposten — ideal für die Eröffnungsbilanz und
    wenn die Zahlen feststehen.
 2. **Buchhaltung (SKR04)** — laufende Buchungssätze; das Tool bildet daraus
-   Summen-/Saldenliste und überträgt die Salden in Bilanz und GuV.
+   Summen-/Saldenliste und überträgt die Salden in Bilanz und GuV. Inklusive
+   Eröffnungsbuchungen (Saldenvortrag) und GoBD-Festschreibung — siehe Abschnitt
+   [Buchhaltung, GoBD & Gesellschafterbeschlüsse](#buchhaltung-gobd--gesellschafterbeschlüsse).
 
 ---
 
@@ -92,7 +98,58 @@ exportierbare `.obz`-Datei (optional passwortverschlüsselt).
 3. **E-Bilanz** erzeugen, **gegen die Taxonomie validieren**, herunterladen.
 4. **Druckansicht** → Browser „Drucken → Als PDF speichern".
 5. Nach jedem Geschäftsjahr einen **Jahresabschluss** (Bilanz + GuV + Anhang),
-   bei Bedarf mit **Steuerschätzung**.
+   wahlweise per Direkteingabe oder über die **Buchhaltung** (SKR04-Buchungen,
+   Eröffnungsbuchungen, GoBD-Festschreibung), bei Bedarf mit **Steuerschätzung**.
+6. Bei Bedarf **Gesellschafterbeschlüsse** erzeugen (Feststellung des
+   Jahresabschlusses, Ergebnisverwendung u. a.).
+
+---
+
+## Buchhaltung, GoBD & Gesellschafterbeschlüsse
+
+### Buchhaltung nach SKR04
+
+Im Buchhaltungs-Modus eines Jahresabschlusses werden laufende Buchungssätze
+erfasst. Aus den Kontensalden bildet das Tool die Summen- und Saldenliste;
+„Salden in Bilanz/GuV übernehmen" überträgt sie in die HGB-Positionen.
+
+### Eröffnungsbuchungen — Saldenvortrag ins neue Jahr
+
+Eine Jahresabschluss-Buchhaltung beginnt nicht bei null: die Schlussbestände
+des Vorjahres — im ersten Jahr die Eröffnungsbilanz — werden als
+**Eröffnungsbuchungen** gegen das Eröffnungsbilanzkonto **9000** übernommen
+(Bilanzidentität, § 252 Abs. 1 Nr. 1 HGB). Die Karte „Anfangsbestände" erzeugt
+diese Buchungen automatisch aus einem gewählten Quell-Abschluss und übernimmt
+dessen Kapitalblock.
+
+### GoBD: Festschreibung der Buchungen
+
+Buchungen lassen sich **festschreiben** (§ 146 AO). Festgeschriebene Buchungen
+sind unveränderlich und nicht mehr löschbar; eine Korrektur erfolgt
+ausschließlich über eine **Stornobuchung** (Soll/Haben getauscht). Jede
+Festschreibung und jeder Storno wird in einem **Änderungsprotokoll** des
+Abschlusses vermerkt.
+
+### Buchungshilfe
+
+Der Reiter **„Buchungshilfe"** erklärt typische Geschäftsvorfälle einer GmbH
+mit konkreten SKR04-Buchungssätzen: Gründung und Eröffnungsbilanz,
+Eröffnungsbuchungen, Anlagevermögen und Abschreibung, digitale Betriebsmittel
+(Hardware, Software, Domains, Websites, Hosting, Mobilfunk), laufende Einnahmen
+und Ausgaben sowie der Jahresabschluss.
+
+### Gesellschafterbeschlüsse
+
+Der Reiter **„Gesellschafterbeschlüsse"** erzeugt druckbare Beschlussvorlagen:
+Feststellung des Jahresabschlusses (§ 42a GmbHG), Ergebnisverwendung
+(§ 29 GmbHG), Einforderung ausstehender Einlagen, Geschäftsführer-Beschlüsse
+(§ 46 GmbHG) sowie einen **Freitext-Beschluss** für alle übrigen Fälle. Wo
+möglich, werden Zahlen (Bilanzsumme, Jahresergebnis, Stammkapital) direkt aus
+dem Abschluss übernommen.
+
+> Die Beschlussvorlagen sind unverbindliche Muster und ersetzen keine
+> Rechtsberatung. Ladungs- und Formvorschriften sowie der Gesellschaftsvertrag
+> sind eigenverantwortlich zu beachten.
 
 ---
 

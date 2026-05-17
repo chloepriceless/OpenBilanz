@@ -17,6 +17,28 @@ Bewertungslegende: **Nutzen** H/M/N (hoch/mittel/niedrig) ·
 
 ---
 
+## ✅ Bereits umgesetzt (Stand 2026-05)
+
+Seit der ersten Roadmap-Fassung umgesetzt — Details in der
+[README](README.md) und der Git-Historie:
+
+- **Website-Variante mit lokaler Datenhaltung** (Abschnitt 2) — IndexedDB,
+  `.obz`-Export/Import mit optionaler Verschlüsselung, PWA, strenge CSP,
+  Dual-Mode. Arelle-im-Browser via Pyodide als experimentelles Gerüst.
+- **GoBD-Festschreibung der Buchungen** — festgeschriebene Buchungen sind
+  unveränderlich, Korrektur nur per Stornobuchung, mit Änderungsprotokoll.
+- **Eröffnungsbuchungen / Saldenvortrag** — Übernahme der Bestände aus
+  Eröffnungsbilanz bzw. Vorjahr in die Jahresabschluss-Buchhaltung gegen das
+  Eröffnungsbilanzkonto 9000.
+- **Buchungshilfe** — Reiter mit erklärten Standard-Buchungssätzen (Gründung,
+  Eröffnungsbuchungen, Anlagen/Abschreibung, digitale Betriebsmittel, laufende
+  Kosten, Jahresabschluss).
+- **Gesellschafterbeschluss-Generator** — druckbare Vorlagen für Feststellung
+  des Jahresabschlusses, Ergebnisverwendung, Einforderung ausstehender
+  Einlagen, Geschäftsführer-Beschlüsse sowie Freitext-Beschlüsse.
+
+---
+
 ## 1. Korrektheits-Hinweise (vorrangig prüfen)
 
 Diese Punkte betreffen nicht neue Funktionen, sondern die **fachliche
@@ -25,7 +47,7 @@ werden.
 
 ### 1.1 Kontennachweise fehlen in der E-Bilanz
 
-`lib/xbrl.js` überträgt aktuell nur die verdichteten Bilanz- und GuV-Positionen
+`public/shared/xbrl.js` überträgt aktuell nur die verdichteten Bilanz- und GuV-Positionen
 (`de-gaap-ci`-Fakten) sowie die Stammdaten (`de-gcd`). **Kontensalden auf
 Kontenebene werden nicht ausgegeben.**
 
@@ -192,11 +214,10 @@ Zugriff auf den Rechner des Nutzers.
 |---|---|---|---|
 | **Broker-Import (Interactive Brokers Flex/XML)** | Depotauszüge in SKR04-Buchungssätze überführen — passt zum vv-GmbH-Fokus. `Daywalker7754/Generosity` zeigt die Zuordnung (GPL-2.0, nur Referenz). | H (vv-GmbH) | M |
 | **GoBD-Verfahrensdokumentation** | Geführter Fragebogen, der eine zugeschnittene Verfahrensdokumentation als PDF erzeugt. | M | S |
-| **Festschreibung & Unveränderbarkeit der Buchungen (GoBD)** | Buchungssätze nach GoBD (§ 146 AO) gegen nachträgliche Änderung sichern: festgeschriebene Buchungen sind nicht mehr editier-/löschbar, Korrekturen laufen ausschließlich über **Stornobuchungen**, dazu ein **Änderungsprotokoll**. Eine berichtigte E-Bilanz bleibt möglich. Heute sind die Buchungen frei editierbar — für eine prüfungsfeste Buchführung ist das zu ergänzen. | H | M |
 | **E-Rechnung empfangen/anzeigen** | Eingehende ZUGFeRD-/XRechnung-Dateien (EN 16931) parsen und Buchungsvorschläge bilden. Empfang ist seit 01.01.2025 Pflicht. | M | M |
 | **ERiC-Übermittlung (optionales Modul)** | E-Bilanz tatsächlich ans Finanzamt übermitteln. ERiC ist kostenlos, aber registrierungspflichtig und nicht weiterverteilbar — daher opt-in und nicht zero-dependency. | H | L |
 | **BWA / Auswertungen** | Betriebswirtschaftliche Auswertung aus vorhandenen Daten ableiten. | M | S |
-| **KapSt-Anmeldung bei Gewinnausschüttung** | Assistent: 25 % Kapitalertragsteuer + Soli berechnen, Anmeldungs-Datensatz und Ausschüttungsbeschluss-Vorlage erzeugen (Tagesanmeldung). | M | S–M |
+| **KapSt-Anmeldung bei Gewinnausschüttung** | Assistent: 25 % Kapitalertragsteuer + Soli berechnen und den Anmeldungs-Datensatz erzeugen (Tagesanmeldung). Die Ausschüttungs-/Ergebnisverwendungsbeschluss-Vorlage ist über den Beschluss-Generator bereits abgedeckt. | M | S–M |
 | **SKR03 zusätzlich zu SKR04** | Zweiten Kontenrahmen unterstützen. | M | M |
 
 ### Voraussichtlich außerhalb des Fokus
@@ -217,11 +238,11 @@ Zugriff auf den Rechner des Nutzers.
 |---|---|---|---|
 | **Erweiterte Plausibilitätsprüfungen** | Über die Bilanzgleichung hinaus: Steuerrückstellung vs. zvE, Abschreibung vs. Anlagevermögen, Beteiligungserträge vs. Finanzanlagen; Vorjahresabweichung > 20 % „bitte erläutern"; Eigenkapitalquote-Warnung. | H | M |
 | **Mehrere GmbHs (Mandanten)** | Aktuell ist `data/unternehmen.json` einfirmig; vv-GmbH-Inhaber halten oft mehrere Gesellschaften. | H | M |
-| **Mehrjahres-Verwaltung** | Zeitleiste je Mandant (EB → JA 2024 → JA 2025 …) mit Übernahme Schluss- → Eröffnungsbilanz. | H | M |
+| **Mehrjahres-Verwaltung** | Zeitleiste je Mandant (EB → JA 2024 → JA 2025 …). Die Übernahme der Bestände ins Folgejahr ist als Eröffnungsbuchung bereits umgesetzt; offen ist die mandantenweite Jahres-Zeitleiste. | M | M |
 | **Geführter Erfassungs-Assistent** | Schrittweise Eingabe in kleinen Abschnitten statt eines großen Formulars. | M | M |
 | **Demo-/Beispieldaten** | Je ein Beispiel (operative GmbH, vv-GmbH) auf Knopfdruck ladbar — Einstieg ohne echte Steuerdaten. | M | S |
 | **Glossar & Kontexthilfe** | Jeder §-Verweis und HGB-Begriff mit Tooltip; durchsuchbares Glossar. | M | S–M |
-| **Audit-Trail / Versionierung der Daten** | Änderungsprotokoll mit Zeitstempel; aktuell sind die JSON-Dateien frei editierbar und damit nicht revisionssicher. | M | M |
+| **Audit-Trail / Versionierung der Daten** | Übergreifendes Änderungsprotokoll mit Zeitstempel. Buchungen sind über die GoBD-Festschreibung bereits geschützt; Stammdaten und Bilanzwerte bleiben frei editierbar. | M | M |
 | **Barrierefreiheit (WCAG 2.1/2.2 AA)** | Tastaturbedienung, Kontraste, Beschriftungen, Überschriftenhierarchie. | M | M |
 | **Anlagenspiegel** | Für nicht-Kleinst-GmbHen Pflicht (§ 284 Abs. 3 HGB) und E-Bilanz-Mussfeld. | M | L |
 
