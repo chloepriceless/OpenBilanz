@@ -40,6 +40,10 @@ a{color:var(--akzent)}
 .nav-item.aktiv{background:var(--akzent);color:#fff;font-weight:500}
 .nav-item .ic{width:17px;text-align:center;opacity:.85}
 .nav-sub{font-size:12.5px;padding-left:30px;color:#9fb0bd}
+.nav-unter{padding:6px 11px 6px 37px;border-radius:6px;cursor:pointer;
+  color:#9fb0bd;font-size:12.5px;margin-bottom:1px}
+.nav-unter:hover{background:#1f3445}
+.nav-unter.aktiv{background:var(--akzent);color:#fff;font-weight:500}
 .sidebar-foot{padding:13px 18px;border-top:1px solid #25394a;font-size:12px}
 .sidebar-foot #firmaName{color:#fff;font-weight:500}
 .sidebar-foot-sub{color:#7c91a0;font-size:11px;margin-top:2px}

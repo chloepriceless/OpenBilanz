@@ -87,9 +87,17 @@ function renderNav() {
   if (!S.abschluesse.length) n.push('<div class="nav-sub">noch keine vorhanden</div>');
   S.abschluesse.forEach(function (a) {
     var ic = a.art === 'EROEFFNUNGSBILANZ' ? '◈' : '▤';
-    var akt = S.view === 'editor' && S.aktiv && S.aktiv.id === a.id;
-    n.push('<div class="nav-item' + (akt ? ' aktiv' : '') + '" data-oeffne="' + a.id + '">' +
+    var offen = S.aktiv && S.aktiv.id === a.id;
+    n.push('<div class="nav-item' + (offen ? ' aktiv' : '') + '" data-oeffne="' + a.id + '">' +
            '<span class="ic">' + ic + '</span><span>' + esc(a.bezeichnung || a.stichtag) + '</span></div>');
+    if (offen) {
+      var istEB = a.art === 'EROEFFNUNGSBILANZ';
+      n.push(navUnter('editor', istEB ? 'Bilanz' : 'Bilanz &amp; GuV'));
+      n.push(navUnter('buchhaltung', 'Buchhaltung'));
+      if (!istEB) n.push(navUnter('steuer', 'Steuern'));
+      n.push(navUnter('ebilanz', 'E-Bilanz'));
+      n.push(navUnter('druck', 'Druckansicht'));
+    }
   });
   n.push('<div class="nav-item" data-akt="neu"><span class="ic">+</span><span>Neuer Abschluss</span></div>');
   n.push('<div class="nav-grp">Stammdaten</div>');
@@ -98,13 +106,26 @@ function renderNav() {
   n.push(navItem('fristen', '⚠', 'Fristen &amp; Pflichten'));
   document.getElementById('nav').innerHTML = n.join('');
 
-  document.querySelectorAll('#nav .nav-item').forEach(function (el) {
+  document.querySelectorAll('#nav .nav-item, #nav .nav-unter').forEach(function (el) {
     el.onclick = function () {
-      if (el.dataset.oeffne) return oeffneAbschluss(el.dataset.oeffne);
+      if (el.dataset.oeffne) {
+        if (S.aktiv && S.aktiv.id === el.dataset.oeffne) return setView('editor');
+        return mitSpeichern(function () { oeffneAbschluss(el.dataset.oeffne); });
+      }
       if (el.dataset.akt === 'neu') return dialogNeuerAbschluss();
-      if (el.dataset.view) return setView(el.dataset.view);
+      if (el.dataset.sub)  return mitSpeichern(function () { setView(el.dataset.sub); });
+      if (el.dataset.view) return mitSpeichern(function () { setView(el.dataset.view); });
     };
   });
+}
+function navUnter(view, label) {
+  return '<div class="nav-unter' + (S.view === view ? ' aktiv' : '') +
+         '" data-sub="' + view + '">' + label + '</div>';
+}
+/* Fuehrt fn aus; sichert vorher stillschweigend, wenn der Editor offen ist. */
+function mitSpeichern(fn) {
+  if (S.view === 'editor' && S.aktiv) speichereStill().then(fn);
+  else fn();
 }
 function navItem(view, ic, label) {
   return '<div class="nav-item' + (S.view === view ? ' aktiv' : '') + '" data-view="' + view + '">' +
@@ -449,10 +470,6 @@ function renderEditor(m) {
             ? 'Eröffnungsbilanz nach § 242 Abs. 1 HGB zum ' + datumDe(a.stichtag) + '.'
             : 'Jahresabschluss (Bilanz, GuV, Anhang) zum ' + datumDe(a.stichtag) + '.') + '</p></div>' +
           '<div class="btn-reihe">' +
-          '<button class="btn" data-v="druck">Druckansicht</button>' +
-          '<button class="btn" data-v="ebilanz">E-Bilanz</button>' +
-          (istEB ? '' : '<button class="btn" data-v="steuer">Steuern</button>') +
-          '<button class="btn" data-v="buchhaltung">Buchhaltung</button>' +
           '<button class="btn btn-pri" id="edSpeichern">Speichern</button>' +
           '</div></div>';
 
