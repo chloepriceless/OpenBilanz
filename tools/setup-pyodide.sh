@@ -47,6 +47,29 @@ mkdir -p "$WHEELS_DIR"
 python3 -m pip download --no-deps --only-binary=:all: --dest "$WHEELS_DIR" \
   "arelle-release==$ARELLE_VERSION" isodate bottle jaconv truststore filelock \
   openpyxl et-xmlfile
+# Native GUI-Bibliotheken aus dem Arelle-Wheel entfernen (TkTable o. ae.):
+# reine Linux/Mac/Windows-Binaries, die Pyodide nicht laden kann und die fuer
+# die kopflose Validierung nicht gebraucht werden.
+python3 - "$WHEELS_DIR" <<'PY'
+import zipfile, glob, os, sys
+wd = sys.argv[1]
+treffer = glob.glob(os.path.join(wd, 'arelle_release-*.whl'))
+if treffer:
+    src = treffer[0]; tmp = src + '.tmp'
+    def strip(n): return n.startswith('arelle/resources/libs/')
+    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for it in zin.infolist():
+            if strip(it.filename):
+                continue
+            data = zin.read(it.filename)
+            if it.filename.endswith('.dist-info/RECORD'):
+                lines = [l for l in data.decode('utf-8').splitlines()
+                         if l and not strip(l.split(',')[0])]
+                data = ('\n'.join(lines) + '\n').encode('utf-8')
+            zout.writestr(it, data)
+    os.replace(tmp, src)
+    print('  Arelle-Wheel bereinigt (native GUI-Bibliotheken entfernt)')
+PY
 # Manifest fuer den Web-Worker (Liste der .whl-Dateien)
 python3 -c "import json, glob, os; os.chdir('$WHEELS_DIR'); \
 open('wheels.json','w').write(json.dumps(sorted(glob.glob('*.whl'))))"
