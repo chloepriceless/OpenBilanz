@@ -19,6 +19,8 @@ var Steuer     = require('../public/shared/steuer.js');
 var Ustva      = require('../public/shared/ustva.js');
 var Mt940      = require('../public/shared/mt940.js');
 var Datev      = require('../public/shared/datev.js');
+var JournalExport = require('../public/shared/journalexport.js');
+var Gdpdu      = require('../public/shared/gdpdu.js');
 var XBRL       = require('../public/shared/xbrl.js');
 
 var tests = [], pass = 0, fail = 0;
@@ -441,6 +443,42 @@ test('DATEV: liest EXTF-Buchungsstapel mit Soll/Haben-Richtung', function () {
 });
 test('DATEV: meldet Fehler ohne EXTF-Kopfzeile', function () {
   ok(Datev.parse('a;b;c\n1;2;3').fehler, 'Fehler ohne EXTF-Kopf');
+});
+
+/* ---- Journal-Export CSV / JSON --------------------------------------- */
+test('Journal-Export: CSV mit Kopfzeile und einer Zeile je Buchung', function () {
+  var a = { buchungen: [
+    { datum: '2026-03-01', soll: '1800', haben: '4400', betrag: 1190, text: 'Erlös', fest: true },
+    { datum: '2026-03-05', soll: '6300', haben: '1800', betrag: 50, text: 'Büro' }
+  ] };
+  var zeilen = JournalExport.csv(a).replace(/^﻿/, '').replace(/\r\n$/, '').split('\r\n');
+  eq(zeilen.length, 3, 'Kopfzeile + 2 Buchungen');
+  eq(zeilen[0], 'Datum;Soll;Haben;Betrag;Text;Festgeschrieben', 'Kopfzeile');
+  ok(zeilen[1].indexOf('1190,00') >= 0, 'Betrag mit Dezimalkomma');
+  ok(zeilen[1].indexOf(';ja') >= 0 && zeilen[2].indexOf(';nein') >= 0, 'Festschreibungs-Spalte');
+});
+test('Journal-Export: JSON ist gültig und enthält die Buchungen', function () {
+  var a = { id: 'A-1', bezeichnung: 'JA 2026', buchungen: [
+    { datum: '2026-03-01', soll: '1800', haben: '4400', betrag: 100, text: 'x' }
+  ] };
+  var o = JSON.parse(JournalExport.json(a));
+  eq(o.format, 'openbilanz-journal', 'Format-Kennung');
+  eq(o.buchungen.length, 1, 'eine Buchung');
+  eq(o.buchungen[0].betrag, 100, 'Betrag');
+  eq(o.buchungen[0].festgeschrieben, false, 'Festschreibungs-Flag');
+});
+/* ---- GDPdU-Export ---------------------------------------------------- */
+test('GDPdU-Export: CSV-Datenzeilen und beschreibende index.xml', function () {
+  var a = { bezeichnung: 'JA 2026', gjVon: '2026-01-01', gjBis: '2026-12-31',
+    buchungen: [ { datum: '2026-03-01', soll: '1800', haben: '4400',
+      betrag: 1190, text: 'Erlös' } ] };
+  var g = Gdpdu.erzeuge(a, { name: 'Test GmbH', ort: 'Berlin' });
+  var zeilen = g.csv.replace(/\r\n$/, '').split('\r\n');
+  eq(zeilen.length, 1, 'eine Datenzeile (ohne Kopf - Spalten beschreibt index.xml)');
+  ok(zeilen[0].indexOf('1190,00') >= 0, 'Betrag mit Dezimalkomma');
+  ok(g.indexXml.indexOf('<!DOCTYPE DataSet') >= 0, 'GDPdU-DTD referenziert');
+  ok(g.indexXml.indexOf('<VariableColumn>') >= 0, 'Spaltenbeschreibung enthalten');
+  ok(g.indexXml.indexOf(g.csvDateiname) >= 0, 'index.xml verweist auf die CSV-Datei');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

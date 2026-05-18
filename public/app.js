@@ -2168,6 +2168,28 @@ function renderBuchhaltung(m) {
     '<input type="file" id="datevImpDatei" accept=".csv,text/csv,text/plain">' +
     '<div id="datevImpVorschau"></div></div>';
 
+  /* Journal-Export (CSV / JSON) */
+  if (a.buchungen.length) {
+    html += '<div class="karte"><h2>Journal-Export</h2>' +
+      '<div class="karte-hint">Das Buchungsjournal maschinenlesbar — CSV für die ' +
+      'Tabellenkalkulation, JSON für eigene Skripte und Pipelines. Der vollständige ' +
+      'Datenbestand liegt in der .obz-Sicherung (reines JSON); Aufbau aller ' +
+      'Formate siehe DATENFORMATE.md.</div><div class="btn-reihe">' +
+      '<button class="btn" id="journalCsv">Journal als CSV</button>' +
+      '<button class="btn" id="journalJson">Journal als JSON</button></div></div>';
+  }
+
+  /* GDPdU-Export (Betriebsprüfung) */
+  if (a.buchungen.length) {
+    html += '<div class="karte"><h2>GDPdU-Export (Betriebsprüfung)</h2>' +
+      '<div class="karte-hint">Datenträgerüberlassung nach GDPdU-Beschreibungs' +
+      'standard: das Buchungsjournal als CSV und eine beschreibende index.xml für ' +
+      'die Prüfsoftware der Finanzverwaltung. Beide Dateien in denselben Ordner ' +
+      'legen.</div><div class="btn-reihe">' +
+      '<button class="btn btn-pri" id="gdpduExport">GDPdU-Dateien herunterladen' +
+      '</button></div></div>';
+  }
+
   /* Bankimport CAMT.053 */
   html += '<div class="karte"><h2>Bankimport (CAMT.053)</h2>' +
     '<div class="karte-hint">Kontoauszug im Format CAMT.053 (ISO 20022) einlesen und ' +
@@ -2302,6 +2324,27 @@ function renderBuchhaltung(m) {
     };
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
     rd.readAsText(f);
+  };
+  function dateiBasis() {
+    return (a.bezeichnung || 'Abschluss').replace(/[^\w]+/g, '_');
+  }
+  var journalCsvBtn = m.querySelector('#journalCsv');
+  if (journalCsvBtn) journalCsvBtn.onclick = function () {
+    ladeDatei(JournalExport.csv(a), 'Buchungsjournal_' + dateiBasis() + '.csv',
+      'text/csv;charset=utf-8');
+  };
+  var journalJsonBtn = m.querySelector('#journalJson');
+  if (journalJsonBtn) journalJsonBtn.onclick = function () {
+    ladeDatei(JournalExport.json(a), 'Buchungsjournal_' + dateiBasis() + '.json',
+      'application/json;charset=utf-8');
+  };
+  var gdpduBtn = m.querySelector('#gdpduExport');
+  if (gdpduBtn) gdpduBtn.onclick = function () {
+    var g = Gdpdu.erzeuge(a, S.unternehmen);
+    ladeDatei(g.csv, g.csvDateiname, 'text/csv;charset=utf-8');
+    setTimeout(function () {
+      ladeDatei(g.indexXml, 'index.xml', 'application/xml;charset=utf-8');
+    }, 400);
   };
   var camtIn = m.querySelector('#camtDatei');
   if (camtIn) camtIn.onchange = function () {
