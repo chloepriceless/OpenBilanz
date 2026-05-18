@@ -268,7 +268,10 @@ function renderStammdaten(m) {
             [['GKV', 'Gesamtkostenverfahren'], ['UKV', 'Umsatzkostenverfahren']]);
   html += f('gmbhTyp', 'Art der Tätigkeit', 'beeinflusst Hinweise und Steuer', 'select',
             [['operativ', 'operativ tätige GmbH'],
-             ['vermögensverwaltend', 'vermögensverwaltende GmbH (Immobilien, Beteiligungen)']]);
+             ['immobilien', 'Immobilien-GmbH (eigener Grundbesitz)'],
+             ['trading', 'Trading-/Wertpapier-GmbH'],
+             ['hybrid', 'Hybrid (operativ + Kapitalanlage)'],
+             ['vermögensverwaltend', 'vermögensverwaltend (Beteiligungen allgemein)']]);
   html += '</div></div>';
 
   html += '<div class="karte"><h2>Geschäftsführung</h2>' +
@@ -1272,7 +1275,8 @@ function steuerErgebnis(a) {
     schritte.forEach(function (z) { h += steuerZeile(z); });
     return h + '</table></div>';
   }
-  var h = tab('Körperschaftsteuer', s.kst.schritte);
+  var h = gmbhTypHinweis(a);
+  h += tab('Körperschaftsteuer', s.kst.schritte);
   h += tab('Gewerbesteuer', s.gewst.schritte);
   h += '<div class="karte"><h2>Gesamtbelastung</h2><table class="pos-tab">' +
     steuerZeile({ text: 'Körperschaftsteuer + Solidaritätszuschlag',
@@ -1284,6 +1288,42 @@ function steuerErgebnis(a) {
     'Steuerbelastung: ' + geld(s.durchschnittsbelastung) + ' % des Ergebnisses vor ' +
     'Steuern.</div></div>';
   document.getElementById('steuerErgebnis').innerHTML = h;
+}
+/* Typ-spezifische steuerliche Hinweise je GmbH-Untertyp (Immobilien / Trading
+ * / Hybrid). Erscheint oben in der Steuer-Auswertung und reagiert live auf die
+ * Eingaben (insb. die erweiterte Grundstückskürzung). */
+function gmbhTypHinweis(a) {
+  var typ = (S.unternehmen && S.unternehmen.gmbhTyp) || '';
+  var st = a.steuer || {};
+  var info = {
+    immobilien: '<b>Immobilien-GmbH</b>Verwaltet die GmbH ausschließlich eigenen ' +
+      'Grundbesitz, stellt die erweiterte Grundstückskürzung (§ 9 Nr. 1 Satz 2 ' +
+      'GewStG) den Grundstücksertrag praktisch vollständig von der Gewerbesteuer frei.',
+    trading: '<b>Trading-/Wertpapier-GmbH</b>Die 95-%-Freistellung von Veräußerungs' +
+      'gewinnen aus Anteilen (§ 8b Abs. 2 KStG) ist nicht an Ausschließlichkeit ' +
+      'gebunden — sie bleibt auch neben einer operativen Tätigkeit erhalten.',
+    hybrid: '<b>Hybride GmbH</b>§ 8b KStG wirkt auf den Kapitalanlageteil unabhängig ' +
+      'von der operativen Tätigkeit. Die erweiterte Grundstückskürzung dagegen ' +
+      'entfällt, sobald eine operative Tätigkeit hinzukommt.',
+    'vermögensverwaltend': '<b>Vermögensverwaltende GmbH</b>Beteiligungserträge und ' +
+      'Veräußerungsgewinne sind nach § 8b KStG zu 95 % steuerfrei — die Streubesitz' +
+      'grenzen (< 10 % / < 15 %) beachten.'
+  };
+  var h = '';
+  if (info[typ]) h += '<div class="box box-info">' + info[typ] + '</div>';
+  if (st.erweiterteKuerzung && typ && typ !== 'immobilien') {
+    h += '<div class="box box-warn"><b>Erweiterte Kürzung gefährdet</b>Die erweiterte ' +
+      'Grundstückskürzung setzt <b>ausschließlich</b> die Verwaltung eigenen ' +
+      'Grundbesitzes voraus. Bei einer GmbH mit operativer oder sonstiger Tätigkeit ' +
+      'entfällt sie <b>vollständig</b> (§ 9 Nr. 1 Satz 2 GewStG) — die Berechnung ' +
+      'unten wäre dann zu niedrig angesetzt. Erweiterte Kürzung nur für die reine ' +
+      'Immobilien-GmbH ansetzen.</div>';
+  } else if (st.erweiterteKuerzung && !typ) {
+    h += '<div class="box box-info">Die erweiterte Grundstückskürzung setzt ' +
+      'ausschließlich eigenen Grundbesitz voraus. Art der Tätigkeit in den ' +
+      'Unternehmensdaten setzen, damit dieser Punkt geprüft werden kann.</div>';
+  }
+  return h;
 }
 function steuerZeile(z) {
   return '<tr class="' + (z.summe ? 'zeile-summe' : 'zeile-R') + '">' +
