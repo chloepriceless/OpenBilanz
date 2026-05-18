@@ -79,6 +79,14 @@ input,select,textarea{
   font:inherit;color:var(--ink);background:#fff
 }
 input:focus,select:focus,textarea:focus{outline:2px solid var(--akzent-l);border-color:var(--akzent)}
+/* Sichtbarer Fokus-Indikator für tastaturbediente Elemente (WCAG 2.4.7) */
+.btn:focus-visible,.nav-item:focus-visible,.nav-unter:focus-visible,
+.kachel:focus-visible,.zurueck:focus-visible,a:focus-visible,
+[tabindex]:focus-visible{outline:2px solid var(--akzent);outline-offset:2px}
+/* Sprunglink „Zum Inhalt" - nur sichtbar, wenn fokussiert */
+.skip-link{position:absolute;left:-999px;top:0;z-index:200;background:var(--akzent);
+  color:#fff;padding:8px 14px;border-radius:0 0 6px 0}
+.skip-link:focus{left:0}
 input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
 input[readonly]{background:var(--line-2);color:var(--ink-mut)}
 textarea{min-height:64px;resize:vertical}

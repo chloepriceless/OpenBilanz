@@ -113,7 +113,7 @@ Ausbau- und Verifikationsschritte:
 | **Geführter Erfassungs-Assistent** | Schrittweise Eingabe in kleinen Abschnitten statt eines großen Formulars. | M | M |
 | **Kontexthilfe (Tooltips)** | §-Verweise und Fachbegriffe in den Formularen per Tooltip mit dem Glossar verknüpfen. Das durchsuchbare Glossar selbst ist umgesetzt. | M | M |
 | **Versionierung der Bilanzwerte** | Änderungsprotokoll auch für die Bilanz-/GuV-Werte eines Abschlusses. Das Stammdaten-Änderungsprotokoll ist umgesetzt; strukturelle Abschluss-Ereignisse stehen bereits im Abschluss-Protokoll. | N | M |
-| **Barrierefreiheit (WCAG 2.1/2.2 AA)** | Tastaturbedienung, Kontraste, Beschriftungen, Überschriftenhierarchie. | M | M |
+| **Barrierefreiheit: Audit** | Kontraste, Überschriftenhierarchie und ein Screenreader-Durchgang gegen WCAG 2.2 AA prüfen. Tastaturbedienung, Fokus-Indikatoren, Dialog-Rollen und der Sprunglink sind umgesetzt. | M | M |
 
 ---
 

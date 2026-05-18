@@ -64,13 +64,53 @@ function getNested(obj, pfad) {
 
 /* ---- Dialog ------------------------------------------------------------ */
 function dialog(html) {
-  document.getElementById('dialogBox').innerHTML = html;
+  var box = document.getElementById('dialogBox');
+  box.innerHTML = html;
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
   document.getElementById('dialog').hidden = false;
+  var fokus = box.querySelector('input, select, textarea, button');
+  if (fokus) { try { fokus.focus(); } catch (e) {} }
 }
 function dialogZu() { document.getElementById('dialog').hidden = true; }
 
+/* ---- Barrierefreiheit (WCAG 2.1/2.2) ---------------------------------- */
+/* Klickbare Nicht-Button-Elemente (Span-Buttons, Nav, Kacheln) per Tastatur
+ * bedienbar machen: tabindex + role. Idempotent - nach jedem Rendern aufrufbar. */
+function barrierefrei() {
+  var els = document.querySelectorAll('span.btn, .nav-item, .nav-unter, .kachel, .zurueck');
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    if (el.tagName === 'BUTTON' || el.tagName === 'A') continue;
+    if (!el.hasAttribute('tabindex')) el.tabIndex = 0;
+    if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+  }
+}
+/* Einmalig: Enter/Leertaste aktiviert fokussierte Span-Buttons, Escape
+ * schließt einen offenen Dialog. */
+function installTastatur() {
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      var dlg = document.getElementById('dialog');
+      if (dlg && !dlg.hidden) { dialogZu(); return; }
+    }
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      var el = e.target, t = el && el.tagName;
+      if (!el || !el.classList) return;
+      if (t === 'BUTTON' || t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || t === 'A') return;
+      if (el.classList.contains('btn') || el.classList.contains('nav-item') ||
+          el.classList.contains('nav-unter') || el.classList.contains('kachel') ||
+          el.classList.contains('zurueck')) {
+        e.preventDefault();
+        el.click();
+      }
+    }
+  });
+}
+
 /* ---- Start ------------------------------------------------------------- */
 function boot() {
+  installTastatur();
   Store.ladeState().then(function (st) {
     S.unternehmen = st.unternehmen;
     S.abschluesse = st.abschluesse || [];
@@ -158,6 +198,7 @@ function renderNav() {
       if (el.dataset.view) return mitSpeichern(function () { setView(el.dataset.view); });
     };
   });
+  barrierefrei();
 }
 function navUnter(view, label) {
   return '<div class="nav-unter' + (S.view === view ? ' aktiv' : '') +
@@ -194,6 +235,7 @@ function setView(view) {
   else if (view === 'hilfe')      renderHilfe(m);
   else if (view === 'glossar')    renderGlossar(m);
   else if (view === 'beschluesse')renderBeschluesse(m);
+  barrierefrei();
 }
 function oeffneAbschluss(id) {
   Store.ladeAbschluss(id).then(function (a) {
@@ -423,6 +465,7 @@ function feldWrap(label, sub, inner) {
 }
 function hinweisToast(t) {
   var d = document.createElement('div');
+  d.setAttribute('role', 'status');
   d.textContent = t;
   d.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);' +
     'background:#152634;color:#fff;padding:10px 18px;border-radius:7px;z-index:99;font-size:13px';
