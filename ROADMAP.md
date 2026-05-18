@@ -113,7 +113,6 @@ Ausbau- und Verifikationsschritte:
 | **Mehrere GmbHs (Mandanten)** | Aktuell ist `data/unternehmen.json` einfirmig; vv-GmbH-Inhaber halten oft mehrere Gesellschaften. | H | M |
 | **Mehrjahres-Verwaltung** | Zeitleiste je Mandant (EB → JA 2024 → JA 2025 …). Die Übernahme der Bestände ins Folgejahr ist als Eröffnungsbuchung bereits umgesetzt; offen ist die mandantenweite Jahres-Zeitleiste. | M | M |
 | **Geführter Erfassungs-Assistent** | Schrittweise Eingabe in kleinen Abschnitten statt eines großen Formulars. | M | M |
-| **Demo-/Beispieldaten** | Je ein Beispiel (operative GmbH, vv-GmbH) auf Knopfdruck ladbar — Einstieg ohne echte Steuerdaten. | M | S |
 | **Glossar & Kontexthilfe** | Jeder §-Verweis und HGB-Begriff mit Tooltip; durchsuchbares Glossar. | M | S–M |
 | **Audit-Trail / Versionierung der Daten** | Übergreifendes Änderungsprotokoll mit Zeitstempel. Buchungen sind über die GoBD-Festschreibung bereits geschützt; Stammdaten und Bilanzwerte bleiben frei editierbar. | M | M |
 | **Barrierefreiheit (WCAG 2.1/2.2 AA)** | Tastaturbedienung, Kontraste, Beschriftungen, Überschriftenhierarchie. | M | M |

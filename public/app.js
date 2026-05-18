@@ -210,6 +210,15 @@ function renderStart(m) {
             'aufstellen (§ 242 Abs. 1 HGB). Legen Sie hier als Erstes Ihre ' +
             'Eröffnungsbilanz an.</div>';
   }
+  if (!S.unternehmen && !S.abschluesse.length) {
+    html += '<div class="box box-info"><b>Zum Ausprobieren: Beispieldaten</b>' +
+      'Lädt eine vollständige Beispiel-GmbH mit Eröffnungsbilanz und Jahresabschluss ' +
+      '2024 &ndash; zum Erkunden des Tools ohne eigene Steuerdaten.' +
+      '<div class="btn-reihe" style="margin-top:9px">' +
+      '<button class="btn" data-demo="operativ">Beispiel: operative GmbH</button>' +
+      '<button class="btn" data-demo="vv">Beispiel: vermögensverwaltende GmbH</button>' +
+      '</div></div>';
+  }
   html += '<div class="kachel-reihe">';
   html += kachel('Eröffnungsbilanz', 'Anlegen / öffnen', eb.length, 'neu-eb');
   html += kachel('Jahresabschlüsse', 'Bilanz, GuV, Anhang', ja.length, 'neu-ja');
@@ -246,6 +255,9 @@ function renderStart(m) {
       else if (el.dataset.k === 'neu-ja') dialogNeuerAbschluss('JAHRESABSCHLUSS');
       else if (el.dataset.k === 'fristen') setView('fristen');
     };
+  });
+  m.querySelectorAll('[data-demo]').forEach(function (el) {
+    el.onclick = function () { demoLaden(el.dataset.demo); };
   });
 }
 function kachel(tag, titel, zahl, k) {
@@ -462,6 +474,38 @@ var STANDARD_METHODEN =
   'des Anlagevermögens werden zu Anschaffungs- oder Herstellungskosten, vermindert ' +
   'um planmäßige Abschreibungen, angesetzt. Forderungen sind zum Nennwert ' +
   'angesetzt. Verbindlichkeiten sind zum Erfüllungsbetrag passiviert.';
+
+/* ---- Beispieldaten laden (Demodaten-Modul) ---------------------------- */
+/* Baut aus einem Demo-Inhalt einen vollständigen Abschluss: frisches
+ * neuerAbschluss()-Gerüst plus die fallspezifischen Felder. */
+function demoAbschluss(inhalt) {
+  var a = neuerAbschluss(inhalt.art);
+  var klon = JSON.parse(JSON.stringify(inhalt));
+  for (var k in klon) if (klon.hasOwnProperty(k)) a[k] = klon[k];
+  return a;
+}
+/* Speichert eine Beispiel-GmbH samt Abschlüssen und springt zur Startseite. */
+function demoLaden(schluessel) {
+  var b = Demodaten.BEISPIELE[schluessel];
+  if (!b) return;
+  Store.speichereUnternehmen(JSON.parse(JSON.stringify(b.unternehmen)))
+    .then(function (u) {
+      S.unternehmen = (u && !u.fehler) ? u : b.unternehmen;
+      return b.abschluesse.reduce(function (kette, inhalt) {
+        return kette.then(function () {
+          return Store.speichereAbschluss(demoAbschluss(inhalt));
+        });
+      }, Promise.resolve());
+    })
+    .then(function () { return Store.ladeState(); })
+    .then(function (st) {
+      S.unternehmen = st.unternehmen;
+      S.abschluesse = st.abschluesse || [];
+      renderNav();
+      hinweisToast('Beispieldaten geladen (' + b.titel + ').');
+      setView('start');
+    });
+}
 
 /* ===========================================================================
  * EDITOR  (Bilanz + GuV + Kapital + Anhang)
