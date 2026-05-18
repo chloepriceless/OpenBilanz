@@ -1,6 +1,6 @@
 # Lokale Daten (Buchhaltung) - bei Bedarf separat sichern/versionieren.
-# Enthaelt Steuerdaten - bewusst NICHT im Repository. Zum revisionssicheren
-# Versionieren der eigenen Buchfuehrung diese Zeile entfernen.
+# Enthaelt Steuerdaten - bewusst NICHT im Repository. Zum Versionieren der
+# eigenen Buchfuehrung mit Git diese Zeile entfernen.
 data/
 
 # E-Bilanz-Taxonomie (~53 MB, amtlich) - per tools/setup-taxonomie.sh laden

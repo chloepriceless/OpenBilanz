@@ -34,10 +34,12 @@ Rechner. Geeignet für die kleine **operativ tätige** GmbH und die
 
 ## Schnellstart
 
-OpenBilanz lässt sich auf zwei Arten betreiben — die Anwendung ist dieselbe:
+OpenBilanz ist **dieselbe Anwendung** in zwei Betriebsarten. Der einzige
+Unterschied: **wo deine Daten liegen.** Das entscheidest du bewusst darüber,
+**wie** du das Tool startest — „lokal betreiben" ist in beiden Arten möglich.
 
-**1. Selbst-Hosting (lokal, mit Node.js)** — Voraussetzung: **Node.js ≥ 18**,
-keine npm-Abhängigkeiten, kein `npm install`.
+**1. Selbst-Hosting-Modus — Daten als Dateien auf der Festplatte.**
+Voraussetzung: **Node.js ≥ 18**, keine npm-Abhängigkeiten, kein `npm install`.
 
 ```bash
 git clone <repo-url> OpenBilanz
@@ -45,8 +47,14 @@ cd OpenBilanz
 ./start.sh                      # oder:  node server.js
 ```
 
-Dann im Browser öffnen: **http://localhost:3000**. Die Daten liegen als
+Dann im Browser öffnen: **http://localhost:3000**. Die Daten liegen als lesbare
 JSON-Dateien im Ordner `data/`.
+
+> **Vorteil dieses Modus:** Die Buchhaltung liegt als normale Dateien im
+> Dateisystem — mit jedem Backup-Werkzeug sicherbar, mit Git versionierbar und
+> unabhängig vom Browser. (Der Browser kann seinen Speicher bei Speicherdruck
+> verwerfen; Dateien auf der Platte nicht.) Dieser Modus läuft ausschließlich
+> lokal auf deinem Rechner.
 
 > **Sicherheit:** Der Server lauscht standardmäßig nur auf `127.0.0.1`
 > (Loopback) und ist damit ausschließlich vom selben Rechner erreichbar. Er hat
@@ -54,11 +62,27 @@ JSON-Dateien im Ordner `data/`.
 > `HOST=0.0.0.0 node server.js` setzen. Das nur in einem vertrauenswürdigen Netz
 > tun, da dann jeder im Netz die Buchhaltungsdaten lesen und ändern kann.
 
-**2. Website-Modus (rein im Browser)** — der Ordner `public/` wird statisch
-ausgeliefert (z. B. GitHub Pages, Cloudflare Pages). Alle Daten bleiben dann
-**ausschließlich im Browser** des Nutzers (IndexedDB); es werden keinerlei
-Daten an einen Server übertragen. Sicherung und Gerätewechsel laufen über eine
-exportierbare `.obz`-Datei (optional passwortverschlüsselt).
+**2. Website-Modus — Daten im Browser.**
+Hier wird nur der Ordner `public/` statisch ausgeliefert, es läuft **kein
+Server-Code**. Alle Daten bleiben **ausschließlich im Browser** des Nutzers
+(IndexedDB); es werden keinerlei Daten an einen Server übertragen. Sicherung und
+Gerätewechsel laufen über eine exportierbare `.obz`-Datei (optional
+passwortverschlüsselt).
+
+Diesen Modus kannst du **ebenfalls lokal** betreiben …
+
+```bash
+python3 tools/serve-website.py   # lokal über HTTPS, Daten im Browser
+```
+
+… oder öffentlich hosten (z. B. GitHub Pages, Cloudflare Pages oder ein eigener
+Webserver). Auch beim öffentlichen Hosting verlässt kein Buchhaltungsdatum das
+Gerät des Nutzers — der Server liefert nur statische Dateien aus.
+
+> **„Lokal" heißt nicht automatisch Selbst-Hosting-Modus.** Auch der
+> Website-Modus läuft lokal auf deinem Rechner. Zu entscheiden ist allein, **wo
+> die Daten liegen sollen**: als Dateien im Ordner `data/` (Selbst-Hosting) oder
+> in der Datenbank des Browsers (Website-Modus).
 
 ---
 
@@ -289,9 +313,11 @@ data/unternehmen.json          Stammdaten der GmbH
 data/abschluesse/<id>.json     je ein Abschluss (Eröffnungsbilanz / Jahresabschluss)
 ```
 
-`data/` ist in `.gitignore` ausgenommen (Steuerdaten). Zum revisionssicheren
-Versionieren der eigenen Buchführung die Zeile `data/` aus `.gitignore`
-entfernen.
+`data/` ist in `.gitignore` ausgenommen (Steuerdaten). Wer die eigene
+Buchführung versionieren möchte, entfernt die Zeile `data/` aus `.gitignore` —
+Git hält dann eine nachvollziehbare Änderungshistorie pro Abschluss fest. (Eine
+Git-Historie ist eine pragmatische Nachvollziehbarkeit, aber kein „revisions-
+sicheres" Archiv im Rechtssinne — sie lässt sich nachträglich umschreiben.)
 
 **Website-Modus:** Die Daten liegen in der **IndexedDB des Browsers** und
 verlassen das Gerät nicht. Über „Sichern" wird eine vollständige
@@ -299,6 +325,13 @@ verlassen das Gerät nicht. Über „Sichern" wird eine vollständige
 Stand auf ein anderes Gerät oder in einen anderen Browser zu übertragen
 („Backup öffnen"). Browser-Speicher ist **kein Ersatz für ein Backup**: die
 `.obz`-Datei regelmäßig sichern.
+
+**Aufbewahrung (GoBD) — in beiden Modi möglich.** Eine ordnungsgemäße,
+nachvollziehbare Aufbewahrung der Buchführung ist eine Pflicht des Nutzers und
+kein Automatismus des Tools. Sie ist in **beiden** Betriebsarten erreichbar: im
+Selbst-Hosting-Modus über die JSON-Dateien in `data/` (Backup bzw. Git), im
+Website-Modus über die regelmäßig gesicherte `.obz`-Datei. Verbindliche Auskunft
+zu den konkreten GoBD-Pflichten geben Steuerberater bzw. Finanzamt.
 
 ---
 
