@@ -1550,6 +1550,7 @@ function renderUstva(m) {
   var von0 = a.gjVon || (jahr + '-01-01');
   var bis0 = a.gjBis || a.stichtag || (jahr + '-12-31');
   var vart = (S.unternehmen && S.unternehmen.versteuerungsart) === 'ist' ? 'ist' : 'soll';
+  var klein = (S.unternehmen && S.unternehmen.kleinunternehmer) === 'ja';
   var vartText = vart === 'ist'
     ? 'Ist-Versteuerung (§ 20 UStG) — die Umsatzsteuer entsteht mit dem ' +
       'Zahlungseingang; Erlöse zum Zahlungsdatum buchen.'
