@@ -21,6 +21,12 @@
  * 10 % ab 2032) nach dem steuerlichen Investitionssofortprogramm 2025;
  * Soli 5,5 % auf die KSt, GewSt-Steuermesszahl 3,5 % (§ 11 GewStG).
  * Kapitalgesellschaften haben KEINEN gewerbesteuerlichen Freibetrag.
+ *
+ * Mindestbesteuerung beim Verlustvortrag: über dem Sockelbetrag von 1 Mio EUR
+ * sind für die KSt (§ 10d Abs. 2 EStG) in den VZ 2024–2027 70 % abziehbar
+ * (Wachstumschancengesetz), ab VZ 2028 wieder 60 %. Für den gewerbesteuerlichen
+ * Fehlbetrag (§ 10a GewStG) gelten durchgehend 60 % — die Anhebung gilt dort
+ * nicht.
  * ========================================================================= */
 (function (root, factory) {
   var api = factory();
@@ -58,14 +64,25 @@
   }
   function cent(v) { return Math.round(n(v) * 100) / 100; }
 
-  /* Verlustabzug nach § 10d Abs. 2 EStG mit Mindestbesteuerung: bis zum
-   * Sockelbetrag (1 Mio EUR) voll, darüber nur 60 % des übersteigenden
-   * Betrags. Liefert den abziehbaren Betrag und den verbleibenden Vortrag. */
-  function verlustabzug(einkommen, vortrag) {
+  /* Mindestbesteuerungs-Quote (§ 10d Abs. 2 EStG) für den 1 Mio EUR
+   * übersteigenden Betrag: durch das Wachstumschancengesetz auf 70 % für die
+   * VZ 2024–2027 angehoben, ab VZ 2028 wieder 60 %. Maßgeblich für die
+   * Körperschaftsteuer; der Gewerbeverlust (§ 10a GewStG) bleibt bei 60 %. */
+  function mindestbestQuoteKSt(vz) {
+    var j = parseInt(vz, 10);
+    return (j >= 2024 && j <= 2027) ? 0.70 : 0.60;
+  }
+
+  /* Verlustabzug nach § 10d Abs. 2 EStG / § 10a GewStG mit Mindestbesteuerung:
+   * bis zum Sockelbetrag (1 Mio EUR) voll, darüber nur zur übergebenen Quote
+   * (KSt 70 % in VZ 2024–2027 bzw. 60 %, GewSt durchgehend 60 %) des
+   * übersteigenden Betrags. Liefert abziehbaren Betrag und Restvortrag. */
+  function verlustabzug(einkommen, vortrag, quote) {
     einkommen = cent(einkommen); vortrag = cent(n(vortrag));
+    quote = (quote == null) ? 0.60 : quote;
     if (einkommen <= 0 || vortrag <= 0) return { abzug: 0, rest: vortrag };
     var grenze = einkommen <= MINDESTBEST_SOCKEL ? einkommen
-      : cent(MINDESTBEST_SOCKEL + (einkommen - MINDESTBEST_SOCKEL) * 0.6);
+      : cent(MINDESTBEST_SOCKEL + (einkommen - MINDESTBEST_SOCKEL) * quote);
     var abzug = cent(Math.min(vortrag, grenze));
     return { abzug: abzug, rest: cent(vortrag - abzug) };
   }
@@ -77,10 +94,22 @@
     var st = (abschluss && abschluss.steuer) || {};
     var guv = guvErgebnis || { werte: {}, jahresergebnis: 0 };
     var hinweise = [];
+    var vz = vzAus(abschluss);
 
     // Ergebnis vor Ertragsteuern = Jahresergebnis + verbuchte Steuern vom Einkommen
     var steuernVomEinkommen = n(guv.werte['gkv.14']) + n(guv.werte['ukv.13']) + n(guv.werte['kst.7']);
     var vorSteuern = cent(n(guv.jahresergebnis) + steuernVomEinkommen);
+    /* Die verkürzte Kleinst-GuV (§ 275 Abs. 5 HGB) führt nur EINE Position
+     * "Steuern" (kst.7); Ertrag- und sonstige Steuern lassen sich daraus nicht
+     * trennen. Sie wird hier vollständig in das Ergebnis vor Ertragsteuern
+     * zurückgerechnet — sind sonstige Steuern enthalten, ist die Bemessungs-
+     * grundlage entsprechend zu hoch angesetzt. */
+    if (n(guv.werte['kst.7']) !== 0) {
+      hinweise.push('Verkürzte Kleinst-GuV: Die Position "Steuern" umfasst Ertrag- ' +
+        'UND sonstige Steuern; sie wird vollständig in das Ergebnis vor ' +
+        'Ertragsteuern zurückgerechnet. Sind darin sonstige Steuern enthalten, ' +
+        'die Bemessungsgrundlage entsprechend mindern.');
+    }
 
     var hebesatz = n(st.hebesatz) || 400;
     var divid = n(st.beteiligungsertraege);
@@ -136,13 +165,15 @@
       }
     }
     if (zvE < 0) zvE = 0;
-    // Verlustvortrag § 10d EStG (i. V. m. § 8 Abs. 1 KStG)
-    var vvKst = verlustabzug(zvE, verlustvortrag);
+    // Verlustvortrag § 10d EStG (i. V. m. § 8 Abs. 1 KStG) - Mindestbesteuerung
+    // mit der für den VZ geltenden Quote (70 % VZ 2024-2027, sonst 60 %).
+    var kstQuote = mindestbestQuoteKSt(vz);
+    var vvKst = verlustabzug(zvE, verlustvortrag, kstQuote);
     if (vvKst.abzug > 0) {
       zvE = cent(zvE - vvKst.abzug);
-      kstSchritte.push({ text: '- Verlustvortrag (§ 10d EStG)', betrag: -vvKst.abzug });
+      kstSchritte.push({ text: '- Verlustvortrag (§ 10d EStG, Mindestbesteuerung ' +
+        Math.round(kstQuote * 100) + ' %)', betrag: -vvKst.abzug });
     }
-    var vz = vzAus(abschluss);
     var satz = kstSatz(vz);
     var kst = cent(zvE * satz);
     var soli = cent(kst * SOLI_SATZ);
@@ -198,15 +229,20 @@
       gewerbeertrag = cent(gewerbeertrag - kuerz);
       gewSchritte.push({ text: '- erweiterte Kürzung Grundbesitz ' +
         '(§ 9 Nr. 1 Satz 2 GewStG)', betrag: -kuerz });
-    } else if (n(st.einfacheKuerzungGrundbesitzwert) > 0) {
-      var kuerzE = cent(n(st.einfacheKuerzungGrundbesitzwert) * 0.0011);
+    } else if (n(st.gezahlteGrundsteuer) > 0) {
+      /* § 9 Nr. 1 Satz 1 GewStG i. d. F. des JStG 2024 (ab Erhebungszeitraum
+       * 2025): Kürzung um die im Erhebungszeitraum als Betriebsausgabe erfasste
+       * Grundsteuer für den zum Betriebsvermögen gehörenden Grundbesitz - kein
+       * Prozentsatz eines Einheits-/Grundsteuerwerts mehr. */
+      var kuerzE = cent(n(st.gezahlteGrundsteuer));
       gewerbeertrag = cent(gewerbeertrag - kuerzE);
-      gewSchritte.push({ text: '- einfache Kürzung 0,11 % des Grundsteuerwerts ' +
+      gewSchritte.push({ text: '- einfache Kürzung: gezahlte Grundsteuer ' +
         '(§ 9 Nr. 1 Satz 1 GewStG)', betrag: -kuerzE });
     }
     if (gewerbeertrag < 0) gewerbeertrag = 0;
-    // Gewerbeverlust § 10a GewStG (Mindestbesteuerung wie § 10d EStG)
-    var vvGew = verlustabzug(gewerbeertrag, verlustvortrag);
+    // Gewerbeverlust § 10a GewStG - Mindestbesteuerung durchgehend mit 60 %
+    // (die Anhebung auf 70 % gilt nur für § 10d EStG, nicht für die GewSt).
+    var vvGew = verlustabzug(gewerbeertrag, verlustvortrag, 0.60);
     if (vvGew.abzug > 0) {
       gewerbeertrag = cent(gewerbeertrag - vvGew.abzug);
       gewSchritte.push({ text: '- Gewerbeverlust (§ 10a GewStG)', betrag: -vvGew.abzug });
@@ -255,6 +291,7 @@
   }
 
   return { berechne: berechne, kstSatz: kstSatz, verlustabzug: verlustabzug,
+           mindestbestQuoteKSt: mindestbestQuoteKSt,
            KST_SATZ: KST_SATZ, SOLI_SATZ: SOLI_SATZ, GEWST_MESSZAHL: GEWST_MESSZAHL,
            GEWST_HZ_FREIBETRAG: GEWST_HZ_FREIBETRAG, cent: cent };
 });

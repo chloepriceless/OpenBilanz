@@ -33,6 +33,11 @@ else
   URL="https://github.com/pyodide/pyodide/releases/download/$PYODIDE_VERSION/$TARBALL"
   echo "  Lade Pyodide $PYODIDE_VERSION (mehrere hundert MB) ..."
   curl -L --fail -o "/tmp/$TARBALL" "$URL"
+  # Plausibilitaetspruefung: muss ein bzip2-Archiv sein (Magic 'BZh').
+  if [ "$(head -c3 "/tmp/$TARBALL" 2>/dev/null)" != "BZh" ]; then
+    echo "  FEHLER: Pyodide-Download ist kein gueltiges bzip2-Archiv." >&2
+    rm -f "/tmp/$TARBALL"; exit 1
+  fi
   echo "  Entpacke ..."
   tar -xjf "/tmp/$TARBALL" -C /tmp
   cp -r /tmp/pyodide/. "$PYODIDE_DIR/"

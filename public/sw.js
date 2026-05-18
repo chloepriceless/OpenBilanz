@@ -15,14 +15,15 @@
  * ========================================================================= */
 'use strict';
 
-var CACHE = 'openbilanz-v3';
+var CACHE = 'openbilanz-v4';
 
 var SHELL = [
   './', './index.html', './styles.css', './app.js', './manifest.webmanifest',
   './pyodide-worker.js',
   './shared/positionen.js', './shared/berechnung.js', './shared/taxonomie.js',
   './shared/skr04.js', './shared/steuer.js', './shared/ustva.js',
-  './shared/mt940.js', './shared/datev.js', './shared/journalexport.js',
+  './shared/mt940.js', './shared/datev.js', './shared/importe.js',
+  './shared/journalexport.js',
   './shared/gdpdu.js', './shared/pruefkette.js', './shared/xbrl.js',
   './shared/store-idb.js', './shared/store-adapter.js',
   './shared/validate-browser.js', './shared/obz.js', './shared/fileio.js',

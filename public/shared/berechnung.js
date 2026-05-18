@@ -238,7 +238,7 @@
         kap.eingezahlt < 12500) {
       meldungen.push({ stufe: 'warnung',
         text: 'Vor Anmeldung der GmbH müssen mind. 12.500 EUR eingezahlt sein ' +
-              '(§ 7 Abs. 2 HGB/GmbHG). Aktuell eingezahlt: ' + kap0(kap.eingezahlt) + ' EUR.' });
+              '(§ 7 Abs. 2 GmbHG). Aktuell eingezahlt: ' + kap0(kap.eingezahlt) + ' EUR.' });
     }
     if (r.bilanz.fehlbetrag > 0) {
       meldungen.push({ stufe: 'warnung',

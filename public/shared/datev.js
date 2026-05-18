@@ -1,5 +1,5 @@
 /* ===========================================================================
- * datev.js  -  Parser für DATEV-EXTF-Buchungsstapel (Import)
+ * datev.js  -  DATEV-EXTF-Buchungsstapel: Import (parse) und Export (erzeuge)
  * ---------------------------------------------------------------------------
  * Liest einen DATEV-Buchungsstapel im EXTF-Format ein - das Gegenstück zum
  * vorhandenen Export. Aufbau der Datei:
@@ -104,5 +104,46 @@
     return { buchungen: buchungen, jahr: jahr };
   }
 
-  return { parse: parse, splitCsv: splitCsv };
+  /* Erzeugt einen DATEV-Buchungsstapel im EXTF-Format (CSV, semikolongetrennt):
+   * Kopfsatz + Spaltenüberschriften + je Buchung eine Datenzeile (Format
+   * Buchungsstapel, Version 13). Spaltenreihenfolge nach DATEV-Format-
+   * beschreibung; vor Übergabe an den Steuerberater dessen DATEV-Import
+   * gegenprüfen. */
+  function erzeuge(a, u) {
+    a = a || {}; u = u || {};
+    var bu = a.buchungen || [];
+    var jahr = String(a.gjBis || a.stichtag || '').slice(0, 4) ||
+               String(new Date().getFullYear());
+    var wjBeginn = String(a.gjVon || (jahr + '-01-01')).replace(/-/g, '');
+    var bis = String(a.gjBis || a.stichtag || (jahr + '-12-31')).replace(/-/g, '');
+    function q(s) { return '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"'; }
+    function p2(x) { return (x < 10 ? '0' : '') + x; }
+    var d = new Date();
+    var ts = '' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) +
+      p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds()) + '000';
+    var berater = String(u.datevBeraterNr || '').replace(/\D/g, '');
+    var mandant = String(u.datevMandantNr || '').replace(/\D/g, '');
+    var kopf = ['"EXTF"', '700', '21', '"Buchungsstapel"', '13', ts, '', '""',
+      '"OpenBilanz"', '""', berater, mandant, wjBeginn, '4', wjBeginn, bis,
+      q('OpenBilanz ' + (a.bezeichnung || '')), '""', '1', '', '0', '"EUR"',
+      '', '', '', '', '', '', '', '', ''].join(';');
+    var spalten = ['Umsatz (ohne Soll/Haben-Kz)', 'Soll/Haben-Kennzeichen', 'WKZ Umsatz',
+      'Kurs', 'Basis-Umsatz', 'WKZ Basis-Umsatz', 'Konto', 'Gegenkonto', 'BU-Schluessel',
+      'Belegdatum', 'Belegfeld 1', 'Belegfeld 2', 'Skonto', 'Buchungstext']
+      .map(q).join(';');
+    var zeilen = [];
+    bu.forEach(function (b) {
+      if (!b || !b.betrag) return;
+      var dd = String(b.datum || bis);
+      var ttmm = dd.slice(8, 10) + dd.slice(5, 7);
+      var umsatz = (Math.round(Math.abs(Number(b.betrag)) * 100) / 100).toFixed(2)
+        .replace('.', ',');
+      zeilen.push([umsatz, '"S"', '"EUR"', '', '', '', b.soll, b.haben, '',
+        ttmm, '', '', '', q(String(b.text || '').slice(0, 60))].join(';'));
+    });
+    return '﻿' + kopf + '\r\n' + spalten + '\r\n' +
+      zeilen.join('\r\n') + (zeilen.length ? '\r\n' : '');
+  }
+
+  return { parse: parse, splitCsv: splitCsv, erzeuge: erzeuge };
 });

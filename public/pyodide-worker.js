@@ -32,7 +32,15 @@ function initialisieren() {
 
     melde('status', 'Arelle und Abhängigkeiten werden installiert …');
     await pyodide.loadPackage('micropip');
-    var liste = await (await fetch('wheels/wheels.json')).json();
+    var antwort = await fetch('wheels/wheels.json');
+    if (!antwort.ok) {
+      throw new Error('wheels/wheels.json nicht gefunden — bitte tools/setup-pyodide.sh ausführen.');
+    }
+    var liste = null;
+    try { liste = JSON.parse(await antwort.text()); } catch (e) { liste = null; }
+    if (!Array.isArray(liste) || !liste.length) {
+      throw new Error('wheels/wheels.json ist leer oder ungültig — tools/setup-pyodide.sh erneut ausführen.');
+    }
     var urls = liste.map(function (w) { return 'wheels/' + w; });
     /* Standard deps=True: micropip loest Arelles Abhaengigkeiten (lxml, regex,
      * numpy …) aus der Pyodide-Distribution auf - ohne PyPI-Zugriff. */

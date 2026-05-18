@@ -92,7 +92,9 @@ function ladeRechtlicheLinks() {
     if (!links || !links.length) return;
     ziel.className = 'sidebar-foot-legal';
     ziel.innerHTML = links.map(function (l) {
-      return '<a href="' + esc(l.url || '#') + '" target="_blank" rel="noopener">' +
+      /* Nur http(s)-Links zulassen - kein 'javascript:' o. Ä. als Schema. */
+      var url = /^https?:\/\//i.test(String(l.url || '')) ? l.url : '#';
+      return '<a href="' + esc(url) + '" target="_blank" rel="noopener">' +
         esc(l.text || '') + '</a>';
     }).join('<span aria-hidden="true"> &middot; </span>');
   }).catch(function () {});
@@ -871,7 +873,6 @@ function renderDruck(m) {
   var a = S.aktiv, u = S.unternehmen || {};
   if (!a) { setView('start'); return; }
   var r = Berechnung.berechne(a);
-  var vj = a.vorjahrId ? null : null; // Vorjahr wird unten geladen
   var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>' +
     '<div class="btn-reihe no-print" style="margin-bottom:14px">' +
     '<button class="btn btn-pri" id="btnDrucken">Drucken / als PDF speichern</button>' +
@@ -1358,8 +1359,8 @@ function renderSteuer(m) {
     '§ 8b Abs. 2 KStG');
   html += sf('immobilienertrag', 'Begünstigter Grundstücksertrag (EUR)',
     'bei erweiterter Kürzung');
-  html += sf('einfacheKuerzungGrundbesitzwert', 'Grundsteuerwert des Grundbesitzes (EUR)',
-    'für einfache Kürzung 0,11 %');
+  html += sf('gezahlteGrundsteuer', 'Im Geschäftsjahr gezahlte Grundsteuer (EUR)',
+    'einfache Kürzung § 9 Nr. 1 Satz 1 GewStG');
   html += '</div><div class="gitter" style="margin-top:12px">';
   html += sf('beteiligungUnter10', 'Streubesitz: Beteiligung unter 10 %',
     'Dividende voll körperschaftsteuerpflichtig (§ 8b Abs. 4 KStG)', 'check');
@@ -1494,45 +1495,7 @@ function steuerZeile(z) {
 /* ===========================================================================
  * BUCHHALTUNG (Modus 2) - Buchungsjournal nach SKR04
  * ========================================================================= */
-/* DATEV-Buchungsstapel im EXTF-Format (CSV, semikolongetrennt): Kopfzeile +
- * Spaltenüberschriften + je Buchung eine Datenzeile (Format Buchungsstapel,
- * Version 13). Spaltenreihenfolge nach DATEV-Formatbeschreibung; vor Übergabe
- * an den Steuerberater dessen DATEV-Import gegenprüfen. */
-function datevExtf(a, u) {
-  u = u || {};
-  var bu = a.buchungen || [];
-  var jahr = String(a.gjBis || a.stichtag || '').slice(0, 4) ||
-             String(new Date().getFullYear());
-  var wjBeginn = String(a.gjVon || (jahr + '-01-01')).replace(/-/g, '');
-  var bis = String(a.gjBis || a.stichtag || (jahr + '-12-31')).replace(/-/g, '');
-  function q(s) { return '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"'; }
-  function p2(x) { return (x < 10 ? '0' : '') + x; }
-  var d = new Date();
-  var ts = '' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) +
-    p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds()) + '000';
-  var berater = String(u.datevBeraterNr || '').replace(/\D/g, '');
-  var mandant = String(u.datevMandantNr || '').replace(/\D/g, '');
-  var kopf = ['"EXTF"', '700', '21', '"Buchungsstapel"', '13', ts, '', '""',
-    '"OpenBilanz"', '""', berater, mandant, wjBeginn, '4', wjBeginn, bis,
-    q('OpenBilanz ' + (a.bezeichnung || '')), '""', '1', '', '0', '"EUR"',
-    '', '', '', '', '', '', '', '', ''].join(';');
-  var spalten = ['Umsatz (ohne Soll/Haben-Kz)', 'Soll/Haben-Kennzeichen', 'WKZ Umsatz',
-    'Kurs', 'Basis-Umsatz', 'WKZ Basis-Umsatz', 'Konto', 'Gegenkonto', 'BU-Schluessel',
-    'Belegdatum', 'Belegfeld 1', 'Belegfeld 2', 'Skonto', 'Buchungstext']
-    .map(q).join(';');
-  var zeilen = [];
-  bu.forEach(function (b) {
-    if (!b || !b.betrag) return;
-    var dd = String(b.datum || bis);
-    var ttmm = dd.slice(8, 10) + dd.slice(5, 7);
-    var umsatz = (Math.round(Math.abs(Number(b.betrag)) * 100) / 100).toFixed(2)
-      .replace('.', ',');
-    zeilen.push([umsatz, '"S"', '"EUR"', '', '', '', b.soll, b.haben, '',
-      ttmm, '', '', '', q(String(b.text || '').slice(0, 60))].join(';'));
-  });
-  return '﻿' + kopf + '\r\n' + spalten + '\r\n' +
-    zeilen.join('\r\n') + (zeilen.length ? '\r\n' : '');
-}
+/* DATEV-Buchungsstapel-Export (EXTF): siehe Datev.erzeuge in shared/datev.js. */
 /* ===========================================================================
  * UMSATZSTEUER-VORANMELDUNG (UStVA)
  * ---------------------------------------------------------------------------
@@ -1797,61 +1760,8 @@ function renderBwa(m) {
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
 }
 
-/* E-Rechnung (XRechnung / ZUGFeRD): parst die XML einer Eingangsrechnung in
- * den Syntaxen CII (CrossIndustryInvoice) und UBL (Invoice). Liefert
- * { rechnung: { nummer, datum, verkaeufer, netto, ust, brutto } }. */
-function parseERechnung(xmlText) {
-  var doc;
-  try { doc = new DOMParser().parseFromString(String(xmlText), 'application/xml'); }
-  catch (e) { return { fehler: 'Die Datei ist kein gültiges XML.' }; }
-  if (!doc || doc.getElementsByTagName('parsererror').length) {
-    return { fehler: 'Die Datei ist kein gültiges XML.' };
-  }
-  var alle = doc.getElementsByTagName('*'), i;
-  function ersterText(name) {
-    for (i = 0; i < alle.length; i++) if (alle[i].localName === name) {
-      return String(alle[i].textContent || '').trim();
-    }
-    return '';
-  }
-  function innerhalb(rootName, childName) {
-    var root = null, j;
-    for (j = 0; j < alle.length; j++) if (alle[j].localName === rootName) { root = alle[j]; break; }
-    if (!root) return '';
-    var ch = root.getElementsByTagName('*');
-    for (j = 0; j < ch.length; j++) if (ch[j].localName === childName) {
-      return String(ch[j].textContent || '').trim();
-    }
-    return '';
-  }
-  function z(s) { return parseFloat(String(s || '').replace(',', '.')) || 0; }
-  var root = doc.documentElement ? doc.documentElement.localName : '';
-  var cii = /CrossIndustryInvoice/i.test(root);
-  var r = {};
-  if (cii) {
-    r.nummer = innerhalb('ExchangedDocument', 'ID');
-    r.datum = isoDat(innerhalb('ExchangedDocument', 'DateTimeString'));
-    r.netto = z(ersterText('TaxBasisTotalAmount'));
-    r.ust = z(ersterText('TaxTotalAmount'));
-    r.brutto = z(ersterText('GrandTotalAmount'));
-    r.verkaeufer = innerhalb('SellerTradeParty', 'Name');
-  } else {
-    r.nummer = innerhalb('Invoice', 'ID');
-    r.datum = isoDat(ersterText('IssueDate'));
-    r.netto = z(ersterText('TaxExclusiveAmount'));
-    r.ust = z(ersterText('TaxAmount'));
-    r.brutto = z(ersterText('PayableAmount')) || z(ersterText('TaxInclusiveAmount'));
-    r.verkaeufer = innerhalb('AccountingSupplierParty', 'RegistrationName') ||
-                   innerhalb('AccountingSupplierParty', 'Name');
-  }
-  if (!r.brutto && !r.netto) {
-    return { fehler: 'Keine Rechnungsbeträge gefunden — ist das eine E-Rechnung ' +
-      '(XRechnung- oder ZUGFeRD-XML)?' };
-  }
-  if (!r.netto && r.brutto) r.netto = Math.round((r.brutto - r.ust) * 100) / 100;
-  if (!r.brutto && r.netto) r.brutto = Math.round((r.netto + r.ust) * 100) / 100;
-  return { rechnung: r };
-}
+/* parseERechnung (XRechnung / ZUGFeRD): siehe Importe.parseERechnung in
+ * shared/importe.js. */
 /* Zeigt die geparste E-Rechnung und bietet die Übernahme als Buchung an. */
 function eRechnungVorschau(m, a, kontoOpt, parsed) {
   var box = m.querySelector('#erVorschau');
@@ -1896,101 +1806,8 @@ function eRechnungVorschau(m, a, kontoOpt, parsed) {
   };
 }
 
-/* Bankimport CAMT.053 (ISO 20022 Kontoauszug). Parst die XML-Datei und liefert
- * die Umsätze als [{ datum, betrag, eingang, zweck, partner }]. */
-function parseCamt(xmlText) {
-  var doc;
-  try { doc = new DOMParser().parseFromString(String(xmlText), 'application/xml'); }
-  catch (e) { return { fehler: 'Die Datei ist kein gültiges XML.' }; }
-  if (!doc || doc.getElementsByTagName('parsererror').length) {
-    return { fehler: 'Die Datei ist kein gültiges XML.' };
-  }
-  function all(root, name) {
-    var out = [], els = root.getElementsByTagName('*'), i;
-    for (i = 0; i < els.length; i++) if (els[i].localName === name) out.push(els[i]);
-    return out;
-  }
-  function first(root, name) { var a = all(root, name); return a.length ? a[0] : null; }
-  function txt(el) { return el ? String(el.textContent || '').trim() : ''; }
-  var ntrys = all(doc, 'Ntry');
-  if (!ntrys.length) {
-    return { fehler: 'Keine Umsätze (Ntry) gefunden — ist das eine CAMT.053-Datei?' };
-  }
-  var tx = ntrys.map(function (n) {
-    var dtRoot = first(n, 'BookgDt') || first(n, 'ValDt') || n;
-    return {
-      datum: txt(first(dtRoot, 'Dt')).slice(0, 10),
-      betrag: parseFloat(txt(first(n, 'Amt')).replace(',', '.')) || 0,
-      eingang: txt(first(n, 'CdtDbtInd')) === 'CRDT',
-      zweck: all(n, 'Ustrd').map(txt).join(' '),
-      partner: txt(first(n, 'Nm'))
-    };
-  });
-  return { tx: tx };
-}
-/* Datumshilfe: extrahiert YYYY-MM-DD aus IBKR-Datumsfeldern (YYYYMMDD u. a.). */
-function isoDat(s) {
-  var d = String(s || '').replace(/[^0-9]/g, '').slice(0, 8);
-  return d.length === 8 ? d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8)
-                        : String(s || '').slice(0, 10);
-}
-/* Broker-Import: Interactive-Brokers-Flex-XML. Liefert Trades und Cash-
- * Transaktionen als [{ datum, betrag, eingang, zweck, partner, kontoHint }]. */
-function parseIbkrFlex(xmlText) {
-  var doc;
-  try { doc = new DOMParser().parseFromString(String(xmlText), 'application/xml'); }
-  catch (e) { return { fehler: 'Die Datei ist kein gültiges XML.' }; }
-  if (!doc || doc.getElementsByTagName('parsererror').length) {
-    return { fehler: 'Die Datei ist kein gültiges XML.' };
-  }
-  function attr(el, name) { return el && el.getAttribute ? (el.getAttribute(name) || '') : ''; }
-  function tagAll(name) {
-    var out = [], els = doc.getElementsByTagName('*'), i;
-    for (i = 0; i < els.length; i++) if (els[i].localName === name) out.push(els[i]);
-    return out;
-  }
-  var tx = [];
-  tagAll('Trade').forEach(function (t) {
-    var netCash = parseFloat(attr(t, 'netCash')) || 0;
-    if (!netCash) return;
-    var bs = (attr(t, 'buySell') || '').toUpperCase();
-    tx.push({ datum: isoDat(attr(t, 'tradeDate') || attr(t, 'dateTime')),
-      betrag: Math.abs(netCash), eingang: netCash > 0,
-      zweck: (bs || 'Trade') + ' ' + attr(t, 'quantity') + ' ' + attr(t, 'symbol'),
-      partner: attr(t, 'symbol'), kontoHint: '1510' });
-  });
-  tagAll('CashTransaction').forEach(function (c) {
-    var amount = parseFloat(attr(c, 'amount')) || 0;
-    if (!amount) return;
-    var typ = attr(c, 'type');
-    var hint = /dividend/i.test(typ) ? '7010'
-      : /interest/i.test(typ) ? '7100'
-      : /withhold|tax/i.test(typ) ? '7600' : '6300';
-    tx.push({ datum: isoDat(attr(c, 'dateTime') || attr(c, 'settleDate') || attr(c, 'reportDate')),
-      betrag: Math.abs(amount), eingang: amount > 0,
-      zweck: typ + ' ' + attr(c, 'description'),
-      partner: attr(c, 'symbol') || typ, kontoHint: hint });
-  });
-  if (!tx.length) {
-    return { fehler: 'Keine Trades oder Cash-Transaktionen gefunden — ist das ein ' +
-      'Interactive-Brokers-Flex-Bericht?' };
-  }
-  return { tx: tx };
-}
-/* Schlägt aus dem Verwendungszweck ein SKR04-Gegenkonto vor (halbautomatisch). */
-function bankKontoVorschlag(text, eingang) {
-  var regeln = [
-    [/miete|pacht/i, '6310'], [/telekom|vodafone|\bo2\b|mobilfunk|internet|telefon|1&1/i, '6805'],
-    [/hosting|server|domain|cloud|aws|hetzner/i, '6300'], [/versicherung/i, '6400'],
-    [/gehalt|lohn/i, '6020'], [/sozialvers|krankenkasse|aok|tk\b/i, '6110'],
-    [/finanzamt|umsatzsteuer|ust\b/i, '3700'], [/gewerbesteuer/i, '7610'],
-    [/koerperschaftsteuer|körperschaftsteuer/i, '7600'], [/reise|hotel|bahn|flug/i, '6650'],
-    [/anwalt|notar|steuerberat|beratung/i, '6825'], [/zins/i, eingang ? '7100' : '7300'],
-    [/büro|buero|papier/i, '6815']
-  ];
-  for (var i = 0; i < regeln.length; i++) if (regeln[i][0].test(text || '')) return regeln[i][1];
-  return eingang ? '4400' : '6300';
-}
+/* parseCamt (CAMT.053), parseIbkrFlex (Interactive Brokers), bankKontoVorschlag
+ * und isoDat: siehe shared/importe.js (Modul Importe). */
 /* Rendert die Vorschau-Tabelle des Bankimports und bindet die Übernahme. */
 function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
   quelle = quelle || 'IMP';
@@ -2015,7 +1832,7 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
     '<th>Verwendungszweck</th><th class="rechts">Betrag</th><th>Gegenkonto</th>' +
     '</tr></thead><tbody>';
   tx.forEach(function (t, i) {
-    var vor = t.kontoHint || bankKontoVorschlag(t.zweck + ' ' + t.partner, t.eingang);
+    var vor = t.kontoHint || Importe.bankKontoVorschlag(t.zweck + ' ' + t.partner, t.eingang);
     var sel = kontoOpt.replace('value="' + vor + '"', 'value="' + vor + '" selected');
     h += '<tr><td><input type="checkbox" class="camtChk" data-i="' + i + '" checked></td>' +
       '<td class="mono">' + datumDe(t.datum) + '</td>' +
@@ -2339,6 +2156,9 @@ function renderBuchhaltung(m) {
     };
   });
   m.querySelector('#buUebernehmen').onclick = function () {
+    if (!confirm('Kontensalden in Bilanz und GuV übernehmen?\n\nBereits direkt ' +
+      'eingegebene Bilanz- und GuV-Werte dieses Abschlusses werden dabei ' +
+      'überschrieben.')) return;
     uebernehmeSalden(a);
     speichereStill().then(function () {
       hinweisToast('Kontensalden in Bilanz und GuV übernommen.');
@@ -2363,7 +2183,7 @@ function renderBuchhaltung(m) {
   };
   var dtv = m.querySelector('#dtvExport');
   if (dtv) dtv.onclick = function () {
-    var txt = datevExtf(a, {
+    var txt = Datev.erzeuge(a, {
       datevBeraterNr: (m.querySelector('#dtvBerater') || {}).value,
       datevMandantNr: (m.querySelector('#dtvMandant') || {}).value
     });
@@ -2417,7 +2237,7 @@ function renderBuchhaltung(m) {
     if (!f) return;
     var rd = new FileReader();
     rd.onload = function () {
-      camtVorschau(m, a, kontoOpt, parseCamt(rd.result), 'CAMT', '#camtVorschau');
+      camtVorschau(m, a, kontoOpt, Importe.parseCamt(rd.result), 'CAMT', '#camtVorschau');
     };
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
     rd.readAsText(f);
@@ -2428,7 +2248,7 @@ function renderBuchhaltung(m) {
     if (!f) return;
     var rd = new FileReader();
     rd.onload = function () {
-      camtVorschau(m, a, kontoOpt, parseIbkrFlex(rd.result), 'IBKR', '#ibkrVorschau');
+      camtVorschau(m, a, kontoOpt, Importe.parseIbkrFlex(rd.result), 'IBKR', '#ibkrVorschau');
     };
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
     rd.readAsText(f);
@@ -2438,7 +2258,7 @@ function renderBuchhaltung(m) {
     var f = erIn.files && erIn.files[0];
     if (!f) return;
     var rd = new FileReader();
-    rd.onload = function () { eRechnungVorschau(m, a, kontoOpt, parseERechnung(rd.result)); };
+    rd.onload = function () { eRechnungVorschau(m, a, kontoOpt, Importe.parseERechnung(rd.result)); };
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
     rd.readAsText(f);
   };

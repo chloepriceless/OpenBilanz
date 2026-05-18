@@ -377,10 +377,33 @@ test('Steuer: Verlustvortrag begrenzt auf das Einkommen, Rest bleibt', function 
   eq(s.kst.zvE, 0, 'zvE auf 0 gemindert');
   eq(s.verlustvortrag.restKst, 30000, 'Restvortrag 80.000 - 50.000');
 });
-test('Steuer: Mindestbesteuerung § 10d - 60 % über 1 Mio EUR', function () {
+test('Steuer: Mindestbesteuerung § 10d - Standardquote 60 % über 1 Mio EUR', function () {
   var r = Steuer.verlustabzug(2000000, 5000000);
   eq(r.abzug, 1600000, 'abziehbar: 1 Mio voll + 60 % von 1 Mio');
   eq(r.rest, 3400000, 'verbleibender Vortrag');
+});
+test('Steuer: mindestbestQuoteKSt - 70 % VZ 2024-2027, sonst 60 %', function () {
+  eq(Steuer.mindestbestQuoteKSt(2026), 0.70, 'VZ 2026');
+  eq(Steuer.mindestbestQuoteKSt(2027), 0.70, 'VZ 2027');
+  eq(Steuer.mindestbestQuoteKSt(2028), 0.60, 'VZ 2028 - Rückkehr zu 60 %');
+  eq(Steuer.mindestbestQuoteKSt(2023), 0.60, 'VZ 2023 - vor der Anhebung');
+});
+test('Steuer: verlustabzug mit 70-%-Quote (KSt-Mindestbesteuerung 2024-2027)', function () {
+  var r = Steuer.verlustabzug(2000000, 5000000, 0.70);
+  eq(r.abzug, 1700000, 'abziehbar: 1 Mio voll + 70 % von 1 Mio');
+  eq(r.rest, 3300000, 'verbleibender Vortrag');
+});
+test('Steuer: KSt nutzt 70 %, GewSt 60 % beim Verlustvortrag (VZ 2026)', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', stichtag: '2026-12-31',
+    steuer: { hebesatz: 400, verlustvortrag: 5000000 } };
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 2000000 });
+  eq(s.verlustvortrag.eingesetztKst, 1700000, 'KSt: 70 % über dem Sockelbetrag (VZ 2026)');
+  eq(s.verlustvortrag.eingesetztGewSt, 1600000, 'GewSt: durchgehend 60 %');
+});
+test('Steuer: einfache Kürzung § 9 Nr. 1 - gezahlte Grundsteuer', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', steuer: { hebesatz: 400, gezahlteGrundsteuer: 8000 } };
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 100000 });
+  eq(s.gewst.gewerbeertrag, 92000, 'Gewerbeertrag um die gezahlte Grundsteuer gekürzt');
 });
 test('Steuer: GewSt-Hinzurechnung § 8 Nr. 1 über Freibetrag', function () {
   var ja = { art: 'JAHRESABSCHLUSS', steuer: { hebesatz: 400, zinsaufwand: 250000 } };
@@ -451,6 +474,29 @@ test('DATEV: liest EXTF-Buchungsstapel mit Soll/Haben-Richtung', function () {
 });
 test('DATEV: meldet Fehler ohne EXTF-Kopfzeile', function () {
   ok(Datev.parse('a;b;c\n1;2;3').fehler, 'Fehler ohne EXTF-Kopf');
+});
+test('DATEV-Export: erzeugt EXTF-Buchungsstapel mit Kopf und Buchungszeile', function () {
+  var a = { bezeichnung: 'JA 2026', gjVon: '2026-01-01', gjBis: '2026-12-31',
+    buchungen: [ { datum: '2026-03-15', soll: '1800', haben: '4400',
+      betrag: 1190, text: 'Erlös' } ] };
+  var extf = Datev.erzeuge(a, {});
+  var zeilen = extf.replace(/^﻿/, '').replace(/\r\n$/, '').split('\r\n');
+  eq(zeilen.length, 3, 'Kopfsatz + Spaltenzeile + 1 Buchungszeile');
+  ok(zeilen[0].indexOf('"EXTF"') === 0, 'EXTF-Kopfsatz');
+  ok(zeilen[2].indexOf('1190,00') >= 0, 'Betrag mit Dezimalkomma');
+  ok(zeilen[2].indexOf('1503') >= 0, 'Belegdatum als TTMM');
+});
+test('DATEV-Export: Rückimport ergibt dieselbe Buchung (Roundtrip)', function () {
+  var a = { bezeichnung: 'JA 2026', gjVon: '2026-01-01', gjBis: '2026-12-31',
+    buchungen: [ { datum: '2026-03-15', soll: '1800', haben: '4400',
+      betrag: 1190, text: 'Erlös' } ] };
+  var r = Datev.parse(Datev.erzeuge(a, {}));
+  ok(!r.fehler, 'erzeugter Stapel ist wieder einlesbar');
+  eq(r.buchungen.length, 1, 'eine Buchung');
+  eq(r.buchungen[0].soll, '1800', 'Soll-Konto erhalten');
+  eq(r.buchungen[0].haben, '4400', 'Haben-Konto erhalten');
+  eq(r.buchungen[0].betrag, 1190, 'Betrag erhalten');
+  eq(r.buchungen[0].datum, '2026-03-15', 'Belegdatum erhalten');
 });
 
 /* ---- Journal-Export CSV / JSON --------------------------------------- */

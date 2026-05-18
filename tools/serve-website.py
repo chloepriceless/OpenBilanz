@@ -14,6 +14,10 @@ Sicherheitswarnung, die bestaetigt werden muss. Fuer den oeffentlichen Betrieb
 ist stattdessen ein echtes Zertifikat zu verwenden (z. B. Let's Encrypt).
 
 Aufruf:  python3 tools/serve-website.py [port]      (Standard-Port: 8000)
+
+Standardmaessig nur lokal (127.0.0.1) erreichbar. Fuer den Zugriff von einem
+anderen Geraet im selben Netz (z. B. Smartphone-Test) bewusst HOST setzen:
+  HOST=0.0.0.0 python3 tools/serve-website.py
 """
 import functools
 import http.server
@@ -28,6 +32,9 @@ CERTDIR = os.path.join(ROOT, 'tools', '.devcert')
 CERT = os.path.join(CERTDIR, 'cert.pem')
 KEY = os.path.join(CERTDIR, 'key.pem')
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+# Standardmaessig nur lokal erreichbar. Fuer bewussten Netzwerk-Zugriff
+# (Test von einem anderen Geraet):  HOST=0.0.0.0 python3 tools/serve-website.py
+HOST = os.environ.get('HOST', '127.0.0.1')
 
 
 def zertifikat_sichern():
@@ -66,13 +73,17 @@ def main():
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(CERT, KEY)
     handler = functools.partial(Handler, directory=PUBLIC)
-    httpd = http.server.ThreadingHTTPServer(('0.0.0.0', PORT), handler)
+    httpd = http.server.ThreadingHTTPServer((HOST, PORT), handler)
     httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
 
     print('')
     print('  OpenBilanz (Website-Modus) laeuft ueber HTTPS.')
     print('  Im Browser oeffnen:  https://localhost:%d' % PORT)
     print('  Selbstsigniertes Zertifikat - die Browser-Warnung einmal bestaetigen.')
+    if HOST not in ('127.0.0.1', 'localhost', '::1'):
+        print('')
+        print('  ACHTUNG: HOST=%s - der Server ist im gesamten Netzwerk' % HOST)
+        print('  erreichbar. Nur in einem vertrauenswuerdigen Netz verwenden.')
     print('  Beenden mit Strg+C')
     print('')
     try:

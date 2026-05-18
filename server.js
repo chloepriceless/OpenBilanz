@@ -36,7 +36,8 @@ var MIME = {
 
 function sendJSON(res, code, obj) {
   var body = JSON.stringify(obj);
-  res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8',
+                        'X-Content-Type-Options': 'nosniff' });
   res.end(body);
 }
 function sendText(res, code, typ, body, dateiname) {
@@ -46,20 +47,40 @@ function sendText(res, code, typ, body, dateiname) {
   res.end(body);
 }
 function leseBody(req, cb) {
-  var data = '';
-  req.on('data', function (c) { data += c; if (data.length > 5e6) req.destroy(); });
+  /* Chunks als Buffer sammeln und erst am Ende dekodieren - ein an einer
+   * Chunk-Grenze geteiltes Mehrbyte-UTF-8-Zeichen (Umlaut, ß, €) wuerde sonst
+   * zerstoert. */
+  var chunks = [], laenge = 0, fertig = false;
+  req.on('data', function (c) {
+    if (fertig) return;
+    laenge += c.length;
+    if (laenge > 5e6) { fertig = true; req.destroy(); cb(new Error('Anfrage zu gross')); return; }
+    chunks.push(c);
+  });
   req.on('end', function () {
+    if (fertig) return;
+    fertig = true;
+    var data = Buffer.concat(chunks).toString('utf8');
     if (!data) return cb(null, {});
     try { cb(null, JSON.parse(data)); } catch (e) { cb(e); }
   });
+  req.on('error', function () { if (!fertig) { fertig = true; cb(new Error('Anfrage fehlerhaft')); } });
 }
 
 function statisch(res, urlPfad) {
   var rel = urlPfad === '/' ? '/index.html' : urlPfad;
   var datei = path.normalize(path.join(PUBLIC, rel));
-  if (datei.indexOf(PUBLIC) !== 0) { res.writeHead(403); return res.end('Forbidden'); }
+  /* Pfadgrenze exakt pruefen: eine reine Praefixpruefung wuerde einen
+   * Geschwisterordner namens 'public...' faelschlich zulassen. */
+  if (datei !== PUBLIC && datei.indexOf(PUBLIC + path.sep) !== 0) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('Forbidden');
+  }
   fs.readFile(datei, function (err, buf) {
-    if (err) { res.writeHead(404); return res.end('Nicht gefunden: ' + rel); }
+    if (err) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end('Nicht gefunden');
+    }
     /* Selbst-Hosting-Modus: den Betriebsmodus in index.html umschreiben, damit
      * der Browser die Node-API statt IndexedDB nutzt. */
     if (rel === '/index.html') {
@@ -67,7 +88,14 @@ function statisch(res, urlPfad) {
         'name="openbilanz-mode" content="website"',
         'name="openbilanz-mode" content="selfhost"'));
     }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(datei)] || 'application/octet-stream' });
+    res.writeHead(200, {
+      'Content-Type': MIME[path.extname(datei)] || 'application/octet-stream',
+      /* X-Frame-Options ergaenzt die CSP: 'frame-ancestors' aus dem <meta>-Tag
+       * der index.html wird von Browsern ignoriert - nur ein echter
+       * HTTP-Header schuetzt gegen Clickjacking. */
+      'X-Frame-Options': 'DENY',
+      'X-Content-Type-Options': 'nosniff'
+    });
     res.end(buf);
   });
 }
@@ -142,7 +170,23 @@ function api(req, res, pfad, query) {
 }
 
 /* ---- Server ------------------------------------------------------------- */
+/* Schutz vor DNS-Rebinding: Ein nur lokal (127.0.0.1) gebundener Server ohne
+ * Authentifizierung darf ausschliesslich Anfragen mit lokalem Host-Header
+ * beantworten - sonst koennte eine im Browser geoeffnete fremde Website per
+ * DNS-Rebinding die lokale API erreichen und die Buchhaltungsdaten lesen oder
+ * aendern. Bei bewusstem Netzwerk-Betrieb (HOST != Loopback) entfaellt die
+ * Pruefung, da der erwartete Hostname dann nicht bekannt ist. */
+function hostErlaubt(req) {
+  if (HOST !== '127.0.0.1' && HOST !== 'localhost' && HOST !== '::1') return true;
+  var h = String(req.headers.host || '').toLowerCase().replace(/:\d+$/, '');
+  return h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]';
+}
+
 var server = http.createServer(function (req, res) {
+  if (!hostErlaubt(req)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('Forbidden host');
+  }
   var u = require('url').parse(req.url, true);
   if (u.pathname.indexOf('/api/') === 0) {
     try { api(req, res, u.pathname, u.query); }

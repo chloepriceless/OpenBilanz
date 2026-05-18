@@ -31,5 +31,13 @@ else
   echo "FEHLER: weder curl noch wget vorhanden." >&2
   exit 1
 fi
+# Plausibilitaetspruefung: muss ein ZIP sein (Magic 'PK') und hinreichend gross
+# - faengt z. B. eine versehentlich gespeicherte Fehler-/Weiterleitungsseite ab.
+# Fuer echte Integritaet zusaetzlich die amtliche SHA-256-Pruefsumme vergleichen.
+if [ "$(head -c2 "$ZIEL" 2>/dev/null)" != "PK" ] || [ "$(wc -c < "$ZIEL")" -lt 1000000 ]; then
+  echo "FEHLER: Download ist kein gueltiges Taxonomie-ZIP (Format/Groesse)." >&2
+  rm -f "$ZIEL"
+  exit 1
+fi
 echo "Fertig: $ZIEL ($(wc -c < "$ZIEL") Bytes)"
 echo "Pruefen der Installation:  python3 -c 'import arelle' && echo Arelle OK"
