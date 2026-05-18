@@ -22,11 +22,12 @@
  * ========================================================================= */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = factory(require('./taxonomie.js'), require('./berechnung.js'));
+    module.exports = factory(require('./taxonomie.js'), require('./berechnung.js'),
+      require('./skr04.js'));
   } else {
-    root.Xbrl = factory(root.Taxonomie, root.Berechnung);
+    root.Xbrl = factory(root.Taxonomie, root.Berechnung, root.SKR04);
   }
-})(typeof self !== 'undefined' ? self : this, function (Taxonomie, Berechnung) {
+})(typeof self !== 'undefined' ? self : this, function (Taxonomie, Berechnung, SKR04) {
   'use strict';
 
   var EBILANZ_NS = 'http://rzf.fin-nrw.de/RMS/EBilanz/2016/XMLSchema';
@@ -40,6 +41,34 @@
   function nurZiffern(s) { return String(s || '').replace(/[^0-9]/g, ''); }
   function ohneTrenn(iso) { return String(iso || '').replace(/-/g, ''); }
 
+  /* Kontennachweis: gruppiert die SKR04-Kontensalden eines Abschlusses nach
+   * HGB-Bilanz-/GuV-Position. Grundlage sind die erfassten Buchungssätze;
+   * ohne Buchhaltung (Direkteingabe) ist das Ergebnis leer.
+   * Rückgabe: [{ position, label, konten: [{ nr, name, saldo }] }]. */
+  function kontennachweis(abschluss) {
+    var bu = (abschluss && abschluss.buchungen) || [];
+    if (!bu.length || !SKR04) return [];
+    var s = {};
+    bu.forEach(function (b) {
+      if (!b) return;
+      if (b.soll)  { s[b.soll]  = s[b.soll]  || { soll: 0, haben: 0 }; s[b.soll].soll  += Number(b.betrag) || 0; }
+      if (b.haben) { s[b.haben] = s[b.haben] || { soll: 0, haben: 0 }; s[b.haben].haben += Number(b.betrag) || 0; }
+    });
+    var grp = {};
+    Object.keys(s).forEach(function (nr) {
+      var k = SKR04.kontoFinden(nr);
+      if (!k) return;                                  // z. B. EBK 9000 -> kein Ausweis
+      var saldo = Math.round((s[nr].soll - s[nr].haben) * 100) / 100;
+      if (Math.abs(saldo) < 0.005) return;
+      var pos = k.pos || k.kat || 'sonstige';
+      (grp[pos] = grp[pos] || []).push({ nr: nr, name: k.name, saldo: saldo });
+    });
+    return Object.keys(grp).sort().map(function (pos) {
+      return { position: pos, konten: grp[pos].sort(function (a, b) {
+        return a.nr < b.nr ? -1 : (a.nr > b.nr ? 1 : 0); }) };
+    });
+  }
+
   /* Baut die reine XBRL-Instanz (<xbrli:xbrl> ... </xbrli:xbrl>).
    * Rueckgabe: { zeilen: [String], warnungen: [String], stichtag: 'YYYY-MM-DD' } */
   function xbrlInstanz(unternehmen, abschluss) {
@@ -47,6 +76,7 @@
     var u = unternehmen || {};
     var r = Berechnung.berechne(abschluss);
     var istEB = abschluss.art === 'EROEFFNUNGSBILANZ';
+    var kn = kontennachweis(abschluss);
 
     var stichtag = abschluss.stichtag || u.gruendungsdatum || '';
     var gjVon = abschluss.gjVon || stichtag;
@@ -104,6 +134,19 @@
     gcd('genInfo.doc.id.generationDate', 'D', new Date().toISOString().slice(0, 10));
     warn.push('GCD-Auswahlfelder (Rechtsform, Bilanzart, GuV-Format, Rechnungslegungs' +
               'standard) sind je nach ERiC-/Taxonomie-Version als Auswahlwerte zu ergaenzen.');
+    if (!istEB) {
+      gcd('genInfo.report.id.reportElements.transmissionNotYetPossible', 'D',
+        kn.length
+          ? 'Zu den werthaltigen Positionen liegen unverdichtete Kontennachweise vor. ' +
+            'Sie sind dieser Datei als Kontensalden-Aufstellung beigefügt; eine ' +
+            'taxonomiekonforme Einzelfeld-Übermittlung der Kontennachweise erfolgt mit ' +
+            'dieser Programmversion noch nicht.'
+          : 'Der Abschluss wurde ohne kontengenaue Buchführung erstellt (Direkteingabe ' +
+            'der Bilanz-/GuV-Positionen); unverdichtete Kontennachweise liegen nicht vor.');
+      warn.push('Kontennachweis-Pflicht (§ 5b EStG i. d. F. JStG 2024): das Härtefall-Feld ' +
+        '"transmissionNotYetPossible" wurde gesetzt. Feldname und Datentyp gegen die ' +
+        'eingesetzte Taxonomie-XSD prüfen.');
+    }
 
     /* --- GAAP-Modul: Bilanz (Stichtagswerte, context I) --- */
     function fakt(elem, ctx, wert) {
@@ -150,6 +193,19 @@
       });
     }
 
+    /* --- Kontennachweis (unverdichtete Kontensalden, § 5b EStG / JStG 2024) --- */
+    if (kn.length) {
+      L.push('    <!-- Kontennachweis: unverdichtete Kontensalden nach SKR04, je');
+      L.push('         werthaltiger HGB-Position die zugrunde liegenden Konten. -->');
+      kn.forEach(function (g) {
+        L.push('    <!-- Position ' + g.position + ' -->');
+        g.konten.forEach(function (k) {
+          L.push('    <!-- Konto ' + k.nr + ' ' +
+            esc(k.name).replace(/--+/g, '-') + ' = ' + betrag(k.saldo) + ' EUR -->');
+        });
+      });
+    }
+
     L.push('  </xbrli:xbrl>');
     return { zeilen: L, warnungen: warn, stichtag: stichtag };
   }
@@ -177,5 +233,6 @@
     return { xml: xml, warnungen: inst.warnungen };
   }
 
-  return { erzeugeXBRL: erzeugeXBRL, erzeugeEBilanz: erzeugeEBilanz };
+  return { erzeugeXBRL: erzeugeXBRL, erzeugeEBilanz: erzeugeEBilanz,
+           kontennachweis: kontennachweis };
 });

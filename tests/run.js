@@ -216,6 +216,22 @@ test('XBRL: ist wohlgeformtes XML', function () {
   } catch (e) { fs.unlinkSync(tmp); throw new Error('XML nicht wohlgeformt'); }
   fs.unlinkSync(tmp);
 });
+test('XBRL: Kontennachweis gruppiert die Kontensalden nach HGB-Position', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', stichtag: '2025-12-31',
+    buchungen: [ { soll: '1800', haben: '4400', betrag: 1000 },
+                 { soll: '6310', haben: '1800', betrag: 200 } ] };
+  var kn = XBRL.kontennachweis(ja);
+  var bIV = kn.filter(function (g) { return g.position === 'B.IV'; })[0];
+  ok(bIV, 'B.IV (Bank) als Positionsgruppe');
+  eq(bIV.konten[0].nr, '1800', 'Konto 1800 unter B.IV');
+  eq(bIV.konten[0].saldo, 800, 'Saldo Konto 1800 = 1000 - 200');
+});
+test('XBRL: Haertefall-Feld bei Direkteingabe ohne Buchungen', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', stichtag: '2025-12-31',
+    werte: { aktiva: {}, passiva: {}, guv: {} } };
+  var r = XBRL.erzeugeXBRL({ steuernummer: '1234567890123' }, ja);
+  ok(r.xml.indexOf('transmissionNotYetPossible') >= 0, 'Haertefall-Feld gesetzt');
+});
 
 /* ---- Steuerberechnung (vv-GmbH) -------------------------------------- */
 test('Steuer: § 8b - 95 % der Dividenden steuerfrei', function () {

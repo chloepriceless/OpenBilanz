@@ -1076,6 +1076,30 @@ function renderEbilanz(m) {
   }
   html += '</tbody></table></div>';
 
+  /* Kontennachweis (unverdichtete Kontensalden, § 5b EStG / JStG 2024) */
+  var kn = (typeof Xbrl !== 'undefined' && Xbrl.kontennachweis) ? Xbrl.kontennachweis(a) : [];
+  html += '<div class="karte"><h2>Kontennachweis</h2>' +
+    '<div class="karte-hint">Unverdichtete Kontensalden je HGB-Position aus der ' +
+    'Buchhaltung. Für Wirtschaftsjahre ab 2025 sind sie zur E-Bilanz mitzugeben ' +
+    '(§ 5b EStG i. d. F. JStG 2024); diese Datei führt sie als Aufstellung mit.</div>';
+  if (!kn.length) {
+    html += '<div class="karte-hint">Keine Buchungen erfasst — ohne kontengenaue ' +
+      'Buchführung liegt kein Kontennachweis vor. In der E-Bilanz wird stattdessen ' +
+      'das Härtefall-Feld gesetzt.</div>';
+  } else {
+    html += '<table class="liste"><thead><tr><th>Position</th><th>Konto</th>' +
+      '<th>Bezeichnung</th><th class="rechts">Saldo</th></tr></thead><tbody>';
+    kn.forEach(function (g) {
+      g.konten.forEach(function (k, i) {
+        html += '<tr><td class="mono">' + (i === 0 ? esc(g.position) : '') + '</td>' +
+          '<td class="mono">' + esc(k.nr) + '</td><td>' + esc(k.name) + '</td>' +
+          '<td class="rechts mono">' + geld(k.saldo) + '</td></tr>';
+      });
+    });
+    html += '</tbody></table>';
+  }
+  html += '</div>';
+
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
   m.querySelector('#dlEbilanz').onclick = function () {
