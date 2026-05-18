@@ -1594,6 +1594,55 @@ function parseCamt(xmlText) {
   });
   return { tx: tx };
 }
+/* Datumshilfe: extrahiert YYYY-MM-DD aus IBKR-Datumsfeldern (YYYYMMDD u. a.). */
+function isoDat(s) {
+  var d = String(s || '').replace(/[^0-9]/g, '').slice(0, 8);
+  return d.length === 8 ? d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8)
+                        : String(s || '').slice(0, 10);
+}
+/* Broker-Import: Interactive-Brokers-Flex-XML. Liefert Trades und Cash-
+ * Transaktionen als [{ datum, betrag, eingang, zweck, partner, kontoHint }]. */
+function parseIbkrFlex(xmlText) {
+  var doc;
+  try { doc = new DOMParser().parseFromString(String(xmlText), 'application/xml'); }
+  catch (e) { return { fehler: 'Die Datei ist kein gültiges XML.' }; }
+  if (!doc || doc.getElementsByTagName('parsererror').length) {
+    return { fehler: 'Die Datei ist kein gültiges XML.' };
+  }
+  function attr(el, name) { return el && el.getAttribute ? (el.getAttribute(name) || '') : ''; }
+  function tagAll(name) {
+    var out = [], els = doc.getElementsByTagName('*'), i;
+    for (i = 0; i < els.length; i++) if (els[i].localName === name) out.push(els[i]);
+    return out;
+  }
+  var tx = [];
+  tagAll('Trade').forEach(function (t) {
+    var netCash = parseFloat(attr(t, 'netCash')) || 0;
+    if (!netCash) return;
+    var bs = (attr(t, 'buySell') || '').toUpperCase();
+    tx.push({ datum: isoDat(attr(t, 'tradeDate') || attr(t, 'dateTime')),
+      betrag: Math.abs(netCash), eingang: netCash > 0,
+      zweck: (bs || 'Trade') + ' ' + attr(t, 'quantity') + ' ' + attr(t, 'symbol'),
+      partner: attr(t, 'symbol'), kontoHint: '1510' });
+  });
+  tagAll('CashTransaction').forEach(function (c) {
+    var amount = parseFloat(attr(c, 'amount')) || 0;
+    if (!amount) return;
+    var typ = attr(c, 'type');
+    var hint = /dividend/i.test(typ) ? '7010'
+      : /interest/i.test(typ) ? '7100'
+      : /withhold|tax/i.test(typ) ? '7600' : '6300';
+    tx.push({ datum: isoDat(attr(c, 'dateTime') || attr(c, 'settleDate') || attr(c, 'reportDate')),
+      betrag: Math.abs(amount), eingang: amount > 0,
+      zweck: typ + ' ' + attr(c, 'description'),
+      partner: attr(c, 'symbol') || typ, kontoHint: hint });
+  });
+  if (!tx.length) {
+    return { fehler: 'Keine Trades oder Cash-Transaktionen gefunden — ist das ein ' +
+      'Interactive-Brokers-Flex-Bericht?' };
+  }
+  return { tx: tx };
+}
 /* Schlägt aus dem Verwendungszweck ein SKR04-Gegenkonto vor (halbautomatisch). */
 function bankKontoVorschlag(text, eingang) {
   var regeln = [
@@ -1609,8 +1658,9 @@ function bankKontoVorschlag(text, eingang) {
   return eingang ? '4400' : '6300';
 }
 /* Rendert die Vorschau-Tabelle des Bankimports und bindet die Übernahme. */
-function camtVorschau(m, a, kontoOpt, parsed) {
-  var box = m.querySelector('#camtVorschau');
+function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
+  quelle = quelle || 'IMP';
+  var box = m.querySelector(boxId || '#camtVorschau');
   if (!box) return;
   if (parsed.fehler) {
     box.innerHTML = '<div class="box box-warn" style="margin-top:10px">' +
@@ -1624,7 +1674,7 @@ function camtVorschau(m, a, kontoOpt, parsed) {
     '<th>Verwendungszweck</th><th class="rechts">Betrag</th><th>Gegenkonto</th>' +
     '</tr></thead><tbody>';
   tx.forEach(function (t, i) {
-    var vor = bankKontoVorschlag(t.zweck + ' ' + t.partner, t.eingang);
+    var vor = t.kontoHint || bankKontoVorschlag(t.zweck + ' ' + t.partner, t.eingang);
     var sel = kontoOpt.replace('value="' + vor + '"', 'value="' + vor + '" selected');
     h += '<tr><td><input type="checkbox" class="camtChk" data-i="' + i + '" checked></td>' +
       '<td class="mono">' + datumDe(t.datum) + '</td>' +
@@ -1643,16 +1693,16 @@ function camtVorschau(m, a, kontoOpt, parsed) {
       var i = parseInt(chk.dataset.i, 10), t = tx[i];
       var konto = box.querySelector('.camtKonto[data-i="' + i + '"]').value;
       a.buchungen.push({
-        id: 'B-CAMT-' + stamp + '-' + i, datum: t.datum,
+        id: 'B-' + quelle + '-' + stamp + '-' + i, datum: t.datum,
         betrag: Berechnung.cent(t.betrag),
-        text: ((t.partner ? t.partner + ' — ' : '') + (t.zweck || 'Bankumsatz')).slice(0, 90),
+        text: ((t.partner ? t.partner + ' — ' : '') + (t.zweck || 'Umsatz')).slice(0, 90),
         soll: t.eingang ? '1800' : konto, haben: t.eingang ? konto : '1800'
       });
       n++;
     });
     if (!n) { alert('Keine Zeile ausgewählt.'); return; }
     speichereStill().then(function () {
-      hinweisToast(n + ' Buchung(en) aus dem Bankimport übernommen.');
+      hinweisToast(n + ' Buchung(en) aus dem Import übernommen.');
       renderBuchhaltung(m);
     });
   };
@@ -1762,6 +1812,14 @@ function renderBuchhaltung(m) {
     '<input type="file" id="camtDatei" accept=".xml,text/xml,application/xml">' +
     '<div id="camtVorschau"></div></div>';
 
+  /* Broker-Import (Interactive Brokers Flex) */
+  html += '<div class="karte"><h2>Broker-Import (Interactive Brokers)</h2>' +
+    '<div class="karte-hint">Flex-Query-Bericht (XML) von Interactive Brokers ' +
+    'einlesen — Trades, Dividenden und Zinsen werden je Zeile als Buchung gegen ' +
+    'das Verrechnungs-/Bankkonto 1800 vorgeschlagen (Wertpapiere → 1510).</div>' +
+    '<input type="file" id="ibkrDatei" accept=".xml,text/xml,application/xml">' +
+    '<div id="ibkrVorschau"></div></div>';
+
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
   m.querySelector('#buAdd').onclick = function () {
@@ -1850,7 +1908,20 @@ function renderBuchhaltung(m) {
     var f = camtIn.files && camtIn.files[0];
     if (!f) return;
     var rd = new FileReader();
-    rd.onload = function () { camtVorschau(m, a, kontoOpt, parseCamt(rd.result)); };
+    rd.onload = function () {
+      camtVorschau(m, a, kontoOpt, parseCamt(rd.result), 'CAMT', '#camtVorschau');
+    };
+    rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
+    rd.readAsText(f);
+  };
+  var ibkrIn = m.querySelector('#ibkrDatei');
+  if (ibkrIn) ibkrIn.onchange = function () {
+    var f = ibkrIn.files && ibkrIn.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      camtVorschau(m, a, kontoOpt, parseIbkrFlex(rd.result), 'IBKR', '#ibkrVorschau');
+    };
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
     rd.readAsText(f);
   };
