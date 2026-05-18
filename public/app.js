@@ -95,6 +95,7 @@ function renderNav() {
       n.push(navUnter('editor', istEB ? 'Bilanz' : 'Bilanz &amp; GuV'));
       if (!istEB) n.push(navUnter('buchhaltung', 'Buchhaltung'));
       if (!istEB) n.push(navUnter('steuer', 'Steuern'));
+      if (!istEB) n.push(navUnter('ustva', 'Umsatzsteuer'));
       n.push(navUnter('ebilanz', 'E-Bilanz'));
       n.push(navUnter('druck', 'Druckansicht'));
     }
@@ -147,6 +148,7 @@ function setView(view) {
   else if (view === 'ebilanz')    renderEbilanz(m);
   else if (view === 'steuer')     renderSteuer(m);
   else if (view === 'buchhaltung')renderBuchhaltung(m);
+  else if (view === 'ustva')      renderUstva(m);
   else if (view === 'fristen')    renderFristen(m);
   else if (view === 'hilfe')      renderHilfe(m);
   else if (view === 'beschluesse')renderBeschluesse(m);
@@ -1375,6 +1377,94 @@ function datevExtf(a, u) {
   return '﻿' + kopf + '\r\n' + spalten + '\r\n' +
     zeilen.join('\r\n') + (zeilen.length ? '\r\n' : '');
 }
+/* ===========================================================================
+ * UMSATZSTEUER-VORANMELDUNG (UStVA)
+ * ---------------------------------------------------------------------------
+ * Bereitet die UStVA-Kennzahlen aus den SKR04-USt-Konten eines Zeitraums auf.
+ * Eine Aufbereitung, kein ELSTER-Versand.
+ * ========================================================================= */
+/* Rechnet die UStVA-Kennzahlen aus den Buchungen im Zeitraum [von, bis]. */
+function ustvaBerechne(buchungen, von, bis) {
+  var s = {};
+  (buchungen || []).forEach(function (b) {
+    if (!b) return;
+    var d = b.datum || '';
+    if (von && d < von) return;
+    if (bis && d > bis) return;
+    if (b.soll)  { s[b.soll]  = s[b.soll]  || { soll: 0, haben: 0 }; s[b.soll].soll  += Number(b.betrag) || 0; }
+    if (b.haben) { s[b.haben] = s[b.haben] || { soll: 0, haben: 0 }; s[b.haben].haben += Number(b.betrag) || 0; }
+  });
+  function hs(nr) { var k = s[nr]; return k ? Berechnung.cent(k.haben - k.soll) : 0; }
+  function sh(nr) { var k = s[nr]; return k ? Berechnung.cent(k.soll - k.haben) : 0; }
+  var kz81 = Berechnung.cent(hs('4400') + hs('4000'));   // Umsätze 19 % (netto)
+  var kz86 = hs('4300');                                 // Umsätze 7 % (netto)
+  var ust19 = Berechnung.cent(kz81 * 0.19);
+  var ust7 = Berechnung.cent(kz86 * 0.07);
+  var ustBerechnet = Berechnung.cent(ust19 + ust7);
+  var ustGebucht = Berechnung.cent(hs('3806') + hs('3801'));
+  var kz66 = Berechnung.cent(sh('1406') + sh('1401'));   // abziehbare Vorsteuer
+  return { kz81: kz81, kz86: kz86, ust19: ust19, ust7: ust7,
+           ustBerechnet: ustBerechnet, ustGebucht: ustGebucht, kz66: kz66,
+           kz83: Berechnung.cent(ustBerechnet - kz66) };
+}
+function renderUstva(m) {
+  var a = S.aktiv;
+  if (!a) { setView('start'); return; }
+  if (a.art !== 'JAHRESABSCHLUSS') { setView('editor'); return; }
+  a.buchungen = a.buchungen || [];
+  var jahr = String(a.gjBis || a.stichtag || '').slice(0, 4) ||
+             String(new Date().getFullYear());
+  var von0 = a.gjVon || (jahr + '-01-01');
+  var bis0 = a.gjBis || a.stichtag || (jahr + '-12-31');
+
+  var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>' +
+    '<div class="kopf"><h1>Umsatzsteuer-Voranmeldung &ndash; ' + esc(a.bezeichnung) +
+    '</h1><p>Bereitet die UStVA-Kennzahlen aus den Buchungen auf. Für eine ' +
+    'monatliche Voranmeldung den Zeitraum auf den Monat einstellen.</p></div>';
+  html += '<div class="box box-info"><b>Aufbereitung, kein Versand</b>Die ' +
+    'Voranmeldung wird über ELSTER übermittelt. Hier werden die Kennzahlen aus den ' +
+    'SKR04-Konten ermittelt: Erlöse 4400/4000 (19 %), 4300 (7 %), Vorsteuer ' +
+    '1406/1401. Soll-/Ist-Versteuerung und Sonderfälle sind nicht abgebildet.</div>';
+  html += '<div class="karte"><h2>Zeitraum</h2><div class="gitter g3">' +
+    feldWrap('von', '', '<input type="date" id="ustVon" value="' + esc(von0) + '">') +
+    feldWrap('bis', '', '<input type="date" id="ustBis" value="' + esc(bis0) + '">') +
+    '</div></div><div id="ustvaErgebnis"></div>';
+  m.innerHTML = html;
+  m.querySelector('[data-z]').onclick = function () { setView('editor'); };
+
+  function zeile(kz, txt, betrag, opt) {
+    opt = opt || {};
+    return '<tr class="' + (opt.summe ? 'zeile-summe' : 'zeile-R') + '">' +
+      '<td class="mono">' + (kz || '') + '</td><td class="p-lbl">' + txt + '</td>' +
+      '<td class="p-wert"><span class="wert-ro">' + geld(betrag) + '</span></td></tr>';
+  }
+  function zeigen() {
+    var von = m.querySelector('#ustVon').value, bis = m.querySelector('#ustBis').value;
+    var u = ustvaBerechne(a.buchungen, von, bis);
+    var h = '<div class="karte"><h2>Kennzahlen</h2><table class="pos-tab">' +
+      zeile('81', 'Steuerpflichtige Umsätze zum Steuersatz 19 % (netto)', u.kz81) +
+      zeile('86', 'Steuerpflichtige Umsätze zum Steuersatz 7 % (netto)', u.kz86) +
+      zeile('', 'Umsatzsteuer 19 %', u.ust19) +
+      zeile('', 'Umsatzsteuer 7 %', u.ust7) +
+      zeile('', '= Umsatzsteuer', u.ustBerechnet, { summe: true }) +
+      zeile('66', 'Abziehbare Vorsteuerbeträge', u.kz66) +
+      zeile('83', 'Verbleibende Umsatzsteuer-Vorauszahlung', u.kz83, { summe: true }) +
+      '</table>';
+    h += '<div class="karte-hint" style="margin-top:8px">' +
+      (u.kz83 < 0 ? 'Negativer Wert = Vorsteuerüberschuss (Erstattung). ' : '') +
+      'In der Buchhaltung erfasste Umsatzsteuer (Konten 3806/3801): ' +
+      geld(u.ustGebucht) + ' EUR' +
+      (Math.abs(u.ustGebucht - u.ustBerechnet) > 0.5
+        ? ' — weicht von der aus den Netto-Erlösen berechneten USt ab; bitte die ' +
+          'USt-Buchungen prüfen.'
+        : '.') + '</div></div>';
+    document.getElementById('ustvaErgebnis').innerHTML = h;
+  }
+  m.querySelector('#ustVon').addEventListener('input', zeigen);
+  m.querySelector('#ustBis').addEventListener('input', zeigen);
+  zeigen();
+}
+
 /* Bankimport CAMT.053 (ISO 20022 Kontoauszug). Parst die XML-Datei und liefert
  * die Umsätze als [{ datum, betrag, eingang, zweck, partner }]. */
 function parseCamt(xmlText) {
