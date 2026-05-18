@@ -11,6 +11,13 @@
  * und einzelne Elementnamen gegen die neue XSD (esteuer.de) zu prüfen.
  * Die erzeugte XBRL-Datei sollte vor der Übermittlung mit einem Validator
  * (z. B. Arelle) gegen die amtliche Taxonomie geprueft werden.
+ *
+ * BEIM VERSIONSWECHSEL (jaehrlich, neue Kerntaxonomie ~April):
+ *   1. VERSION und STAND unten setzen - NS und SCHEMA leiten sich daraus ab.
+ *   2. tools/setup-taxonomie.sh: Download-URL auf das neue Paket aktualisieren.
+ *   3. BILANZ-, GUV- und KAPITAL-Elementnamen gegen die neue XSD abgleichen.
+ *   4. Eine erzeugte XBRL-Instanz mit Arelle gegen die neue Taxonomie pruefen.
+ * Die Roadmap fuehrt diesen Punkt in der regulatorischen Beobachtungsliste.
  * ========================================================================= */
 (function (root, factory) {
   var api = factory();
