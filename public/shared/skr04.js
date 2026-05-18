@@ -84,6 +84,9 @@
     { nr: '1600', name: 'Kasse', seite: 'AKTIV', pos: 'B.IV', eb: true },
     { nr: '1800', name: 'Bank (Guthaben bei Kreditinstituten)', seite: 'AKTIV', pos: 'B.IV', eb: true },
     { nr: '1810', name: 'Bank - weiteres Konto', seite: 'AKTIV', pos: 'B.IV', eb: true },
+    { nr: '1820', name: 'Bank - weiteres Konto', seite: 'AKTIV', pos: 'B.IV', eb: true },
+    { nr: '1830', name: 'Bank - weiteres Konto', seite: 'AKTIV', pos: 'B.IV', eb: true },
+    { nr: '1840', name: 'Bank - weiteres Konto', seite: 'AKTIV', pos: 'B.IV', eb: true },
     /* Rechnungsabgrenzung / latente Steuern */
     { nr: '1900', name: 'Aktive Rechnungsabgrenzung', seite: 'AKTIV', pos: 'C' },
     { nr: '1950', name: 'Aktive latente Steuern', seite: 'AKTIV', pos: 'D' },

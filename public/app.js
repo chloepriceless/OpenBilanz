@@ -2002,8 +2002,15 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
     return;
   }
   var tx = parsed.tx;
+  var bankOpt = SKR04.KONTEN.filter(function (k) { return /^18/.test(k.nr); })
+    .map(function (k) {
+      return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
+    }).join('');
   var h = '<div class="karte-hint" style="margin-top:10px">' + tx.length +
-    ' Umsatz/-sätze gelesen. Gegenkonto je Zeile prüfen, dann übernehmen.</div>' +
+    ' Umsatz/-sätze gelesen. Ziel-Bankkonto wählen, Gegenkonto je Zeile prüfen, ' +
+    'dann übernehmen.</div>' +
+    feldWrap('Ziel-Bankkonto', 'der Auszug wird auf dieses Konto gebucht',
+      '<select id="impBankkonto">' + bankOpt + '</select>') +
     '<table class="liste"><thead><tr><th></th><th>Datum</th><th>Partner</th>' +
     '<th>Verwendungszweck</th><th class="rechts">Betrag</th><th>Gegenkonto</th>' +
     '</tr></thead><tbody>';
@@ -2022,6 +2029,7 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
   box.innerHTML = h;
   box.querySelector('#camtUebernehmen').onclick = function () {
     var n = 0, stamp = Date.now();
+    var bankKonto = (box.querySelector('#impBankkonto') || {}).value || '1800';
     box.querySelectorAll('.camtChk').forEach(function (chk) {
       if (!chk.checked) return;
       var i = parseInt(chk.dataset.i, 10), t = tx[i];
@@ -2030,7 +2038,7 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
         id: 'B-' + quelle + '-' + stamp + '-' + i, datum: t.datum,
         betrag: Berechnung.cent(t.betrag),
         text: ((t.partner ? t.partner + ' — ' : '') + (t.zweck || 'Umsatz')).slice(0, 90),
-        soll: t.eingang ? '1800' : konto, haben: t.eingang ? konto : '1800'
+        soll: t.eingang ? bankKonto : konto, haben: t.eingang ? konto : bankKonto
       });
       n++;
     });
@@ -2228,8 +2236,8 @@ function renderBuchhaltung(m) {
   /* Bankimport CAMT.053 */
   html += '<div class="karte"><h2>Bankimport (CAMT.053)</h2>' +
     '<div class="karte-hint">Kontoauszug im Format CAMT.053 (ISO 20022) einlesen und ' +
-    'halbautomatisch verbuchen. Das Bankkonto ist Konto 1800; der Verwendungszweck ' +
-    'liefert je Zeile einen Kontovorschlag.</div>' +
+    'halbautomatisch verbuchen. Das Ziel-Bankkonto wählst du in der Vorschau; der ' +
+    'Verwendungszweck liefert je Zeile einen Kontovorschlag.</div>' +
     '<input type="file" id="camtDatei" accept=".xml,text/xml,application/xml">' +
     '<div id="camtVorschau"></div></div>';
 
@@ -2237,7 +2245,8 @@ function renderBuchhaltung(m) {
   html += '<div class="karte"><h2>Bankimport (MT940)</h2>' +
     '<div class="karte-hint">Kontoauszug im klassischen SWIFT-Format MT940 ' +
     'einlesen — viele Banken bieten es alternativ zu CAMT.053. Verbuchung wie ' +
-    'beim CAMT-Import: Bankkonto 1800, je Zeile ein Kontovorschlag.</div>' +
+    'beim CAMT-Import: Ziel-Bankkonto in der Vorschau wählbar, je Zeile ein ' +
+    'Kontovorschlag.</div>' +
     '<input type="file" id="mt940Datei" accept=".sta,.940,.txt,text/plain">' +
     '<div id="mt940Vorschau"></div></div>';
 
@@ -2245,7 +2254,8 @@ function renderBuchhaltung(m) {
   html += '<div class="karte"><h2>Broker-Import (Interactive Brokers)</h2>' +
     '<div class="karte-hint">Flex-Query-Bericht (XML) von Interactive Brokers ' +
     'einlesen — Trades, Dividenden und Zinsen werden je Zeile als Buchung gegen ' +
-    'das Verrechnungs-/Bankkonto 1800 vorgeschlagen (Wertpapiere → 1510).</div>' +
+    'das in der Vorschau gewählte Verrechnungs-/Bankkonto gebucht (Wertpapiere → ' +
+    '1510).</div>' +
     '<input type="file" id="ibkrDatei" accept=".xml,text/xml,application/xml">' +
     '<div id="ibkrVorschau"></div></div>';
 

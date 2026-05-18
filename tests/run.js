@@ -151,6 +151,13 @@ test('SKR04: vermögensverwaltende Konten vorhanden', function () {
   ok(SKR04.kontoFinden('0820'), 'Beteiligungen (0820) fehlt');
   ok(SKR04.kontoFinden('7000'), 'Erträge aus Beteiligungen (7000) fehlt');
 });
+test('SKR04: mehrere Bankkonten für verschiedene Banken', function () {
+  ['1800', '1810', '1820', '1830', '1840'].forEach(function (nr) {
+    var k = SKR04.kontoFinden(nr);
+    ok(k, 'Bankkonto ' + nr + ' fehlt');
+    eq(k.pos, 'B.IV', 'Bankkonto ' + nr + ' muss auf Position B.IV zeigen');
+  });
+});
 test('SKR04: Eröffnungsbilanzkonto 9000 ohne Bilanzseite', function () {
   var ebk = SKR04.kontoFinden('9000');
   ok(ebk, 'Konto 9000 (EBK) fehlt');
