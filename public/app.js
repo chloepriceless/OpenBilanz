@@ -102,6 +102,7 @@ function renderNav() {
   n.push('<div class="nav-item" data-akt="neu"><span class="ic">+</span><span>Neuer Abschluss</span></div>');
   n.push('<div class="nav-grp">Stammdaten</div>');
   n.push(navItem('stammdaten', '⌂', 'Unternehmensdaten'));
+  n.push(navItem('anlagen', '▦', 'Anlagenverzeichnis'));
   n.push('<div class="nav-grp">Hilfe</div>');
   n.push(navItem('fristen', '⚠', 'Fristen &amp; Pflichten'));
   n.push(navItem('hilfe', '?', 'Buchungshilfe'));
@@ -140,6 +141,7 @@ function setView(view) {
   m.scrollTop = 0;
   if (view === 'start')       renderStart(m);
   else if (view === 'stammdaten') renderStammdaten(m);
+  else if (view === 'anlagen')    renderAnlagen(m);
   else if (view === 'editor')     renderEditor(m);
   else if (view === 'druck')      renderDruck(m);
   else if (view === 'ebilanz')    renderEbilanz(m);
@@ -2167,6 +2169,295 @@ function beschlussText(typ, s, ab, dat) {
     ' zum Geschäftsführer der Gesellschaft bestellt. Die Vertretungsbefugnis richtet ' +
     'sich nach dem Gesellschaftsvertrag.</p>' +
     '<p class="dok-fussnote">Rechtsgrundlage: § 46 Nr. 5 GmbHG.</p>';
+}
+
+/* ===========================================================================
+ * ANLAGENVERZEICHNIS & AfA
+ * ---------------------------------------------------------------------------
+ * Anlagengitter mit linearer und degressiver Abschreibung. Die Anlagegüter
+ * werden unternehmensweit gehalten (S.unternehmen.anlagen); je Geschäftsjahr
+ * ergeben sich AfA-Betrag und Buchwert. Aus dem Verzeichnis lassen sich der
+ * Anlagenspiegel (§ 284 Abs. 3 HGB) und AfA-Buchungen für einen Jahres-
+ * abschluss erzeugen.
+ * ========================================================================= */
+
+/* Standard-Abschreibungskonto (GuV) zu einem Anlage-Konto. */
+function afaKontoZu(kontoNr) {
+  var k = SKR04.kontoFinden(kontoNr);
+  if (!k) return '6220';
+  if (k.pos === 'A.I') return '6200';                 // immaterielle Vermögensgegenstände
+  if (kontoNr === '0670') return '6260';              // GWG-Sofortabschreibung
+  if (/^02/.test(kontoNr)) return '6221';             // Gebäude / grundstücksgleiche Bauten
+  return '6220';                                      // sonstige Sachanlagen
+}
+
+/* AfA-Plan einer Anlage: [{ jahr, monate, afa, buchwert }] je Kalenderjahr.
+ * Degressive AfA: höchstens das Dreifache der linearen, gedeckelt auf 30 %
+ * (Regelung für bewegliche WG, Anschaffung 01.07.2025–31.12.2027); Wechsel zur
+ * linearen Restwert-AfA, sobald diese höher ist. Erstes Jahr monatsgenau. */
+function afaPlan(anlage) {
+  var AK = Berechnung.num(anlage.anschaffungskosten);
+  var ND = parseInt(anlage.nutzungsdauer, 10) || 0;
+  var d = String(anlage.anschaffungsdatum || '');
+  var jahr0 = parseInt(d.slice(0, 4), 10);
+  var monat0 = parseInt(d.slice(5, 7), 10) || 1;
+  if (!(AK > 0) || !ND || !jahr0) return [];
+  var degressiv = anlage.methode === 'degressiv';
+  var satz = Math.min(3 / ND, 0.30);
+  var linJahr = AK / ND;
+  var plan = [], bw = AK, jahr = jahr0, idx = 0, restMon = ND * 12;
+  while (bw > 0.005 && plan.length < ND + 4 && restMon > 0) {
+    var mon = (idx === 0) ? (13 - monat0) : 12;
+    if (mon > restMon) mon = restMon;
+    var afa;
+    if (degressiv) {
+      var afaDeg = bw * satz * (mon / 12);
+      var afaLin = bw * mon / restMon;          // linear auf Restbuchwert/Restmonate
+      afa = Math.max(afaDeg, afaLin);
+    } else {
+      afa = linJahr * (mon / 12);
+    }
+    if (afa > bw) afa = bw;
+    afa = Math.round(afa * 100) / 100;
+    bw = Math.round((bw - afa) * 100) / 100;
+    plan.push({ jahr: jahr, monate: mon, afa: afa, buchwert: bw });
+    restMon -= mon; jahr++; idx++;
+  }
+  if (bw > 0.005 && plan.length) {              // Rundungsrest in die letzte Zeile
+    var last = plan[plan.length - 1];
+    last.afa = Math.round((last.afa + bw) * 100) / 100;
+    last.buchwert = 0;
+  }
+  return plan;
+}
+/* AfA-Zeile eines Kalenderjahres. */
+function afaImJahr(anlage, jahr) {
+  var p = afaPlan(anlage), i;
+  for (i = 0; i < p.length; i++) if (p[i].jahr === jahr) return p[i];
+  if (p.length && jahr > p[p.length - 1].jahr) return { jahr: jahr, monate: 0, afa: 0, buchwert: 0 };
+  return { jahr: jahr, monate: 0, afa: 0, buchwert: Berechnung.num(anlage.anschaffungskosten) };
+}
+/* kumulierte AfA bis einschließlich Jahresende. */
+function afaKumuliert(anlage, jahr) {
+  var s = 0;
+  afaPlan(anlage).forEach(function (z) { if (z.jahr <= jahr) s += z.afa; });
+  return Math.round(s * 100) / 100;
+}
+/* AfA-Verlauf einer Anlage als Tabelle. */
+function afaVerlaufHtml(an) {
+  var p = afaPlan(an);
+  if (!p.length) return '<div class="karte-hint">Unvollständige Angaben — kein AfA-Plan.</div>';
+  var h = '<table class="liste"><thead><tr><th>Jahr</th><th>Monate</th>' +
+    '<th class="rechts">AfA</th><th class="rechts">Buchwert Jahresende</th></tr></thead><tbody>';
+  p.forEach(function (z) {
+    h += '<tr><td class="mono">' + z.jahr + '</td><td class="mono">' + z.monate + '</td>' +
+      '<td class="rechts mono">' + geld(z.afa) + '</td>' +
+      '<td class="rechts mono">' + geld(z.buchwert) + '</td></tr>';
+  });
+  return h + '</tbody></table>';
+}
+/* Anlagenspiegel eines Geschäftsjahres (§ 284 Abs. 3 HGB). */
+function anlagenspiegelHtml(jahr) {
+  var anlagen = (S.unternehmen && S.unternehmen.anlagen) || [];
+  if (!anlagen.length) return '<div class="karte-hint">Keine Anlagegüter erfasst.</div>';
+  var t = { ak: 0, kumA: 0, afa: 0, kumE: 0, bw: 0 }, zeilen = '';
+  anlagen.forEach(function (an) {
+    var aJahr = parseInt(String(an.anschaffungsdatum || '').slice(0, 4), 10);
+    if (aJahr && jahr < aJahr) return;                 // noch nicht im Bestand
+    var ak = Berechnung.num(an.anschaffungskosten);
+    var kumA = afaKumuliert(an, jahr - 1);
+    var afa = afaImJahr(an, jahr).afa;
+    var kumE = afaKumuliert(an, jahr);
+    var bw = afaImJahr(an, jahr).buchwert;
+    t.ak += ak; t.kumA += kumA; t.afa += afa; t.kumE += kumE; t.bw += bw;
+    zeilen += '<tr><td>' + esc(an.bezeichnung || '') + '</td>' +
+      '<td class="rechts mono">' + geld(ak) + '</td>' +
+      '<td class="rechts mono">' + geld(kumA) + '</td>' +
+      '<td class="rechts mono">' + geld(afa) + '</td>' +
+      '<td class="rechts mono">' + geld(kumE) + '</td>' +
+      '<td class="rechts mono">' + geld(bw) + '</td></tr>';
+  });
+  if (!zeilen) return '<div class="karte-hint">Im Jahr ' + jahr + ' kein Anlagegut im Bestand.</div>';
+  return '<table class="liste" style="margin-top:10px"><thead><tr><th>Anlagegut</th>' +
+    '<th class="rechts">Anschaffungskosten</th><th class="rechts">kum. AfA Anfang</th>' +
+    '<th class="rechts">AfA ' + jahr + '</th><th class="rechts">kum. AfA Ende</th>' +
+    '<th class="rechts">Buchwert Ende</th></tr></thead><tbody>' + zeilen +
+    '<tr class="zeile-summe"><td>Summe</td>' +
+    '<td class="rechts mono">' + geld(t.ak) + '</td>' +
+    '<td class="rechts mono">' + geld(t.kumA) + '</td>' +
+    '<td class="rechts mono">' + geld(t.afa) + '</td>' +
+    '<td class="rechts mono">' + geld(t.kumE) + '</td>' +
+    '<td class="rechts mono">' + geld(t.bw) + '</td></tr></tbody></table>';
+}
+/* Erzeugt die AfA-Buchungen des Geschäftsjahres in einem Jahresabschluss. */
+function afaBuchungenErzeugen(jaId, m) {
+  Store.ladeAbschluss(jaId).then(function (ja) {
+    if (!ja) { alert('Jahresabschluss konnte nicht geladen werden.'); return; }
+    var jahr = parseInt(String(ja.gjBis || ja.stichtag || '').slice(0, 4), 10);
+    if (!jahr) { alert('Der Jahresabschluss hat kein Geschäftsjahr.'); return; }
+    var anlagen = (S.unternehmen && S.unternehmen.anlagen) || [];
+    ja.buchungen = ja.buchungen || [];
+    ja.protokoll = ja.protokoll || [];
+    var neu = 0, stamp = Date.now();
+    anlagen.forEach(function (an, i) {
+      var z = afaImJahr(an, jahr);
+      if (!(z.afa > 0)) return;
+      var quelle = (an.id || ('idx' + i)) + ':' + jahr;
+      if (ja.buchungen.some(function (b) { return b.afaQuelle === quelle; })) return;
+      ja.buchungen.push({
+        id: 'B-AfA-' + stamp + '-' + i, datum: ja.gjBis || ja.stichtag,
+        betrag: z.afa, text: 'Abschreibung ' + (an.bezeichnung || an.konto || '') + ' ' + jahr,
+        soll: afaKontoZu(an.konto), haben: an.konto, afaQuelle: quelle
+      });
+      neu++;
+    });
+    if (!neu) {
+      alert('Keine neuen AfA-Buchungen für ' + jahr + ' — entweder keine Abschreibung ' +
+        'in diesem Jahr oder bereits gebucht.');
+      return;
+    }
+    ja.protokoll.push({ zeit: new Date().toISOString(),
+      text: neu + ' AfA-Buchung(en) aus dem Anlagenverzeichnis übernommen' });
+    Store.speichereAbschluss(ja).then(function (g) {
+      if (g && !g.fehler && S.aktiv && S.aktiv.id === ja.id) S.aktiv = g;
+      hinweisToast(neu + ' AfA-Buchung(en) im Jahresabschluss erzeugt. Dort „Salden ' +
+        'übernehmen" überträgt sie in Bilanz und GuV.');
+    });
+  });
+}
+function renderAnlagen(m) {
+  if (!S.unternehmen) { setView('stammdaten'); return; }
+  var u = S.unternehmen;
+  if (!Array.isArray(u.anlagen)) u.anlagen = [];
+  var anlagen = u.anlagen;
+  var jahrJetzt = new Date().getFullYear();
+
+  var html = '<div class="kopf"><h1>Anlagenverzeichnis &amp; AfA</h1>' +
+    '<p>Anlagegüter mit linearer oder degressiver Abschreibung. Aus dem Verzeichnis ' +
+    'entstehen Anlagenspiegel und AfA-Buchungen.</p></div>';
+  html += '<div class="box box-info"><b>Abschreibung</b>Anlagegüter werden über ihre ' +
+    'Nutzungsdauer abgeschrieben (AfA). Die <b>lineare</b> AfA verteilt die Anschaffungs' +
+    'kosten gleichmäßig; die <b>degressive</b> AfA (bewegliche Wirtschaftsgüter, ' +
+    'Anschaffung 01.07.2025–31.12.2027) schreibt anfangs mehr ab — höchstens das ' +
+    'Dreifache der linearen, gedeckelt auf 30 %. Das erste Jahr wird monatsgenau ' +
+    'gerechnet (§ 7 EStG).</div>';
+
+  var kontoOpt = SKR04.KONTEN.filter(function (k) {
+    return /^0/.test(k.nr) && (k.pos === 'A.I' || k.pos === 'A.II');
+  }).map(function (k) {
+    return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
+  }).join('');
+  html += '<div class="karte"><h2>Anlagegut erfassen</h2><div class="gitter g3">' +
+    feldWrap('Bezeichnung', '', '<input id="anBez">') +
+    feldWrap('Anlagekonto (SKR04)', '', '<select id="anKonto">' + kontoOpt + '</select>') +
+    feldWrap('Anschaffungsdatum', '', '<input type="date" id="anDatum">') +
+    feldWrap('Anschaffungskosten (EUR, netto)', '',
+      '<input class="zahl" type="text" inputmode="decimal" id="anAK">') +
+    feldWrap('Nutzungsdauer (Jahre)', '', '<input type="number" id="anND" min="1" value="3">') +
+    feldWrap('AfA-Methode', '', '<select id="anMethode">' +
+      '<option value="linear">linear</option>' +
+      '<option value="degressiv">degressiv</option></select>') +
+    '</div><div class="btn-reihe"><button class="btn btn-pri" id="anAdd">' +
+    'Anlagegut hinzufügen</button></div></div>';
+
+  html += '<div class="karte"><div class="karte-kopf"><div><h2>Anlagegüter</h2>' +
+    '<div class="karte-hint">' + anlagen.length + ' Anlagegut(-güter)' +
+    (anlagen.length ? ' &middot; Buchwerte zum Jahresende ' + jahrJetzt : '') +
+    '</div></div></div>';
+  if (!anlagen.length) {
+    html += '<div class="karte-hint">Noch keine Anlagegüter erfasst.</div>';
+  } else {
+    html += '<table class="liste"><thead><tr><th>Bezeichnung</th><th>Konto</th>' +
+      '<th>Anschaffung</th><th class="rechts">AK</th><th>ND</th><th>Methode</th>' +
+      '<th class="rechts">Buchwert</th><th></th></tr></thead><tbody>';
+    anlagen.forEach(function (an, i) {
+      html += '<tr><td>' + esc(an.bezeichnung || '') + '</td>' +
+        '<td class="mono">' + esc(an.konto || '') + '</td>' +
+        '<td class="mono">' + datumDe(an.anschaffungsdatum) + '</td>' +
+        '<td class="rechts mono">' + geld(an.anschaffungskosten) + '</td>' +
+        '<td class="mono">' + esc(an.nutzungsdauer) + ' J.</td>' +
+        '<td>' + (an.methode === 'degressiv' ? 'degressiv' : 'linear') + '</td>' +
+        '<td class="rechts mono">' + geld(afaImJahr(an, jahrJetzt).buchwert) + '</td>' +
+        '<td class="rechts"><span class="btn btn-sm" data-verlauf="' + i + '">Verlauf</span> ' +
+        '<span class="btn btn-sm btn-gefahr" data-andel="' + i + '">löschen</span></td></tr>';
+      html += '<tr id="anVerlauf' + i + '" style="display:none"><td colspan="8">' +
+        afaVerlaufHtml(an) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '</div>';
+
+  html += '<div class="karte"><h2>Anlagenspiegel <span class="reg">&middot; § 284 Abs. 3 HGB' +
+    '</span></h2><div class="gitter g3">' +
+    feldWrap('Geschäftsjahr', '', '<input type="number" id="anSpiegelJahr" value="' +
+      jahrJetzt + '">') + '</div><div id="anSpiegel"></div></div>';
+
+  var jas = S.abschluesse.filter(function (x) { return x.art === 'JAHRESABSCHLUSS'; });
+  html += '<div class="karte"><h2>AfA-Buchungen übernehmen</h2>' +
+    '<div class="karte-hint">Erzeugt für jedes Anlagegut die AfA-Buchung des ' +
+    'Geschäftsjahres im Buchungsjournal des gewählten Jahresabschlusses (Soll ' +
+    'Abschreibungskonto / Haben Anlagekonto). Anschließend dort „Salden übernehmen".</div>';
+  if (!jas.length) {
+    html += '<div class="karte-hint">Noch kein Jahresabschluss vorhanden.</div>';
+  } else {
+    html += '<div class="gitter g2">' +
+      feldWrap('Jahresabschluss', '', '<select id="anJa">' + jas.map(function (x) {
+        return '<option value="' + esc(x.id) + '">' + esc(x.bezeichnung) + '</option>';
+      }).join('') + '</select>') +
+      '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" ' +
+      'id="anAfaBuchen">AfA-Buchungen erzeugen</button></div></div>';
+  }
+  html += '</div>';
+
+  m.innerHTML = html;
+
+  m.querySelector('#anAdd').onclick = function () {
+    var bez = document.getElementById('anBez').value.trim();
+    var ak = Berechnung.num(document.getElementById('anAK').value);
+    var datum = document.getElementById('anDatum').value;
+    if (!bez) { alert('Bitte eine Bezeichnung eingeben.'); return; }
+    if (!ak) { alert('Bitte die Anschaffungskosten eingeben.'); return; }
+    if (!datum) { alert('Bitte das Anschaffungsdatum eingeben.'); return; }
+    anlagen.push({
+      id: 'A-' + Date.now(), bezeichnung: bez,
+      konto: document.getElementById('anKonto').value,
+      anschaffungsdatum: datum, anschaffungskosten: ak,
+      nutzungsdauer: parseInt(document.getElementById('anND').value, 10) || 1,
+      methode: document.getElementById('anMethode').value
+    });
+    Store.speichereUnternehmen(u).then(function (g) {
+      if (g && !g.fehler) S.unternehmen = g;
+      hinweisToast('Anlagegut hinzugefügt.');
+      renderAnlagen(m);
+    });
+  };
+  m.querySelectorAll('[data-verlauf]').forEach(function (el) {
+    el.onclick = function () {
+      var z = document.getElementById('anVerlauf' + el.dataset.verlauf);
+      if (z) z.style.display = z.style.display === 'none' ? '' : 'none';
+    };
+  });
+  m.querySelectorAll('[data-andel]').forEach(function (el) {
+    el.onclick = function () {
+      if (!confirm('Anlagegut löschen?')) return;
+      anlagen.splice(parseInt(el.dataset.andel, 10), 1);
+      Store.speichereUnternehmen(u).then(function (g) {
+        if (g && !g.fehler) S.unternehmen = g;
+        renderAnlagen(m);
+      });
+    };
+  });
+  var sj = m.querySelector('#anSpiegelJahr');
+  function zeigeSpiegel() {
+    document.getElementById('anSpiegel').innerHTML =
+      anlagenspiegelHtml(parseInt(sj.value, 10) || jahrJetzt);
+  }
+  sj.addEventListener('input', zeigeSpiegel);
+  zeigeSpiegel();
+  var ab = m.querySelector('#anAfaBuchen');
+  if (ab) ab.onclick = function () {
+    afaBuchungenErzeugen(m.querySelector('#anJa').value, m);
+  };
 }
 
 /* ===========================================================================
