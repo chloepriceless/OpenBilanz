@@ -1564,6 +1564,105 @@ function renderUstva(m) {
   zeigen();
 }
 
+/* E-Rechnung (XRechnung / ZUGFeRD): parst die XML einer Eingangsrechnung in
+ * den Syntaxen CII (CrossIndustryInvoice) und UBL (Invoice). Liefert
+ * { rechnung: { nummer, datum, verkaeufer, netto, ust, brutto } }. */
+function parseERechnung(xmlText) {
+  var doc;
+  try { doc = new DOMParser().parseFromString(String(xmlText), 'application/xml'); }
+  catch (e) { return { fehler: 'Die Datei ist kein gültiges XML.' }; }
+  if (!doc || doc.getElementsByTagName('parsererror').length) {
+    return { fehler: 'Die Datei ist kein gültiges XML.' };
+  }
+  var alle = doc.getElementsByTagName('*'), i;
+  function ersterText(name) {
+    for (i = 0; i < alle.length; i++) if (alle[i].localName === name) {
+      return String(alle[i].textContent || '').trim();
+    }
+    return '';
+  }
+  function innerhalb(rootName, childName) {
+    var root = null, j;
+    for (j = 0; j < alle.length; j++) if (alle[j].localName === rootName) { root = alle[j]; break; }
+    if (!root) return '';
+    var ch = root.getElementsByTagName('*');
+    for (j = 0; j < ch.length; j++) if (ch[j].localName === childName) {
+      return String(ch[j].textContent || '').trim();
+    }
+    return '';
+  }
+  function z(s) { return parseFloat(String(s || '').replace(',', '.')) || 0; }
+  var root = doc.documentElement ? doc.documentElement.localName : '';
+  var cii = /CrossIndustryInvoice/i.test(root);
+  var r = {};
+  if (cii) {
+    r.nummer = innerhalb('ExchangedDocument', 'ID');
+    r.datum = isoDat(innerhalb('ExchangedDocument', 'DateTimeString'));
+    r.netto = z(ersterText('TaxBasisTotalAmount'));
+    r.ust = z(ersterText('TaxTotalAmount'));
+    r.brutto = z(ersterText('GrandTotalAmount'));
+    r.verkaeufer = innerhalb('SellerTradeParty', 'Name');
+  } else {
+    r.nummer = innerhalb('Invoice', 'ID');
+    r.datum = isoDat(ersterText('IssueDate'));
+    r.netto = z(ersterText('TaxExclusiveAmount'));
+    r.ust = z(ersterText('TaxAmount'));
+    r.brutto = z(ersterText('PayableAmount')) || z(ersterText('TaxInclusiveAmount'));
+    r.verkaeufer = innerhalb('AccountingSupplierParty', 'RegistrationName') ||
+                   innerhalb('AccountingSupplierParty', 'Name');
+  }
+  if (!r.brutto && !r.netto) {
+    return { fehler: 'Keine Rechnungsbeträge gefunden — ist das eine E-Rechnung ' +
+      '(XRechnung- oder ZUGFeRD-XML)?' };
+  }
+  if (!r.netto && r.brutto) r.netto = Math.round((r.brutto - r.ust) * 100) / 100;
+  if (!r.brutto && r.netto) r.brutto = Math.round((r.netto + r.ust) * 100) / 100;
+  return { rechnung: r };
+}
+/* Zeigt die geparste E-Rechnung und bietet die Übernahme als Buchung an. */
+function eRechnungVorschau(m, a, kontoOpt, parsed) {
+  var box = m.querySelector('#erVorschau');
+  if (!box) return;
+  if (parsed.fehler) {
+    box.innerHTML = '<div class="box box-warn" style="margin-top:10px">' +
+      esc(parsed.fehler) + '</div>';
+    return;
+  }
+  var r = parsed.rechnung;
+  var aufwOpt = kontoOpt.replace('value="6300"', 'value="6300" selected');
+  box.innerHTML = '<table class="liste" style="margin-top:10px"><tbody>' +
+    '<tr><td>Rechnungsnummer</td><td class="mono">' + esc(r.nummer || '—') + '</td></tr>' +
+    '<tr><td>Rechnungsdatum</td><td class="mono">' + datumDe(r.datum) + '</td></tr>' +
+    '<tr><td>Rechnungssteller</td><td>' + esc(r.verkaeufer || '—') + '</td></tr>' +
+    '<tr><td>Nettobetrag</td><td class="rechts mono">' + geld(r.netto) + '</td></tr>' +
+    '<tr><td>Umsatzsteuer</td><td class="rechts mono">' + geld(r.ust) + '</td></tr>' +
+    '<tr><td>Bruttobetrag</td><td class="rechts mono">' + geld(r.brutto) + '</td></tr>' +
+    '</tbody></table>' +
+    '<div class="gitter g2" style="margin-top:10px">' +
+    feldWrap('Aufwandskonto', 'Soll-Konto für den Nettobetrag',
+      '<select id="erKonto">' + aufwOpt + '</select>') +
+    '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" ' +
+    'id="erUebernehmen">Als Eingangsrechnung buchen</button></div></div>';
+  box.querySelector('#erUebernehmen').onclick = function () {
+    var konto = box.querySelector('#erKonto').value, stamp = Date.now();
+    var basis = 'Eingangsrechnung ' + (r.verkaeufer ? r.verkaeufer + ' ' : '') + (r.nummer || '');
+    a.buchungen.push({ id: 'B-ER-' + stamp + '-0', datum: r.datum,
+      betrag: Berechnung.cent(r.netto), text: basis.slice(0, 90),
+      soll: konto, haben: '3300' });
+    var n = 1;
+    if (r.ust > 0.005) {
+      a.buchungen.push({ id: 'B-ER-' + stamp + '-1', datum: r.datum,
+        betrag: Berechnung.cent(r.ust), text: ('Vorsteuer ' + (r.nummer || '')).slice(0, 90),
+        soll: '1406', haben: '3300' });
+      n = 2;
+    }
+    speichereStill().then(function () {
+      hinweisToast(n + ' Buchung(en) aus der E-Rechnung übernommen.');
+      renderBuchhaltung(m);
+    });
+  };
+}
+
 /* Bankimport CAMT.053 (ISO 20022 Kontoauszug). Parst die XML-Datei und liefert
  * die Umsätze als [{ datum, betrag, eingang, zweck, partner }]. */
 function parseCamt(xmlText) {
@@ -1822,6 +1921,14 @@ function renderBuchhaltung(m) {
     '<input type="file" id="ibkrDatei" accept=".xml,text/xml,application/xml">' +
     '<div id="ibkrVorschau"></div></div>';
 
+  /* E-Rechnung (XRechnung / ZUGFeRD) */
+  html += '<div class="karte"><h2>E-Rechnung (XRechnung / ZUGFeRD)</h2>' +
+    '<div class="karte-hint">Eingehende E-Rechnung als XML einlesen (XRechnung ' +
+    'oder die XML aus einer ZUGFeRD-PDF). Die Beträge werden ausgelesen und als ' +
+    'Eingangsrechnung gegen Verbindlichkeiten (3300) gebucht.</div>' +
+    '<input type="file" id="erDatei" accept=".xml,text/xml,application/xml">' +
+    '<div id="erVorschau"></div></div>';
+
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
   m.querySelector('#buAdd').onclick = function () {
@@ -1924,6 +2031,15 @@ function renderBuchhaltung(m) {
     rd.onload = function () {
       camtVorschau(m, a, kontoOpt, parseIbkrFlex(rd.result), 'IBKR', '#ibkrVorschau');
     };
+    rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
+    rd.readAsText(f);
+  };
+  var erIn = m.querySelector('#erDatei');
+  if (erIn) erIn.onchange = function () {
+    var f = erIn.files && erIn.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () { eRechnungVorschau(m, a, kontoOpt, parseERechnung(rd.result)); };
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
     rd.readAsText(f);
   };
