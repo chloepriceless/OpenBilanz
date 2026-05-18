@@ -105,6 +105,7 @@ function renderNav() {
   n.push('<div class="nav-grp">Stammdaten</div>');
   n.push(navItem('stammdaten', '⌂', 'Unternehmensdaten'));
   n.push(navItem('anlagen', '▦', 'Anlagenverzeichnis'));
+  n.push(navItem('verfahrensdoku', '✎', 'Verfahrensdokumentation'));
   n.push('<div class="nav-grp">Hilfe</div>');
   n.push(navItem('fristen', '⚠', 'Fristen &amp; Pflichten'));
   n.push(navItem('hilfe', '?', 'Buchungshilfe'));
@@ -144,6 +145,7 @@ function setView(view) {
   if (view === 'start')       renderStart(m);
   else if (view === 'stammdaten') renderStammdaten(m);
   else if (view === 'anlagen')    renderAnlagen(m);
+  else if (view === 'verfahrensdoku') renderVerfahrensdoku(m);
   else if (view === 'editor')     renderEditor(m);
   else if (view === 'druck')      renderDruck(m);
   else if (view === 'ebilanz')    renderEbilanz(m);
@@ -2890,6 +2892,106 @@ function renderAnlagen(m) {
   if (ab) ab.onclick = function () {
     afaBuchungenErzeugen(m.querySelector('#anJa').value, m);
   };
+}
+
+/* ===========================================================================
+ * GoBD-VERFAHRENSDOKUMENTATION
+ * ---------------------------------------------------------------------------
+ * Geführter Fragebogen: die unternehmensspezifischen Angaben werden erfasst,
+ * der Rest ist vorformuliert. Ergebnis ist ein druckbares Dokument.
+ * ========================================================================= */
+function verfahrensDok(u) {
+  var v = u.verfahrensdoku || {};
+  function f(key, fallback) { return esc(v[key] || fallback || '—'); }
+  var h = '<h1>' + esc(u.name || 'Unternehmen') + '</h1>';
+  h += '<div class="dok-sub">' + esc((u.plz || '') + ' ' + (u.ort || '')) +
+    (u.hrNummer ? ' &middot; ' + esc(u.hrNummer) : '') + '</div>';
+  h += '<h1 style="margin-top:14px">Verfahrensdokumentation</h1>';
+  h += '<div class="dok-sub">zur ordnungsmäßigen Buchführung nach den GoBD' +
+    ' &middot; Stand ' + datumDe(new Date().toISOString().slice(0, 10)) + '</div>';
+  h += '<h2>1. Allgemeines</h2><p>Diese Verfahrensdokumentation beschreibt das ' +
+    'Verfahren der Buchführung und Belegverarbeitung der ' +
+    esc(u.name || 'Gesellschaft') + ' nach den Grundsätzen zur ordnungsmäßigen ' +
+    'Führung und Aufbewahrung von Büchern, Aufzeichnungen und Unterlagen in ' +
+    'elektronischer Form sowie zum Datenzugriff (GoBD).</p>';
+  h += '<h2>2. Belegwesen</h2>' +
+    '<p><b>Verantwortlich für Belegerfassung und Buchführung:</b> ' +
+    f('verantwortlich') + '</p>' +
+    '<p><b>Erfassung und Behandlung der Belege:</b> ' +
+    f('belegerfassung', 'Eingehende und ausgehende Belege werden zeitnah und ' +
+      'vollständig erfasst und mit den Buchungen verknüpft.') + '</p>' +
+    '<p><b>Ablage der Belege:</b> ' + f('belegablage') + '</p>';
+  h += '<h2>3. Buchführung</h2>' +
+    '<p><b>Eingesetzte Software:</b> ' + f('software', 'OpenBilanz') + '</p>' +
+    '<p><b>Kontenrahmen:</b> ' + f('kontenrahmen', 'SKR04') + '</p>' +
+    '<p>Die Buchungssätze werden im Buchungsjournal erfasst. Nach Abschluss ' +
+    'eines Zeitraums werden die Buchungen <b>festgeschrieben</b>; festgeschriebene ' +
+    'Buchungen sind unveränderlich und nicht mehr löschbar. Korrekturen erfolgen ' +
+    'ausschließlich über <b>Stornobuchungen</b>; jede Festschreibung und jeder ' +
+    'Storno wird im Änderungsprotokoll vermerkt (§ 146 Abs. 4 AO).</p>';
+  h += '<h2>4. Datensicherung und IT</h2>' +
+    '<p><b>Datensicherung — Ort und Rhythmus:</b> ' + f('datensicherung') + '</p>' +
+    '<p>Die Daten werden lokal gehalten; eine vollständige Sicherungsdatei wird ' +
+    'exportiert und an einem getrennten Ort aufbewahrt.</p>';
+  h += '<h2>5. Aufbewahrung</h2>' +
+    '<p><b>Aufbewahrungsort der Unterlagen:</b> ' + f('aufbewahrungsort') + '</p>' +
+    '<p>Es gelten die gesetzlichen Aufbewahrungsfristen: 10 Jahre für ' +
+    'Jahresabschlüsse, Eröffnungsbilanzen und Inventare, 8 Jahre für ' +
+    'Buchungsbelege, 6 Jahre für Handels- und Geschäftsbriefe (§ 257 HGB, ' +
+    '§ 147 AO).</p>';
+  h += '<h2>6. Internes Kontrollsystem</h2><p>' +
+    f('iks', 'Die erfassten Buchungen werden auf Vollständigkeit und Richtigkeit ' +
+      'geprüft; die Bilanzgleichung wird laufend kontrolliert.') + '</p>';
+  h += '<div class="dok-fuss">Erstellt mit OpenBilanz. Die Verfahrens' +
+    'dokumentation ist bei Verfahrensänderungen fortzuschreiben.</div>';
+  return h;
+}
+function renderVerfahrensdoku(m) {
+  if (!S.unternehmen) { setView('stammdaten'); return; }
+  var u = S.unternehmen;
+  u.verfahrensdoku = u.verfahrensdoku || {};
+  var v = u.verfahrensdoku;
+  function fld(key, label, sub, typ) {
+    var val = v[key] || '';
+    if (typ === 'area') {
+      return feldWrap(label, sub, '<textarea data-vd="' + key + '">' + esc(val) +
+        '</textarea>');
+    }
+    return feldWrap(label, sub, '<input data-vd="' + key + '" value="' + esc(val) + '">');
+  }
+  var html = '<div class="kopf no-print"><h1>Verfahrensdokumentation</h1>' +
+    '<p>Geführter Fragebogen für die GoBD-Verfahrensdokumentation.</p></div>';
+  html += '<div class="box box-info no-print"><b>GoBD</b>Die GoBD verlangen eine ' +
+    'Verfahrensdokumentation, die das Buchführungs- und Belegverfahren ' +
+    'nachvollziehbar beschreibt. Die folgenden Angaben füllen die ' +
+    'unternehmensspezifischen Teile; der Rest ist vorformuliert.</div>';
+  html += '<div class="karte no-print"><h2>Angaben</h2><div class="gitter g2">' +
+    fld('verantwortlich', 'Verantwortlich für Belegerfassung und Buchführung',
+      'z. B. die Geschäftsführung') +
+    fld('belegablage', 'Ablageort der Belege', 'z. B. Ordner, DMS, Cloud') +
+    fld('software', 'Eingesetzte Software', 'Standard: OpenBilanz') +
+    fld('kontenrahmen', 'Kontenrahmen', 'SKR04 oder SKR03') +
+    fld('datensicherung', 'Datensicherung — Ort und Rhythmus',
+      'z. B. .obz-Datei wöchentlich auf externe Platte') +
+    fld('aufbewahrungsort', 'Aufbewahrungsort der Unterlagen', '') +
+    '</div><div class="gitter" style="margin-top:12px">' +
+    fld('belegerfassung', 'Erfassung und Behandlung der Belege', '', 'area') +
+    fld('iks', 'Internes Kontrollsystem', '', 'area') +
+    '</div><div class="btn-reihe"><button class="btn btn-pri" id="vdSpeichern">' +
+    'Speichern &amp; aktualisieren</button></div></div>';
+  html += '<div class="btn-reihe no-print"><button class="btn btn-pri" id="vdDruck">' +
+    'Drucken / als PDF speichern</button></div>';
+  html += '<div class="dok">' + verfahrensDok(u) + '</div>';
+  m.innerHTML = html;
+  m.querySelector('#vdSpeichern').onclick = function () {
+    m.querySelectorAll('[data-vd]').forEach(function (el) { v[el.dataset.vd] = el.value; });
+    Store.speichereUnternehmen(u).then(function (g) {
+      if (g && !g.fehler) S.unternehmen = g;
+      hinweisToast('Verfahrensdokumentation gespeichert.');
+      renderVerfahrensdoku(m);
+    });
+  };
+  m.querySelector('#vdDruck').onclick = function () { window.print(); };
 }
 
 /* ===========================================================================
