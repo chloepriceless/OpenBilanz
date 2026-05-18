@@ -1336,6 +1336,45 @@ function steuerZeile(z) {
 /* ===========================================================================
  * BUCHHALTUNG (Modus 2) - Buchungsjournal nach SKR04
  * ========================================================================= */
+/* DATEV-Buchungsstapel im EXTF-Format (CSV, semikolongetrennt): Kopfzeile +
+ * Spaltenüberschriften + je Buchung eine Datenzeile (Format Buchungsstapel,
+ * Version 13). Spaltenreihenfolge nach DATEV-Formatbeschreibung; vor Übergabe
+ * an den Steuerberater dessen DATEV-Import gegenprüfen. */
+function datevExtf(a, u) {
+  u = u || {};
+  var bu = a.buchungen || [];
+  var jahr = String(a.gjBis || a.stichtag || '').slice(0, 4) ||
+             String(new Date().getFullYear());
+  var wjBeginn = String(a.gjVon || (jahr + '-01-01')).replace(/-/g, '');
+  var bis = String(a.gjBis || a.stichtag || (jahr + '-12-31')).replace(/-/g, '');
+  function q(s) { return '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"'; }
+  function p2(x) { return (x < 10 ? '0' : '') + x; }
+  var d = new Date();
+  var ts = '' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) +
+    p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds()) + '000';
+  var berater = String(u.datevBeraterNr || '').replace(/\D/g, '');
+  var mandant = String(u.datevMandantNr || '').replace(/\D/g, '');
+  var kopf = ['"EXTF"', '700', '21', '"Buchungsstapel"', '13', ts, '', '""',
+    '"OpenBilanz"', '""', berater, mandant, wjBeginn, '4', wjBeginn, bis,
+    q('OpenBilanz ' + (a.bezeichnung || '')), '""', '1', '', '0', '"EUR"',
+    '', '', '', '', '', '', '', '', ''].join(';');
+  var spalten = ['Umsatz (ohne Soll/Haben-Kz)', 'Soll/Haben-Kennzeichen', 'WKZ Umsatz',
+    'Kurs', 'Basis-Umsatz', 'WKZ Basis-Umsatz', 'Konto', 'Gegenkonto', 'BU-Schluessel',
+    'Belegdatum', 'Belegfeld 1', 'Belegfeld 2', 'Skonto', 'Buchungstext']
+    .map(q).join(';');
+  var zeilen = [];
+  bu.forEach(function (b) {
+    if (!b || !b.betrag) return;
+    var dd = String(b.datum || bis);
+    var ttmm = dd.slice(8, 10) + dd.slice(5, 7);
+    var umsatz = (Math.round(Math.abs(Number(b.betrag)) * 100) / 100).toFixed(2)
+      .replace('.', ',');
+    zeilen.push([umsatz, '"S"', '"EUR"', '', '', '', b.soll, b.haben, '',
+      ttmm, '', '', '', q(String(b.text || '').slice(0, 60))].join(';'));
+  });
+  return '﻿' + kopf + '\r\n' + spalten + '\r\n' +
+    zeilen.join('\r\n') + (zeilen.length ? '\r\n' : '');
+}
 function renderBuchhaltung(m) {
   var a = S.aktiv;
   if (!a) { setView('start'); return; }
@@ -1419,6 +1458,20 @@ function renderBuchhaltung(m) {
     html += '</tbody></table></div>';
   }
 
+  /* DATEV-Export */
+  if (a.buchungen.length) {
+    html += '<div class="karte"><h2>DATEV-Export</h2>' +
+      '<div class="karte-hint">Exportiert das Buchungsjournal als DATEV-Buchungs' +
+      'stapel (Format EXTF) — für die Übergabe an den Steuerberater.</div>' +
+      '<div class="gitter g3">' +
+      feldWrap('Beraternummer', 'optional', '<input id="dtvBerater" inputmode="numeric">') +
+      feldWrap('Mandantennummer', 'optional', '<input id="dtvMandant" inputmode="numeric">') +
+      '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" ' +
+      'id="dtvExport">DATEV-Buchungsstapel herunterladen</button></div></div>' +
+      '<div class="karte-hint" style="margin-top:8px">Vor der Übergabe mit dem ' +
+      'DATEV-Import des Steuerberaters gegenprüfen.</div></div>';
+  }
+
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
   m.querySelector('#buAdd').onclick = function () {
@@ -1492,6 +1545,15 @@ function renderBuchhaltung(m) {
   var ebBtn = m.querySelector('#ebUebernehmen');
   if (ebBtn) ebBtn.onclick = function () {
     eroeffnungUebernehmen(a, m.querySelector('#ebQuelle').value, m);
+  };
+  var dtv = m.querySelector('#dtvExport');
+  if (dtv) dtv.onclick = function () {
+    var txt = datevExtf(a, {
+      datevBeraterNr: (m.querySelector('#dtvBerater') || {}).value,
+      datevMandantNr: (m.querySelector('#dtvMandant') || {}).value
+    });
+    ladeDatei(txt, 'EXTF_Buchungsstapel_' + (a.bezeichnung || 'Abschluss')
+      .replace(/[^\w]+/g, '_') + '.csv', 'text/csv;charset=utf-8');
   };
 }
 
