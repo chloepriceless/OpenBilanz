@@ -28,7 +28,6 @@ a{color:var(--akzent)}
 .brand{display:flex;flex-direction:column;gap:5px;align-items:flex-start;
   padding:15px 18px;background:#fff;border-bottom:1px solid #25394a}
 .brand-img{width:185px;height:auto;display:block}
-.brand-sub{font-size:11.5px;color:#5a6b78}
 #nav{padding:12px 10px;flex:1;overflow:auto}
 .nav-grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;
   color:#6f8493;margin:14px 10px 5px}
