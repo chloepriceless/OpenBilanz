@@ -323,6 +323,33 @@ test('UStVA: Zeitraumfilter grenzt Buchungen ab', function () {
   eq(Ustva.berechne(bu, '2026-01-01', '2026-01-31').kz81, 1000, 'nur Januar-Umsatz');
   eq(Ustva.berechne(bu, null, null).kz81, 3000, 'ohne Filter beide Umsätze');
 });
+test('UStVA: Kleinunternehmer § 19 - keine USt, kein Vorsteuerabzug', function () {
+  var bu = [{ datum: '2026-04-01', soll: '1406', haben: '1800', betrag: 570 }];
+  var u = Ustva.berechne(bu, null, null, { kleinunternehmer: true });
+  eq(u.kleinunternehmer, true, 'Kleinunternehmer-Flag');
+  eq(u.kz66, 0, 'kein Vorsteuerabzug');
+  eq(u.kz83, 0, 'keine Zahllast');
+  ok(u.hinweise.length >= 1, 'Hinweis zur Kleinunternehmerregelung');
+});
+test('UStVA: § 13b - geschuldete Steuer und Vorsteuer heben sich auf', function () {
+  var u = Ustva.berechne([], null, null, { rc13b: { netto19: 1000 } });
+  eq(u.kz84, 190, 'Kz 84 = 19 % von 1.000');
+  eq(u.kz66, 190, '§ 13b-Steuer zugleich als Vorsteuer abziehbar');
+  eq(u.kz83, 0, 'netto Null bei voller Abzugsberechtigung');
+});
+test('UStVA: § 13b zusätzlich zur eigenen Umsatzsteuer', function () {
+  var bu = [{ datum: '2026-01-10', soll: '1800', haben: '4400', betrag: 10000 }];
+  var u = Ustva.berechne(bu, null, null, { rc13b: { netto19: 2000 } });
+  eq(u.ust19, 1900, 'eigene USt 19 %');
+  eq(u.kz84, 380, '§ 13b-Steuer 19 % von 2.000');
+  eq(u.kz83, 1900, 'Zahllast = eigene USt (1900 + 380 - 380)');
+});
+test('UStVA: steuerfreie Umsätze ohne Vorsteuerabzug melden Kz 48 + Hinweis', function () {
+  var u = Ustva.berechne([], null, null, { steuerfrei: { ohneVorsteuer: 12000 } });
+  eq(u.kz48, 12000, 'Kz 48 (steuerfrei ohne Vorsteuerabzug)');
+  ok(u.hinweise.some(function (h) { return h.indexOf('Vorsteueraufteilung') >= 0; }),
+     'Hinweis auf Vorsteueraufteilung § 15 Abs. 4');
+});
 
 /* ---- Lauf ------------------------------------------------------------- */
 console.log('OpenBilanz - Test-Suite\n');
