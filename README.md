@@ -132,15 +132,15 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Journal-Export** — Buchungsjournal maschinenlesbar als CSV und JSON | 🟡 |
 | **GDPdU-Export** — Datenträgerüberlassung (Z3) für die Betriebsprüfung | 🟡 |
 | **Prüfkette** — SHA-256-Verkettung festgeschriebener Buchungen, Integritätsprüfung | 🟡 |
-| **Erweiterte Plausibilitätsprüfungen** — Eigenkapitalquote, Steuerrückstellung, Abschreibung/Anlagevermögen, Beteiligungserträge, Vorjahresabweichung | 🟡 |
-| **Geführter Erfassungs-Assistent** — schrittweise Eröffnungsbilanz statt großem Formular | 🟡 |
-| **Demo-/Beispieldaten** — operative und vermögensverwaltende Beispiel-GmbH auf Knopfdruck | 🟡 |
-| **Glossar** — durchsuchbare Erklärung der HGB-, Steuer- und E-Bilanz-Begriffe, mit Tooltips | 🟡 |
-| **Anlagenabgänge & Teilwertabschreibungen** — Abgangsbuchungen, außerplanmäßige AfA, Abgangsspalte im Anlagenspiegel | 🟡 |
-| **Wertpapier-Buchhaltung Trading-GmbH** — Buchungshilfe Kauf/Verkauf, Verlustkonto 6905 (SKR04) | 🟡 |
-| **Anrechenbare ausländische Quellensteuer** — Anrechnung auf die Körperschaftsteuer (§ 26 KStG) | 🟡 |
-| **Änderungsprotokoll der Unternehmensdaten** — Audit-Trail mit Zeitstempel für die Stammdaten | 🟡 |
-| **Kontierungsregeln (Bankimport)** — nutzerpflegbare Regeln Suchbegriff → Gegenkonto | 🟡 |
+| **Erweiterte Plausibilitätsprüfungen** — Eigenkapitalquote, Steuerrückstellung, Abschreibung/Anlagevermögen, Beteiligungserträge, Vorjahresabweichung | ✅ |
+| **Geführter Erfassungs-Assistent** — schrittweise Eröffnungsbilanz statt großem Formular | ✅ |
+| **Demo-Portal** — Beispiel-GmbH (3 Geschäftsjahre) per Deeplink laden, ohne eigene Daten ausprobieren | 🟡 |
+| **Glossar** — durchsuchbare Erklärung der HGB-, Steuer- und E-Bilanz-Begriffe, mit Tooltips | ✅ |
+| **Anlagenabgänge & Teilwertabschreibungen** — Abgangsbuchungen, außerplanmäßige AfA, Abgangsspalte im Anlagenspiegel | ✅ |
+| **Wertpapier-Buchhaltung Trading-GmbH** — Buchungshilfe Kauf/Verkauf, Verlustkonto 6905 (SKR04) | ✅ |
+| **Anrechenbare ausländische Quellensteuer** — Anrechnung auf die Körperschaftsteuer (§ 26 KStG) | ✅ |
+| **Änderungsprotokoll der Unternehmensdaten** — Audit-Trail mit Zeitstempel für die Stammdaten | ✅ |
+| **Kontierungsregeln (Bankimport)** — nutzerpflegbare Regeln Suchbegriff → Gegenkonto | ✅ |
 
 ### Zwei Erfassungswege
 
