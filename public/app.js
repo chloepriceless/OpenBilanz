@@ -1331,6 +1331,8 @@ function renderSteuer(m) {
     'Dividende gewerbesteuerpflichtig (§ 8 Nr. 5 GewStG)', 'check');
   html += sf('erweiterteKuerzung', 'Erweiterte Grundstücks-Kürzung beantragt',
     'nur eigener Grundbesitz (§ 9 Nr. 1 Satz 2 GewStG)', 'check');
+  html += sf('finanzunternehmen', 'Anteile im Handelsbestand (§ 8b Abs. 7 KStG)',
+    'Trading-GmbH / Finanzunternehmen — keine 95-%-Freistellung', 'check');
   html += '</div></div><div id="steuerErgebnis"></div>';
 
   m.innerHTML = html;
@@ -1380,9 +1382,14 @@ function gmbhTypHinweis(a) {
     immobilien: '<b>Immobilien-GmbH</b>Verwaltet die GmbH ausschließlich eigenen ' +
       'Grundbesitz, stellt die erweiterte Grundstückskürzung (§ 9 Nr. 1 Satz 2 ' +
       'GewStG) den Grundstücksertrag praktisch vollständig von der Gewerbesteuer frei.',
-    trading: '<b>Trading-/Wertpapier-GmbH</b>Die 95-%-Freistellung von Veräußerungs' +
-      'gewinnen aus Anteilen (§ 8b Abs. 2 KStG) ist nicht an Ausschließlichkeit ' +
-      'gebunden — sie bleibt auch neben einer operativen Tätigkeit erhalten.',
+    operativ: '<b>Operative GmbH</b>Normaler Gewerbebetrieb: Körperschaft- und ' +
+      'Gewerbesteuer auf den Gewinn. Die § 8b-KStG- und § 9-GewStG-Angaben unten ' +
+      'sind nur relevant, wenn die GmbH auch Beteiligungen oder eigenen Grundbesitz hält.',
+    trading: '<b>Trading-/Wertpapier-GmbH</b>Die 95-%-Freistellung von Dividenden ' +
+      'und Veräußerungsgewinnen aus Anteilen (§ 8b KStG) ist nicht an ' +
+      'Ausschließlichkeit gebunden. <b>Achtung § 8b Abs. 7 KStG:</b> Werden die ' +
+      'Anteile im Handelsbestand gehalten (typische Trading-/Daytrading-GmbH), ' +
+      'entfällt die Freistellung — die Gewinne sind dann voll steuerpflichtig.',
     hybrid: '<b>Hybride GmbH</b>§ 8b KStG wirkt auf den Kapitalanlageteil unabhängig ' +
       'von der operativen Tätigkeit. Die erweiterte Grundstückskürzung dagegen ' +
       'entfällt, sobald eine operative Tätigkeit hinzukommt.',
@@ -1403,6 +1410,19 @@ function gmbhTypHinweis(a) {
     h += '<div class="box box-info">Die erweiterte Grundstückskürzung setzt ' +
       'ausschließlich eigenen Grundbesitz voraus. Art der Tätigkeit in den ' +
       'Unternehmensdaten setzen, damit dieser Punkt geprüft werden kann.</div>';
+  }
+  var anteile = Berechnung.num(st.beteiligungsertraege) > 0 ||
+                Berechnung.num(st.veraeusserungsgewinne) > 0;
+  if ((typ === 'trading' || typ === 'hybrid') && anteile && !st.finanzunternehmen) {
+    h += '<div class="box box-warn"><b>§ 8b Abs. 7 KStG prüfen</b>Bei einer ' +
+      'Trading-GmbH mit Anteilen im <b>Handelsbestand</b> sind Dividenden und ' +
+      'Veräußerungsgewinne voll steuerpflichtig — die 95-%-Freistellung entfällt. ' +
+      'Trifft das zu, unten „Anteile im Handelsbestand" ankreuzen.</div>';
+  }
+  if (st.finanzunternehmen) {
+    h += '<div class="box box-info">§ 8b Abs. 7 KStG aktiv: Dividenden und ' +
+      'Veräußerungsgewinne werden voll steuerpflichtig gerechnet — ohne die ' +
+      '95-%-Freistellung.</div>';
   }
   return h;
 }

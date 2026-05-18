@@ -253,6 +253,14 @@ test('Steuer: erweiterte Kürzung § 9 Nr. 1 GewStG', function () {
   var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 80000 });
   eq(s.gewst.betrag, 0, 'erweiterte Kürzung -> keine Gewerbesteuer auf Immobilienertrag');
 });
+test('Steuer: § 8b Abs. 7 - Anteile im Handelsbestand voll steuerpflichtig', function () {
+  var g = { werte: {}, jahresergebnis: 100000 };
+  var ohne = Steuer.berechne({ steuer: { hebesatz: 400, beteiligungsertraege: 100000 } }, g);
+  var mit = Steuer.berechne({ steuer: { hebesatz: 400, beteiligungsertraege: 100000,
+    finanzunternehmen: true } }, g);
+  eq(ohne.kst.zvE, 5000, '95 % steuerfrei ohne § 8b Abs. 7');
+  eq(mit.kst.zvE, 100000, 'voll steuerpflichtig mit § 8b Abs. 7');
+});
 test('Steuer: KSt 15 % + Soli 5,5 % korrekt', function () {
   var s = Steuer.berechne({ steuer: { hebesatz: 400 } }, { werte: {}, jahresergebnis: 100000 });
   eq(s.kst.betrag, 15000, 'KSt');

@@ -78,9 +78,13 @@
       zvE = cent(zvE + nichtAbzb);
       kstSchritte.push({ text: '+ nicht abziehbare Betriebsausgaben', betrag: nichtAbzb });
     }
-    // § 8b Abs. 1/4/5 KStG - Dividenden
+    // § 8b KStG - Dividenden. Abs. 7: Anteile im Handelsbestand einer
+    // Trading-/Finanzunternehmens-GmbH sind von der Freistellung ausgenommen.
     if (divid > 0) {
-      if (st.beteiligungUnter10) {
+      if (st.finanzunternehmen) {
+        kstSchritte.push({ text: 'Dividenden voll steuerpflichtig (Anteile im ' +
+          'Handelsbestand, § 8b Abs. 7 KStG)', betrag: 0 });
+      } else if (st.beteiligungUnter10) {
         kstSchritte.push({ text: 'Dividenden voll steuerpflichtig (Streubesitz < 10 %, ' +
           '§ 8b Abs. 4 KStG)', betrag: 0 });
       } else {
@@ -90,12 +94,18 @@
           '(§ 8b Abs. 1/5 KStG)', betrag: -divFrei });
       }
     }
-    // § 8b Abs. 2/3 KStG - Veräußerungsgewinne (keine Streubesitzgrenze)
+    // § 8b Abs. 2/3 KStG - Veräußerungsgewinne (keine Streubesitzgrenze;
+    // Abs. 7: Ausnahme fuer Anteile im Handelsbestand)
     if (veraeuss > 0) {
-      var verFrei = cent(veraeuss * 0.95);
-      zvE = cent(zvE - verFrei);
-      kstSchritte.push({ text: '- 95 % der Veräußerungsgewinne steuerfrei ' +
-        '(§ 8b Abs. 2/3 KStG)', betrag: -verFrei });
+      if (st.finanzunternehmen) {
+        kstSchritte.push({ text: 'Veräußerungsgewinne voll steuerpflichtig (Anteile ' +
+          'im Handelsbestand, § 8b Abs. 7 KStG)', betrag: 0 });
+      } else {
+        var verFrei = cent(veraeuss * 0.95);
+        zvE = cent(zvE - verFrei);
+        kstSchritte.push({ text: '- 95 % der Veräußerungsgewinne steuerfrei ' +
+          '(§ 8b Abs. 2/3 KStG)', betrag: -verFrei });
+      }
     }
     if (zvE < 0) zvE = 0;
     var vz = vzAus(abschluss);
@@ -115,8 +125,8 @@
       gewerbeertrag = cent(gewerbeertrag + nichtAbzb);
       gewSchritte.push({ text: '+ nicht abziehbare Betriebsausgaben', betrag: nichtAbzb });
     }
-    // § 8b wirkt auch gewerbesteuerlich
-    if (divid > 0 && !st.beteiligungUnter10) {
+    // § 8b wirkt auch gewerbesteuerlich (entfaellt bei § 8b Abs. 7)
+    if (divid > 0 && !st.beteiligungUnter10 && !st.finanzunternehmen) {
       var divFreiG = cent(divid * 0.95);
       gewerbeertrag = cent(gewerbeertrag - divFreiG);
       gewSchritte.push({ text: '- 95 % Beteiligungserträge (§ 8b KStG)', betrag: -divFreiG });
@@ -127,7 +137,7 @@
           '(< 15 %, § 8 Nr. 5 GewStG)', betrag: divFreiG });
       }
     }
-    if (veraeuss > 0) {
+    if (veraeuss > 0 && !st.finanzunternehmen) {
       var verFreiG = cent(veraeuss * 0.95);
       gewerbeertrag = cent(gewerbeertrag - verFreiG);
       gewSchritte.push({ text: '- 95 % Veräußerungsgewinne (§ 8b KStG)', betrag: -verFreiG });
