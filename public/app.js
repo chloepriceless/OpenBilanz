@@ -96,6 +96,7 @@ function renderNav() {
       if (!istEB) n.push(navUnter('buchhaltung', 'Buchhaltung'));
       if (!istEB) n.push(navUnter('steuer', 'Steuern'));
       if (!istEB) n.push(navUnter('ustva', 'Umsatzsteuer'));
+      if (!istEB) n.push(navUnter('bwa', 'BWA'));
       n.push(navUnter('ebilanz', 'E-Bilanz'));
       if (!istEB) n.push(navUnter('offenlegung', 'Offenlegung'));
       n.push(navUnter('druck', 'Druckansicht'));
@@ -153,6 +154,7 @@ function setView(view) {
   else if (view === 'steuer')     renderSteuer(m);
   else if (view === 'buchhaltung')renderBuchhaltung(m);
   else if (view === 'ustva')      renderUstva(m);
+  else if (view === 'bwa')        renderBwa(m);
   else if (view === 'fristen')    renderFristen(m);
   else if (view === 'hilfe')      renderHilfe(m);
   else if (view === 'beschluesse')renderBeschluesse(m);
@@ -1562,6 +1564,96 @@ function renderUstva(m) {
   m.querySelector('#ustVon').addEventListener('input', zeigen);
   m.querySelector('#ustBis').addEventListener('input', zeigen);
   zeigen();
+}
+
+/* ===========================================================================
+ * BWA  -  Betriebswirtschaftliche Auswertung
+ * ========================================================================= */
+/* Leitet aus der GuV eines Abschlusses die BWA-Kennzahlen ab. */
+function bwaDaten(a, r) {
+  var w = r.guv.werte || {};
+  var v = a.guvVerfahren || 'GKV';
+  function g(id) { return Berechnung.num(w[id]); }
+  if (v === 'GKV') {
+    var umsatz = g('gkv.1');
+    var gesamt = Berechnung.cent(umsatz + g('gkv.2') + g('gkv.3'));
+    var material = g('gkv.5');
+    var rohertrag = Berechnung.cent(gesamt - material);
+    var personal = g('gkv.6'), abschr = g('gkv.7'), sonstA = g('gkv.8'), sonstE = g('gkv.4');
+    var betrErg = Berechnung.cent(rohertrag - personal - abschr - sonstA + sonstE);
+    var finErg = Berechnung.cent(g('gkv.9') + g('gkv.10') + g('gkv.11') -
+                                 g('gkv.12') - g('gkv.13'));
+    var vorSt = Berechnung.cent(betrErg + finErg);
+    var steuern = Berechnung.cent(g('gkv.14') + g('gkv.16'));
+    return { verfahren: v, voll: true,
+      zeilen: [
+        ['Umsatzerlöse', umsatz],
+        ['Bestandsveränderung / aktivierte Eigenleistung', Berechnung.cent(g('gkv.2') + g('gkv.3'))],
+        ['= Gesamtleistung', gesamt, 'Z'],
+        ['− Materialaufwand', -material],
+        ['= Rohertrag', rohertrag, 'Z'],
+        ['− Personalaufwand', -personal],
+        ['− Abschreibungen', -abschr],
+        ['− sonstige betriebliche Aufwendungen', -sonstA],
+        ['+ sonstige betriebliche Erträge', sonstE],
+        ['= Betriebsergebnis', betrErg, 'Z'],
+        ['+ Finanzergebnis', finErg],
+        ['= Ergebnis vor Steuern', vorSt, 'Z'],
+        ['− Steuern', -steuern],
+        ['= Jahresergebnis', Berechnung.cent(vorSt - steuern), 'S']
+      ],
+      umsatz: umsatz, gesamtleistung: gesamt, rohertrag: rohertrag,
+      personal: personal, ergebnis: Berechnung.cent(vorSt - steuern) };
+  }
+  var umsatzX = v === 'UKV' ? g('ukv.1') : g('kst.1');
+  return { verfahren: v, voll: false,
+    zeilen: [['Umsatzerlöse', umsatzX],
+             ['= Jahresergebnis', r.guv.jahresergebnis, 'S']],
+    umsatz: umsatzX, ergebnis: r.guv.jahresergebnis };
+}
+function renderBwa(m) {
+  var a = S.aktiv;
+  if (!a) { setView('start'); return; }
+  if (a.art !== 'JAHRESABSCHLUSS') { setView('editor'); return; }
+  var r = Berechnung.berechne(a);
+  var d = bwaDaten(a, r);
+  var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>';
+  html += '<div class="kopf"><h1>BWA &ndash; ' + esc(a.bezeichnung) + '</h1>' +
+    '<p>Betriebswirtschaftliche Auswertung aus der Gewinn- und Verlustrechnung — ' +
+    'eine interne Auswertung, keine amtliche Rechnung.</p></div>';
+  if (!d.voll) {
+    html += '<div class="box box-info">Die strukturierte BWA leitet sich aus der ' +
+      'Gesamtkosten-Gliederung ab. Dieser Abschluss nutzt das ' +
+      (d.verfahren === 'UKV' ? 'Umsatzkostenverfahren' : 'verkürzte Kleinst-Verfahren') +
+      ' — ausgewiesen werden Umsatz, Jahresergebnis und die Bilanzkennzahlen.</div>';
+  }
+  html += '<div class="karte"><h2>Kurzfristige Erfolgsrechnung</h2><table class="pos-tab">';
+  d.zeilen.forEach(function (z) {
+    var cls = z[2] === 'S' ? 'zeile-summe' : (z[2] === 'Z' ? 'zeile-Z' : 'zeile-R');
+    html += '<tr class="' + cls + '"><td class="p-lbl">' + esc(z[0]) + '</td>' +
+      '<td class="p-wert"><span class="wert-ro">' + geld(z[1]) + '</span></td></tr>';
+  });
+  html += '</table></div>';
+  function proz(zaehler, nenner) {
+    return nenner ? (Math.round(zaehler / nenner * 1000) / 10).toLocaleString('de-DE') + ' %'
+                  : '–';
+  }
+  function kz(lbl, wert) {
+    return '<tr class="zeile-R"><td class="p-lbl">' + lbl + '</td>' +
+      '<td class="p-wert"><span class="wert-ro">' + wert + '</span></td></tr>';
+  }
+  html += '<div class="karte"><h2>Kennzahlen</h2><table class="pos-tab">' +
+    kz('Umsatzrentabilität (Jahresergebnis / Umsatz)', proz(d.ergebnis, d.umsatz));
+  if (d.voll) {
+    html += kz('Rohertragsquote (Rohertrag / Gesamtleistung)',
+      proz(d.rohertrag, d.gesamtleistung)) +
+      kz('Personalkostenquote (Personal / Gesamtleistung)',
+      proz(d.personal, d.gesamtleistung));
+  }
+  html += kz('Eigenkapitalquote (Eigenkapital / Bilanzsumme)',
+    proz(r.bilanz.eigenkapital, r.bilanz.summeAktiva)) + '</table></div>';
+  m.innerHTML = html;
+  m.querySelector('[data-z]').onclick = function () { setView('editor'); };
 }
 
 /* E-Rechnung (XRechnung / ZUGFeRD): parst die XML einer Eingangsrechnung in
