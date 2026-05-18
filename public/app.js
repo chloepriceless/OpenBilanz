@@ -97,6 +97,7 @@ function renderNav() {
       if (!istEB) n.push(navUnter('steuer', 'Steuern'));
       if (!istEB) n.push(navUnter('ustva', 'Umsatzsteuer'));
       n.push(navUnter('ebilanz', 'E-Bilanz'));
+      if (!istEB) n.push(navUnter('offenlegung', 'Offenlegung'));
       n.push(navUnter('druck', 'Druckansicht'));
     }
   });
@@ -146,6 +147,7 @@ function setView(view) {
   else if (view === 'editor')     renderEditor(m);
   else if (view === 'druck')      renderDruck(m);
   else if (view === 'ebilanz')    renderEbilanz(m);
+  else if (view === 'offenlegung')renderOffenlegung(m);
   else if (view === 'steuer')     renderSteuer(m);
   else if (view === 'buchhaltung')renderBuchhaltung(m);
   else if (view === 'ustva')      renderUstva(m);
@@ -999,6 +1001,81 @@ function dokAnhang(a) {
   }
   if (an.sonstiges) h += '<p><b>Sonstige Angaben:</b> ' + esc(an.sonstiges) + '</p>';
   return h;
+}
+
+/* ===========================================================================
+ * OFFENLEGUNG  -  Jahresabschluss beim Unternehmensregister (§ 325 HGB)
+ * ========================================================================= */
+/* Offenlegungs-Dokument: Umfang nach Größenklasse. Kleinst-/kleine GmbH legen
+ * die GuV nicht offen (§ 326 HGB). */
+function offenlegungDok(a, u, r) {
+  var klasse = a.groessenklasse || 'KLEIN';
+  var mitGuv = klasse === 'MITTEL' || klasse === 'GROSS';
+  var h = '<h1>' + esc(u.name || 'Unternehmen') + '</h1>';
+  h += '<div class="dok-sub">' + esc((u.plz || '') + ' ' + (u.ort || '')) +
+    (u.hrNummer ? ' &middot; ' + esc(u.hrNummer) : '') + '</div>';
+  h += '<h1 style="margin-top:14px">Jahresabschluss zur Offenlegung</h1>';
+  h += '<div class="dok-sub">zum ' + datumDe(a.stichtag) +
+    ' &middot; Geschäftsjahr ' + datumDe(a.gjVon) + ' bis ' + datumDe(a.gjBis) +
+    '<br>' + klasseName(klasse) + '</div>';
+  h += '<h2>Bilanz</h2><div class="dok-bilanz">' +
+    '<div class="col">' + dokSeite('aktiva', r, null) + '</div>' +
+    '<div class="col">' + dokSeite('passiva', r, null) + '</div></div>';
+  if (r.bilanz.kapital.eingefordertOffen > 0) {
+    h += '<p class="dok-fussnote">In den Forderungen und sonstigen ' +
+      'Vermögensgegenständen sind ' + geld(r.bilanz.kapital.eingefordertOffen) +
+      ' EUR eingefordertes, noch nicht eingezahltes Kapital enthalten ' +
+      '(§ 272 Abs. 1 Satz 3 HGB).</p>';
+  }
+  if (mitGuv) h += '<h2>Gewinn- und Verlustrechnung</h2>' + dokGuv(a, r, null);
+  h += dokAnhang(a);
+  h += '<div class="dok-fuss">Offenlegung nach § 325 HGB. Erstellt mit OpenBilanz.</div>';
+  return h;
+}
+function renderOffenlegung(m) {
+  var a = S.aktiv, u = S.unternehmen || {};
+  if (!a) { setView('start'); return; }
+  if (a.art !== 'JAHRESABSCHLUSS') { setView('editor'); return; }
+  var r = Berechnung.berechne(a);
+  var klasse = a.groessenklasse || 'KLEIN';
+  var frist = '';
+  if (a.stichtag) {
+    var d = new Date(a.stichtag);
+    if (!isNaN(d.getTime())) { d.setFullYear(d.getFullYear() + 1); frist = d.toISOString().slice(0, 10); }
+  }
+  var umfang = klasse === 'KLEINST'
+    ? 'nur die Bilanz (Hinterlegung statt Offenlegung möglich, § 326 Abs. 2 HGB)'
+    : klasse === 'KLEIN'
+    ? 'Bilanz und Anhang — die Gewinn- und Verlustrechnung ist nicht offenzulegen (§ 326 Abs. 1 HGB)'
+    : 'Bilanz, Gewinn- und Verlustrechnung, Anhang und Lagebericht';
+
+  var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>';
+  html += '<div class="kopf no-print"><h1>Offenlegung</h1>' +
+    '<p>Jahresabschluss beim Unternehmensregister einreichen (§ 325 HGB).</p></div>';
+  html += '<div class="box box-warn no-print"><b>Offenlegungspflicht</b>Jede GmbH ' +
+    'reicht ihren Jahresabschluss binnen zwölf Monaten nach dem Bilanzstichtag beim ' +
+    'Unternehmensregister (unternehmensregister.de) ein' +
+    (frist ? ' — für diesen Abschluss bis spätestens <b>' + datumDe(frist) + '</b>' : '') +
+    '. Bei Versäumnis droht ein Ordnungsgeld ab 2.500 EUR (§ 335 HGB). Einzureichen ' +
+    'ist für diese Gesellschaft (' + klasseName(klasse) + '): ' + umfang + '.</div>';
+  html += '<div class="box box-info no-print">Die Einreichung erfolgt über das ' +
+    'Unternehmensregister als <b>PDF</b> (Dokument unten → „Drucken / als PDF ' +
+    'speichern") oder maschinenlesbar als <b>XBRL</b>. Der Offenlegungs-Datensatz ' +
+    'kann vom Steuer-E-Bilanz-Format abweichen — das aktuell geforderte Einreichungs' +
+    'format vor der Übermittlung prüfen.</div>';
+  html += '<div class="btn-reihe no-print">' +
+    '<button class="btn btn-pri" id="ofDruck">Drucken / als PDF speichern</button>' +
+    '<button class="btn" id="ofXbrl">XBRL herunterladen</button></div>';
+  html += '<div class="dok" id="ofDok">' + offenlegungDok(a, u, r) + '</div>';
+  m.innerHTML = html;
+  m.querySelector('[data-z]').onclick = function () { setView('editor'); };
+  m.querySelector('#ofDruck').onclick = function () { window.print(); };
+  m.querySelector('#ofXbrl').onclick = function () {
+    Store.erzeugeXBRL(u, a, 'instanz').then(function (res) {
+      ladeDatei(res.xml, res.dateiname || ('offenlegung_' + a.id + '.xml'),
+        'application/xml; charset=utf-8');
+    });
+  };
 }
 
 /* ===========================================================================
