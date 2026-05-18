@@ -135,6 +135,7 @@ function renderNav() {
   n.push('<div class="nav-grp">Hilfe</div>');
   n.push(navItem('fristen', '⚠', 'Fristen &amp; Pflichten'));
   n.push(navItem('hilfe', '?', 'Buchungshilfe'));
+  n.push(navItem('glossar', '≡', 'Glossar'));
   n.push(navItem('beschluesse', '§', 'Gesellschafterbeschlüsse'));
   document.getElementById('nav').innerHTML = n.join('');
 
@@ -183,6 +184,7 @@ function setView(view) {
   else if (view === 'kapst')      renderKapst(m);
   else if (view === 'fristen')    renderFristen(m);
   else if (view === 'hilfe')      renderHilfe(m);
+  else if (view === 'glossar')    renderGlossar(m);
   else if (view === 'beschluesse')renderBeschluesse(m);
 }
 function oeffneAbschluss(id) {
@@ -2759,6 +2761,121 @@ function renderHilfe(m) {
     'einholen.</div>';
 
   m.innerHTML = html;
+}
+
+/* ===========================================================================
+ * GLOSSAR  -  durchsuchbare Erklärung der HGB-, Steuer- und E-Bilanz-Begriffe
+ * ========================================================================= */
+var GLOSSAR = [
+  { g: 'Bilanz & Jahresabschluss', t: 'Eröffnungsbilanz',
+    e: 'Bestandsaufnahme von Vermögen und Schulden zu Beginn des Handelsgewerbes. Jede GmbH muss sie zur Gründung aufstellen (§ 242 Abs. 1 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Jahresabschluss',
+    e: 'Bilanz, Gewinn- und Verlustrechnung und Anhang zum Ende jedes Geschäftsjahres (§ 242, § 264 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Bilanz',
+    e: 'Gegenüberstellung von Vermögen (Aktiva) und Kapital/Schulden (Passiva) zum Stichtag; die Gliederung gibt § 266 HGB vor.' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Gewinn- und Verlustrechnung (GuV)',
+    e: 'Gegenüberstellung der Erträge und Aufwendungen eines Geschäftsjahres; sie endet mit dem Jahresüberschuss oder -fehlbetrag (§ 275 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Anhang',
+    e: 'Erläuternder Teil des Jahresabschlusses mit den Bilanzierungsmethoden und gesetzlichen Pflichtangaben (§§ 284–288 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Gesamtkostenverfahren',
+    e: 'GuV-Form, die alle Erträge und die nach Art gegliederten Aufwendungen einer Periode zeigt (§ 275 Abs. 2 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Umsatzkostenverfahren',
+    e: 'GuV-Form, die den Umsatzerlösen die Herstellungskosten der verkauften Leistungen gegenüberstellt (§ 275 Abs. 3 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Größenklasse',
+    e: 'Einstufung als Kleinst-, kleine, mittelgroße oder große Kapitalgesellschaft nach Bilanzsumme, Umsatz und Arbeitnehmerzahl (§ 267, § 267a HGB). Sie bestimmt den Umfang des Abschlusses.' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Kleinstkapitalgesellschaft',
+    e: 'Kleinste Größenklasse (§ 267a HGB); sie darf eine stark verkürzte Bilanz und GuV aufstellen und weitgehend auf den Anhang verzichten.' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Anlagevermögen',
+    e: 'Vermögensgegenstände, die dem Betrieb dauerhaft dienen — Posten A der Aktivseite (§ 266 Abs. 2 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Umlaufvermögen',
+    e: 'Vermögensgegenstände, die nicht dauerhaft gehalten werden — Vorräte, Forderungen, Wertpapiere, Bank (Posten B der Aktivseite).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Gezeichnetes Kapital',
+    e: 'Das im Gesellschaftsvertrag festgelegte Stammkapital der GmbH (Nennbetrag), mindestens 25.000 € (§ 272 Abs. 1 HGB, § 5 GmbHG).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Nettomethode',
+    e: 'Ist das Stammkapital nicht voll eingezahlt, werden nicht eingeforderte Einlagen offen vom gezeichneten Kapital abgesetzt (§ 272 Abs. 1 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Rückstellung',
+    e: 'Verbindlichkeit, die dem Grunde nach besteht, aber in Höhe oder Zeitpunkt ungewiss ist — etwa die Steuerrückstellung (§ 249 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Rechnungsabgrenzungsposten',
+    e: 'Posten für Zahlungen, die einen Aufwand oder Ertrag eines anderen Geschäftsjahres betreffen (§ 250 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Nicht durch Eigenkapital gedeckter Fehlbetrag',
+    e: 'Ausweis auf der Aktivseite, wenn Verluste das Eigenkapital übersteigen (§ 268 Abs. 3 HGB) — ein Warnsignal in Richtung Überschuldung.' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Niederstwertprinzip',
+    e: 'Vorsichtsgebot: Vermögensgegenstände sind höchstens mit den Anschaffungskosten, bei niedrigerem Wert mit diesem anzusetzen (§ 253 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Abschreibung (AfA)',
+    e: 'Verteilung der Anschaffungs- oder Herstellungskosten eines Anlageguts als Aufwand über seine Nutzungsdauer.' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Anlagenspiegel',
+    e: 'Übersicht über die Entwicklung des Anlagevermögens (Zugänge, Abgänge, Abschreibungen); Pflichtangabe ab der kleinen GmbH (§ 284 Abs. 3 HGB).' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Vorjahresspalte',
+    e: 'Im Jahresabschluss ist zu jedem Posten der entsprechende Vorjahreswert anzugeben (§ 265 Abs. 2 HGB).' },
+  { g: 'Steuern', t: 'Körperschaftsteuer (KSt)',
+    e: 'Steuer der Kapitalgesellschaft auf ihren Gewinn; Satz 15 % bis 2027, danach stufenweise sinkend bis 10 % ab 2032.' },
+  { g: 'Steuern', t: 'Solidaritätszuschlag',
+    e: 'Zuschlag von 5,5 % auf die Körperschaftsteuer.' },
+  { g: 'Steuern', t: 'Gewerbesteuer (GewSt)',
+    e: 'Gemeindesteuer auf den Gewerbeertrag; Steuermesszahl 3,5 %, multipliziert mit dem Hebesatz der Gemeinde.' },
+  { g: 'Steuern', t: 'Hebesatz',
+    e: 'Von der Gemeinde festgelegter Prozentsatz, mit dem der Gewerbesteuer-Messbetrag multipliziert wird (z. B. 400 %).' },
+  { g: 'Steuern', t: 'Zu versteuerndes Einkommen (zvE)',
+    e: 'Bemessungsgrundlage der Körperschaftsteuer: der handelsrechtliche Gewinn nach den steuerlichen Korrekturen.' },
+  { g: 'Steuern', t: '§ 8b KStG',
+    e: 'Dividenden und Veräußerungsgewinne aus Kapitalbeteiligungen sind bei der GmbH zu 95 % steuerfrei — zentral für die vermögensverwaltende GmbH.' },
+  { g: 'Steuern', t: 'Verlustvortrag',
+    e: 'Verluste eines Jahres mindern den steuerpflichtigen Gewinn der Folgejahre; über 1 Mio € greift die Mindestbesteuerung (§ 10d EStG, § 10a GewStG).' },
+  { g: 'Steuern', t: 'Verdeckte Gewinnausschüttung',
+    e: 'Vermögensvorteil an einen Gesellschafter außerhalb eines offenen Gewinnbeschlusses; sie erhöht das zu versteuernde Einkommen (§ 8 Abs. 3 KStG).' },
+  { g: 'Steuern', t: 'Kapitalertragsteuer',
+    e: '25 % Abgeltungsteuer (zzgl. Solidaritätszuschlag), die die GmbH bei einer Gewinnausschüttung einbehält und ans Finanzamt abführt.' },
+  { g: 'Steuern', t: 'Erweiterte Grundstückskürzung',
+    e: 'Verwaltet eine GmbH ausschließlich eigenen Grundbesitz, bleibt der Grundstücksertrag praktisch gewerbesteuerfrei (§ 9 Nr. 1 Satz 2 GewStG).' },
+  { g: 'Steuern', t: 'Anrechenbare ausländische Quellensteuer',
+    e: 'Im Ausland auf Dividenden einbehaltene Steuer, die unter Voraussetzungen auf die deutsche Körperschaftsteuer angerechnet wird (§ 26 KStG).' },
+  { g: 'E-Bilanz, Buchhaltung & GoBD', t: 'E-Bilanz',
+    e: 'Elektronische Übermittlung von Bilanz und GuV an das Finanzamt im XBRL-Format; Pflicht auch für die Eröffnungsbilanz (§ 5b EStG).' },
+  { g: 'E-Bilanz, Buchhaltung & GoBD', t: 'Taxonomie',
+    e: 'Amtliches Gliederungsschema der E-Bilanz; die Finanzverwaltung gibt jährlich eine neue Kerntaxonomie heraus (aktuell Version 6.9).' },
+  { g: 'E-Bilanz, Buchhaltung & GoBD', t: 'XBRL',
+    e: 'Standardisiertes XML-Format für Finanzberichte; die E-Bilanz wird als XBRL-Datei erzeugt.' },
+  { g: 'E-Bilanz, Buchhaltung & GoBD', t: 'ERiC',
+    e: 'ELSTER Rich Client — die amtliche Software zur Übermittlung der E-Bilanz; sie ist registrierungspflichtig und nicht frei verteilbar.' },
+  { g: 'E-Bilanz, Buchhaltung & GoBD', t: 'GoBD',
+    e: 'Grundsätze zur ordnungsmäßigen Führung und Aufbewahrung von Büchern in elektronischer Form — Verwaltungsvorgaben der Finanzverwaltung.' },
+  { g: 'E-Bilanz, Buchhaltung & GoBD', t: 'Festschreibung',
+    e: 'Buchungen werden unveränderlich gesetzt; eine Korrektur ist danach nur noch per Stornobuchung möglich (§ 146 AO, GoBD).' },
+  { g: 'E-Bilanz, Buchhaltung & GoBD', t: 'SKR04',
+    e: 'Standardkontenrahmen 04 — ein nach der Abschlussgliederung geordneter Kontenrahmen; OpenBilanz nutzt ihn in der Buchhaltung.' },
+  { g: 'E-Bilanz, Buchhaltung & GoBD', t: 'Umsatzsteuer-Voranmeldung (UStVA)',
+    e: 'Regelmäßige Meldung der Umsatzsteuer ans Finanzamt; die Zahllast ist die Umsatzsteuer abzüglich der abziehbaren Vorsteuer.' }
+];
+function renderGlossar(m) {
+  var html = '<div class="kopf"><h1>Glossar</h1><p>Kurz erklärt: die HGB-, Steuer- ' +
+    'und E-Bilanz-Begriffe, die in OpenBilanz vorkommen.</p></div>';
+  html += '<div class="karte">' + feldWrap('Suche', 'Begriff oder Paragraf',
+    '<input id="glsSuche" placeholder="z. B. Rückstellung oder § 266">') + '</div>';
+  html += '<div id="glsListe"></div>';
+  m.innerHTML = html;
+  var inp = document.getElementById('glsSuche');
+  function zeichne() {
+    var q = inp.value.trim().toLowerCase();
+    var gruppen = [], idx = {};
+    GLOSSAR.forEach(function (x) {
+      if (q && (x.t + ' ' + x.e).toLowerCase().indexOf(q) < 0) return;
+      if (idx[x.g] == null) { idx[x.g] = gruppen.length; gruppen.push({ g: x.g, eintr: [] }); }
+      gruppen[idx[x.g]].eintr.push(x);
+    });
+    var h = '';
+    gruppen.forEach(function (gr) {
+      h += '<div class="karte"><h2>' + esc(gr.g) + '</h2>';
+      gr.eintr.forEach(function (x) {
+        h += '<div style="margin-bottom:9px"><b>' + esc(x.t) + '</b>' +
+          '<div class="karte-hint">' + esc(x.e) + '</div></div>';
+      });
+      h += '</div>';
+    });
+    document.getElementById('glsListe').innerHTML = h ||
+      '<div class="box box-info">Kein Begriff gefunden.</div>';
+  }
+  inp.addEventListener('input', zeichne);
+  zeichne();
 }
 
 /* ===========================================================================
