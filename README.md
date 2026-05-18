@@ -101,14 +101,16 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Validierung** der E-Bilanz gegen die amtliche Taxonomie (Arelle) | ✅ |
 | **Vermögensverwaltende GmbH**: Finanzanlagen, Beteiligungen, Mieterträge | ✅ |
 | **GmbH-Untertypen**: Immobilien-, Trading-, Hybrid-GmbH mit Steuerhinweisen | ✅ |
-| **Steuerschätzung**: KSt (jahresabhängiger Satz), Soli, GewSt, § 8b/§ 9 | ✅ |
+| **Steuerschätzung**: KSt (jahresabhängiger Satz), Soli, GewSt — § 8b KStG, §§ 8/9 GewStG, Verlustvortrag (§ 10d/§ 10a), verdeckte Gewinnausschüttung | ✅ |
 | **Buchhaltung** mit Kontenrahmen SKR04 (Buchungsjournal, Saldenliste) | ✅ |
 | **Eröffnungsbuchungen** — Saldenvortrag ins neue Jahr (Eröffnungsbilanzkonto 9000) | ✅ |
 | **GoBD-Festschreibung** — unveränderliche Buchungen, Storno, Änderungsprotokoll | ✅ |
 | **Anlagenverzeichnis & AfA** — linear/degressiv, Anlagenspiegel (§ 284 Abs. 3) | ✅ |
-| **DATEV-Export** — Buchungsstapel im EXTF-Format für den Steuerberater | ✅ |
-| **Bankimport** — Kontoauszüge im Format CAMT.053 (ISO 20022) | ✅ |
-| **UStVA-Aufbereitung** — Umsatzsteuer-Voranmeldung aus den SKR04-Konten | ✅ |
+| **DATEV-Im-/Export** — Buchungsstapel im EXTF-Format (Austausch mit dem Steuerberater) | ✅ |
+| **Bankimport** — Kontoauszüge in den Formaten CAMT.053 (ISO 20022) und MT940 (SWIFT) | ✅ |
+| **UStVA-Aufbereitung** — aus den SKR04-Konten, mit Soll-/Ist-Versteuerung, Kleinunternehmer § 19, Reverse-Charge § 13b und steuerfreien Umsätzen § 4 | ✅ |
+| **Journal-Export** — Buchungsjournal maschinenlesbar als CSV und JSON | ✅ |
+| **GDPdU-Export** — Datenträgerüberlassung (Z3) für die Betriebsprüfung | ✅ |
 | **Offenlegung** beim Unternehmensregister (§ 325 HGB) | ✅ |
 | **Broker-Import** — Interactive-Brokers-Flex-Berichte (Trades, Dividenden) | ✅ |
 | **E-Rechnung** — XRechnung / ZUGFeRD einlesen und verbuchen | ✅ |
@@ -333,12 +335,16 @@ Selbst-Hosting-Modus über die JSON-Dateien in `data/` (Backup bzw. Git), im
 Website-Modus über die regelmäßig gesicherte `.obz`-Datei. Verbindliche Auskunft
 zu den konkreten GoBD-Pflichten geben Steuerberater bzw. Finanzamt.
 
+Der Aufbau aller Datei- und Austauschformate — die `.obz`-Sicherung als
+vollständiger JSON-Datenbestand, Journal-CSV/JSON, DATEV, GDPdU und der
+Bankimport — ist in **`DATENFORMATE.md`** dokumentiert.
+
 ---
 
 ## Tests
 
 ```bash
-npm test          # Rechenkern, SKR04-Mapping, Taxonomie, XBRL, Steuer
+npm test          # Rechenkern, SKR04, Taxonomie, XBRL, Steuer, UStVA, Import-Parser
 ```
 
 Die tiefe XBRL-Validierung gegen die amtliche Taxonomie erfolgt zusätzlich mit
@@ -362,11 +368,16 @@ public/shared/berechnung.js   Rechenkern (Summen, Bilanzgleichung, Größenklass
 public/shared/taxonomie.js    Mapping HGB-Position → E-Bilanz-Taxonomie 6.9
 public/shared/skr04.js        Kontenrahmen SKR04 inkl. vv-GmbH-Konten
 public/shared/steuer.js       Steuerschätzung KSt / Soli / GewSt
+public/shared/ustva.js        UStVA-Kennzahlen inkl. Soll-/Ist und Sonderfälle
 public/shared/xbrl.js         E-Bilanz-XBRL und EBilanz-Container
 public/shared/store-idb.js    Browser-Persistenz via IndexedDB (Website-Modus)
 public/shared/store-adapter.js  Speicheradapter für beide Betriebsarten
 public/shared/obz.js          .obz-Sicherung: packen, optional verschlüsseln
 public/shared/fileio.js       Datei-Export/-Import (File System Access API)
+public/shared/mt940.js        Parser für MT940-Bankauszüge (SWIFT)
+public/shared/datev.js        Parser für DATEV-EXTF-Buchungsstapel
+public/shared/journalexport.js  Buchungsjournal als CSV / JSON
+public/shared/gdpdu.js        GDPdU-Datenträgerüberlassung (Z3)
 public/shared/validate-browser.js  E-Bilanz-Konsistenzprüfung im Browser
 public/pyodide-worker.js      Arelle-Validierung im Browser (experimentell)
 tests/run.js                  Test-Suite
