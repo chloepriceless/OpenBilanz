@@ -110,7 +110,7 @@ Ausbau- und Verifikationsschritte:
 |---|---|---|---|
 | **Mehrere GmbHs (Mandanten)** | Aktuell ist `data/unternehmen.json` einfirmig; vv-GmbH-Inhaber halten oft mehrere Gesellschaften. | H | M |
 | **Mehrjahres-Verwaltung** | Zeitleiste je Mandant (EB → JA 2024 → JA 2025 …). Die Übernahme der Bestände ins Folgejahr ist als Eröffnungsbuchung bereits umgesetzt; offen ist die mandantenweite Jahres-Zeitleiste. | M | M |
-| **Geführter Erfassungs-Assistent** | Schrittweise Eingabe in kleinen Abschnitten statt eines großen Formulars. | M | M |
+| **Erfassungs-Assistent für den Jahresabschluss** | Den geführten Erfassungs-Assistenten (bisher für die Eröffnungsbilanz) auf den Jahresabschluss inkl. GuV ausweiten. | N | M |
 | **Kontexthilfe ausrollen** | Den Glossar-Tooltip (`gtip`) über die Steuer-Ansicht hinaus auf weitere Formulare und §-Verweise ausrollen. Tooltip-Mechanismus und durchsuchbares Glossar sind umgesetzt. | N | S |
 | **Versionierung der Bilanzwerte** | Änderungsprotokoll auch für die Bilanz-/GuV-Werte eines Abschlusses. Das Stammdaten-Änderungsprotokoll ist umgesetzt; strukturelle Abschluss-Ereignisse stehen bereits im Abschluss-Protokoll. | N | M |
 | **Barrierefreiheit: Audit** | Kontraste, Überschriftenhierarchie und ein Screenreader-Durchgang gegen WCAG 2.2 AA prüfen. Tastaturbedienung, Fokus-Indikatoren, Dialog-Rollen und der Sprunglink sind umgesetzt. | M | M |

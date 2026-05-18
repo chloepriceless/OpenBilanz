@@ -223,6 +223,7 @@ function setView(view) {
   else if (view === 'anlagen')    renderAnlagen(m);
   else if (view === 'verfahrensdoku') renderVerfahrensdoku(m);
   else if (view === 'editor')     renderEditor(m);
+  else if (view === 'assistent')  renderAssistent(m);
   else if (view === 'druck')      renderDruck(m);
   else if (view === 'ebilanz')    renderEbilanz(m);
   else if (view === 'offenlegung')renderOffenlegung(m);
@@ -545,7 +546,8 @@ function dialogNeuerAbschluss(vorgabeArt) {
       Store.ladeState().then(function (st) {
         S.abschluesse = st.abschluesse || [];
         S.aktiv = gesp;
-        setView('editor');
+        assiSchritt = 0;
+        setView(art === 'EROEFFNUNGSBILANZ' ? 'assistent' : 'editor');
       });
     });
   };
@@ -614,6 +616,138 @@ function demoLaden(schluessel) {
       hinweisToast('Beispieldaten geladen (' + b.titel + ').');
       setView('start');
     });
+}
+
+/* ===========================================================================
+ * ERFASSUNGS-ASSISTENT  -  geführte Eröffnungsbilanz in kleinen Schritten
+ * ---------------------------------------------------------------------------
+ * Führt Schritt für Schritt durch Kapital, Aktiva und Passiva einer Eröffnungs-
+ * bilanz statt eines großen Formulars. Schreibt direkt in S.aktiv (kapital /
+ * werte.aktiva / werte.passiva); zum klassischen Formular ist jederzeit ein
+ * Wechsel möglich.
+ * ========================================================================= */
+var assiSchritt = 0;
+var ASSI_SCHRITTE = [
+  { titel: 'Kapital der GmbH',
+    text: 'Das Stammkapital laut Gesellschaftsvertrag und wie viel davon schon ' +
+      'eingezahlt ist. Mindeststammkapital der GmbH: 25.000 €, davon mindestens ' +
+      '12.500 € vor der Handelsregister-Anmeldung eingezahlt.',
+    felder: [
+      { bereich: 'kapital', key: 'gezeichnet',
+        label: 'Stammkapital (gezeichnetes Kapital, EUR)', sub: 'Nennbetrag laut Vertrag' },
+      { bereich: 'kapital', key: 'eingezahlt',
+        label: 'davon bereits eingezahlt (EUR)', sub: 'auf das Geschäftskonto geflossen' },
+      { bereich: 'kapital', key: 'eingefordertOffen',
+        label: 'eingefordert, aber noch nicht eingezahlt (EUR)', sub: 'meist 0' }
+    ]},
+  { titel: 'Was besitzt die GmbH? (Aktiva)',
+    text: 'Die Vermögenswerte zum Stichtag der Eröffnungsbilanz. Felder, die nicht ' +
+      'zutreffen, einfach leer lassen.',
+    felder: [
+      { bereich: 'aktiva', key: 'B.IV', label: 'Bankguthaben und Kasse (EUR)',
+        sub: 'Bilanzposten B.IV' },
+      { bereich: 'aktiva', key: 'A.II', label: 'Sachanlagen (EUR)',
+        sub: 'Maschinen, Ausstattung, Gebäude — A.II' },
+      { bereich: 'aktiva', key: 'A.III', label: 'Finanzanlagen (EUR)',
+        sub: 'Beteiligungen, Wertpapiere — A.III' },
+      { bereich: 'aktiva', key: 'B.II', label: 'Forderungen (EUR)',
+        sub: 'noch offene Forderungen — B.II' },
+      { bereich: 'aktiva', key: 'B.I', label: 'Vorräte (EUR)',
+        sub: 'Waren, Roh- und Hilfsstoffe — B.I' }
+    ]},
+  { titel: 'Schulden und Rücklagen (Passiva)',
+    text: 'Verbindlichkeiten und Rückstellungen zum Stichtag. Das gezeichnete Kapital ' +
+      'aus Schritt 1 wird automatisch ergänzt.',
+    felder: [
+      { bereich: 'passiva', key: 'P.C', label: 'Verbindlichkeiten (EUR)',
+        sub: 'Bankdarlehen, offene Rechnungen — P.C' },
+      { bereich: 'passiva', key: 'P.B', label: 'Rückstellungen (EUR)',
+        sub: 'ungewisse Verbindlichkeiten — P.B' },
+      { bereich: 'passiva', key: 'P.A.II', label: 'Kapitalrücklage (EUR)',
+        sub: 'Aufgeld über dem Nennbetrag — P.A.II' }
+    ]},
+  { titel: 'Prüfen und fertigstellen',
+    text: 'Stimmt die Bilanz? Aktiva und Passiva müssen gleich hoch sein. Bei einer ' +
+      'Differenz die vorherigen Schritte prüfen.', uebersicht: true }
+];
+function assiWert(a, f) {
+  if (f.bereich === 'kapital') return (a.kapital || {})[f.key];
+  return ((a.werte || {})[f.bereich] || {})[f.key];
+}
+function assiSetz(a, f, v) {
+  if (f.bereich === 'kapital') { a.kapital = a.kapital || {}; a.kapital[f.key] = v; }
+  else {
+    a.werte = a.werte || {};
+    a.werte[f.bereich] = a.werte[f.bereich] || {};
+    a.werte[f.bereich][f.key] = v;
+  }
+}
+function renderAssistent(m) {
+  var a = S.aktiv;
+  if (!a || a.art !== 'EROEFFNUNGSBILANZ') { setView(a ? 'editor' : 'start'); return; }
+  if (assiSchritt < 0) assiSchritt = 0;
+  if (assiSchritt >= ASSI_SCHRITTE.length) assiSchritt = ASSI_SCHRITTE.length - 1;
+  var s = ASSI_SCHRITTE[assiSchritt], n = ASSI_SCHRITTE.length;
+  var html = '<div class="kopf"><h1>Geführte Erfassung &ndash; Eröffnungsbilanz</h1>' +
+    '<p>Schritt ' + (assiSchritt + 1) + ' von ' + n + '. Die Angaben werden bei jedem ' +
+    'Schritt gespeichert.</p></div>';
+  html += '<div class="btn-reihe no-print" style="margin-bottom:8px">' +
+    '<button class="btn btn-sm" data-assi-formular>Zum klassischen Formular wechseln' +
+    '</button></div>';
+  html += '<div class="karte"><h2>' + esc(s.titel) + '</h2>' +
+    '<div class="karte-hint" style="margin-bottom:10px">' + s.text + '</div>';
+  if (s.uebersicht) {
+    var pr = Berechnung.pruefe(a), r = pr.berechnung;
+    html += '<div class="status-zeile"><span>Summe Aktiva</span><span class="mono">' +
+      geld(r.bilanz.summeAktiva) + ' EUR</span></div>' +
+      '<div class="status-zeile"><span>Summe Passiva</span><span class="mono">' +
+      geld(r.bilanz.summePassiva) + ' EUR</span></div>' +
+      '<div class="status-zeile"><span>Differenz</span><span class="mono">' +
+      geld(r.bilanz.differenz) + ' EUR</span></div>';
+    html += r.bilanz.ausgeglichen
+      ? '<div class="status-ampel ampel-gut">✓ Die Bilanz ist ausgeglichen</div>'
+      : '<div class="status-ampel ampel-fehler">✕ Aktiva und Passiva stimmen noch nicht ' +
+        'überein — mit „Zurück" die Werte prüfen.</div>';
+    pr.meldungen.forEach(function (mld) {
+      html += '<div class="meldung m-' + mld.stufe + '">' + esc(mld.text) + '</div>';
+    });
+  } else {
+    html += '<div class="gitter g2">';
+    s.felder.forEach(function (f, i) {
+      html += feldWrap(f.label, f.sub, '<input class="zahl" type="text" inputmode="decimal" ' +
+        'data-assi-feld="' + i + '" value="' + eingabeWert(assiWert(a, f)) + '">');
+    });
+    html += '</div>';
+  }
+  html += '<div class="btn-reihe" style="margin-top:14px">';
+  if (assiSchritt > 0) html += '<button class="btn" data-assi-zurueck>Zurück</button>';
+  if (assiSchritt < n - 1) html += '<button class="btn btn-pri" data-assi-weiter>Weiter</button>';
+  else html += '<button class="btn btn-pri" data-assi-fertig>Fertigstellen</button>';
+  html += '</div></div>';
+  m.innerHTML = html;
+
+  m.querySelectorAll('[data-assi-feld]').forEach(function (el) {
+    el.addEventListener('input', function () {
+      assiSetz(a, s.felder[parseInt(el.dataset.assiFeld, 10)], Berechnung.num(el.value));
+    });
+  });
+  function weiter(delta, fertig) {
+    speichereStill().then(function () {
+      if (fertig) { hinweisToast('Eröffnungsbilanz erfasst.'); setView('editor'); return; }
+      assiSchritt += delta;
+      renderAssistent(m);
+    });
+  }
+  var z = m.querySelector('[data-assi-zurueck]');
+  if (z) z.onclick = function () { weiter(-1); };
+  var w = m.querySelector('[data-assi-weiter]');
+  if (w) w.onclick = function () { weiter(1); };
+  var fert = m.querySelector('[data-assi-fertig]');
+  if (fert) fert.onclick = function () { weiter(0, true); };
+  var fmod = m.querySelector('[data-assi-formular]');
+  if (fmod) fmod.onclick = function () {
+    speichereStill().then(function () { setView('editor'); });
+  };
 }
 
 /* ===========================================================================
