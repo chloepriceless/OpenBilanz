@@ -39,6 +39,14 @@ function datumDe(iso) {
   var t = String(iso).split('-');
   return t.length === 3 ? t[2] + '.' + t[1] + '.' + t[0] : iso;
 }
+/* ISO-Zeitstempel als „TT.MM.JJJJ HH:MM". */
+function zeitstempelDe(iso) {
+  if (!iso) return '–';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return datumDe(String(iso).slice(0, 10));
+  return datumDe(String(iso).slice(0, 10)) + ' ' +
+    ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+}
 function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -274,6 +282,31 @@ function klasseName(k) {
 /* ===========================================================================
  * STAMMDATEN
  * ========================================================================= */
+/* Felder der Unternehmensdaten, deren Änderungen protokolliert werden. */
+var STAMM_FELDER = [
+  ['name', 'Firmenname'], ['rechtsform', 'Rechtsform'], ['strasse', 'Straße'],
+  ['plz', 'PLZ'], ['ort', 'Ort'], ['registergericht', 'Registergericht'],
+  ['hrNummer', 'Handelsregisternummer'], ['finanzamt', 'Finanzamt'],
+  ['steuernummer', 'Steuernummer'], ['wirtschaftsidnr', 'Wirtschafts-IdNr.'],
+  ['gruendungsdatum', 'Gründungsdatum'], ['geschaeftsjahrTyp', 'Geschäftsjahr'],
+  ['stammkapital', 'Stammkapital'], ['guvVerfahrenStandard', 'GuV-Verfahren'],
+  ['gmbhTyp', 'Art der Tätigkeit'], ['versteuerungsart', 'USt-Versteuerungsart'],
+  ['kleinunternehmer', 'Kleinunternehmer']
+];
+/* Vergleicht zwei Unternehmens-Stände und liefert lesbare Änderungstexte. */
+function stammdatenDiff(alt, neu) {
+  function wert(v) { return (v == null || v === '') ? '—' : String(v); }
+  var aenderungen = [];
+  STAMM_FELDER.forEach(function (f) {
+    if (wert(alt[f[0]]) !== wert(neu[f[0]])) {
+      aenderungen.push(f[1] + ': „' + wert(alt[f[0]]) + '" → „' + wert(neu[f[0]]) + '"');
+    }
+  });
+  var ga = (alt.geschaeftsfuehrer || []).join(', ');
+  var gb = (neu.geschaeftsfuehrer || []).join(', ');
+  if (ga !== gb) aenderungen.push('Geschäftsführer: „' + wert(ga) + '" → „' + wert(gb) + '"');
+  return aenderungen;
+}
 function renderStammdaten(m) {
   var u = S.unternehmen || { rechtsform: 'GmbH', geschaeftsjahrTyp: 'kalenderjahr',
                              stammkapital: 25000, guvVerfahrenStandard: 'GKV' };
@@ -337,6 +370,20 @@ function renderStammdaten(m) {
           feldWrap('Geschäftsführer', '', '<input data-u="geschaeftsfuehrerText" value="' +
             esc((u.geschaeftsfuehrer || []).join(', ')) + '">') + '</div>';
 
+  var prot = u.aenderungsprotokoll || [];
+  if (prot.length) {
+    html += '<div class="karte"><h2>Änderungsprotokoll</h2>' +
+      '<div class="karte-hint">Protokollierte Änderungen an den Unternehmensdaten ' +
+      '(neueste zuerst). Buchungen sind separat über die GoBD-Festschreibung gesichert.' +
+      '</div><table class="liste"><thead><tr><th>Zeitpunkt</th><th>Änderung</th>' +
+      '</tr></thead><tbody>';
+    prot.slice().reverse().forEach(function (e) {
+      html += '<tr><td class="mono">' + esc(zeitstempelDe(e.zeit)) + '</td><td>' +
+        (e.aenderungen || []).map(esc).join('<br>') + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
   html += '<div class="btn-reihe"><button class="btn btn-pri" id="stammSpeichern">' +
           'Stammdaten speichern</button></div>';
   m.innerHTML = html;
@@ -355,6 +402,11 @@ function renderStammdaten(m) {
       }
     });
     if (!neu.name) { alert('Bitte den Firmennamen eingeben.'); return; }
+    var aenderungen = S.unternehmen ? stammdatenDiff(u, neu) : ['Unternehmensdaten angelegt'];
+    if (aenderungen.length) {
+      neu.aenderungsprotokoll = neu.aenderungsprotokoll || [];
+      neu.aenderungsprotokoll.push({ zeit: new Date().toISOString(), aenderungen: aenderungen });
+    }
     Store.speichereUnternehmen(neu).then(function (gespeichert) {
       S.unternehmen = gespeichert;
       renderNav();
