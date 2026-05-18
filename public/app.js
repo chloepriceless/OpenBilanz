@@ -538,7 +538,18 @@ function dialogNeuerAbschluss(vorgabeArt) {
       a.bezeichnung = 'Jahresabschluss ' + j;
       var vj = S.abschluesse.filter(function (x) { return x.stichtag < a.stichtag; })
         .sort(function (x, y) { return y.stichtag.localeCompare(x.stichtag); })[0];
-      if (vj) a.vorjahrId = vj.id;
+      if (vj) {
+        a.vorjahrId = vj.id;
+        // Folgt der Jahresabschluss direkt einer unterjährigen Eröffnungsbilanz,
+        // ist sein erstes Geschäftsjahr ein Rumpfwirtschaftsjahr: Beginn =
+        // Gründungstag (Stichtag der Eröffnungsbilanz), nicht der 01.01.
+        if (vj.art === 'EROEFFNUNGSBILANZ' &&
+            parseInt(String(vj.stichtag).slice(0, 4), 10) === j &&
+            String(vj.stichtag) > j + '-01-01') {
+          a.gjVon = vj.stichtag;
+          a.bezeichnung = 'Jahresabschluss ' + j + ' (Rumpfgeschäftsjahr)';
+        }
+      }
     }
     Store.speichereAbschluss(a).then(function (gesp) {
       dialogZu();
