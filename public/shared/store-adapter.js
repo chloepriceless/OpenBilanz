@@ -62,6 +62,11 @@
           .then(function (r) { return r.json(); })
           .then(function (r) { return !!r.geloescht; });
       },
+      loescheUnternehmen: function () {
+        return fetch('/api/unternehmen', { method: 'DELETE' })
+          .then(function (r) { return r.json(); })
+          .then(function (r) { return !!r.geloescht; });
+      },
       erzeugeXBRL: function (un, ab, form) {
         var q = '/api/xbrl?id=' + encodeURIComponent(ab.id) +
                 (form === 'instanz' ? '&form=instanz' : '');

@@ -116,6 +116,7 @@ function boot() {
     S.abschluesse = st.abschluesse || [];
     renderNav();
     initBackupUI();
+    if (pruefeDemoLink()) return;          // Deep-Link ?demo öffnet das Demo-Portal
     if (!S.unternehmen) setView('stammdaten');
     else setView('start');
   });
@@ -123,6 +124,39 @@ function boot() {
     navigator.serviceWorker.register('sw.js').catch(function () {});
   }
   ladeRechtlicheLinks();
+}
+
+/* Deep-Link-Einstieg fürs Demo-Portal: Wird die App mit ?demo geöffnet (über
+ * den Demo-Portal-Button der Website), holt sie den Beispiel-Datensatz als
+ * .obz-Sicherung vom Server und importiert ihn still in den Browser - so, als
+ * hätte der Nutzer ein Backup eingespielt. Liegen bereits Daten vor, wird
+ * NICHTS überschrieben. Gibt true zurück, wenn der Parameter greift. */
+function pruefeDemoLink() {
+  var hatDemo = false;
+  try { hatDemo = new URLSearchParams(location.search).has('demo'); }
+  catch (e) { hatDemo = false; }
+  if (!hatDemo) return false;
+  // Parameter aus der Adresszeile entfernen - ein Reload soll nicht erneut laden.
+  if (window.history && history.replaceState) {
+    history.replaceState({}, '', location.pathname);
+  }
+  // Nur im Website-Modus: stiller Import in die Browser-Datenbank.
+  if (!Store.schreibeSnapshot) { setView('start'); return true; }
+  if (S.unternehmen || S.abschluesse.length) {
+    setView('start');
+    hinweisToast('Es liegen bereits Daten vor — die Demo wurde nicht geladen.');
+    return true;
+  }
+  fetch('/demo/lindgruen.obz')
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+    .then(function (buf) { return OBZ.entpacken(buf, function () { return ''; }); })
+    .then(function (snapshot) { return Store.schreibeSnapshot(snapshot); })
+    .then(function () { hinweisToast('Demo-Daten geladen.'); boot(); })
+    .catch(function () {
+      hinweisToast('Demo-Daten konnten nicht geladen werden.');
+      setView('start');
+    });
+  return true;
 }
 
 /* Optionale Rechts-Links (Impressum/Datenschutz/Haftungsausschluss) in der
@@ -252,6 +286,8 @@ function oeffneAbschluss(id) {
 function renderStart(m) {
   var eb = S.abschluesse.filter(function (a) { return a.art === 'EROEFFNUNGSBILANZ'; });
   var ja = S.abschluesse.filter(function (a) { return a.art === 'JAHRESABSCHLUSS'; });
+  /* „löschen" je Abschluss nur, wenn in den Unternehmensdaten freigeschaltet */
+  var loeschbar = !!(S.unternehmen && S.unternehmen.loeschenAktiv);
   var html = '';
   html += '<div class="kopf"><h1>' + esc((S.unternehmen && S.unternehmen.name) || 'OpenBilanz') +
           '</h1><p>Erstellen Sie Eröffnungsbilanz und Jahresabschluss Ihrer GmbH ' +
@@ -262,15 +298,6 @@ function renderStart(m) {
             'Jede GmbH muss zu Beginn ihres Handelsgewerbes eine Eröffnungsbilanz ' +
             'aufstellen (§ 242 Abs. 1 HGB). Legen Sie hier als Erstes Ihre ' +
             'Eröffnungsbilanz an.</div>';
-  }
-  if (!S.unternehmen && !S.abschluesse.length) {
-    html += '<div class="box box-info"><b>Zum Ausprobieren: Beispieldaten</b>' +
-      'Lädt eine vollständige Beispiel-GmbH mit Eröffnungsbilanz und Jahresabschluss ' +
-      '2024 &ndash; zum Erkunden des Tools ohne eigene Steuerdaten.' +
-      '<div class="btn-reihe" style="margin-top:9px">' +
-      '<button class="btn" data-demo="operativ">Beispiel: operative GmbH</button>' +
-      '<button class="btn" data-demo="vv">Beispiel: vermögensverwaltende GmbH</button>' +
-      '</div></div>';
   }
   html += '<div class="kachel-reihe">';
   html += kachel('Eröffnungsbilanz', 'Anlegen / öffnen', eb.length, 'neu-eb');
@@ -294,7 +321,10 @@ function renderStart(m) {
         '<td>' + (a.status === 'FESTGESTELLT'
           ? '<span class="tag tag-fest">festgestellt</span>'
           : '<span class="tag tag-entwurf">Entwurf</span>') + '</td>' +
-        '<td class="rechts"><span class="btn btn-sm">öffnen</span></td></tr>';
+        '<td class="rechts"><span class="btn btn-sm">öffnen</span>' +
+        (loeschbar ? ' <span class="btn btn-sm btn-gefahr" data-abdel="' + a.id +
+          '">löschen</span>' : '') +
+        '</td></tr>';
     });
     html += '</tbody></table></div>';
   }
@@ -302,15 +332,28 @@ function renderStart(m) {
   m.querySelectorAll('[data-oeffne]').forEach(function (el) {
     el.onclick = function () { oeffneAbschluss(el.dataset.oeffne); };
   });
+  m.querySelectorAll('[data-abdel]').forEach(function (el) {
+    el.onclick = function (ev) {
+      ev.stopPropagation();                       // nicht zugleich den Abschluss öffnen
+      var id = el.dataset.abdel;
+      if (!confirm('Diesen Abschluss endgültig löschen?')) return;
+      Store.loescheAbschluss(id).then(function () {
+        return Store.ladeState();
+      }).then(function (st) {
+        S.abschluesse = st.abschluesse || [];
+        if (S.aktiv && S.aktiv.id === id) S.aktiv = null;
+        renderNav();
+        hinweisToast('Abschluss gelöscht.');
+        setView('start');
+      });
+    };
+  });
   m.querySelectorAll('.kachel').forEach(function (el) {
     el.onclick = function () {
       if (el.dataset.k === 'neu-eb') dialogNeuerAbschluss('EROEFFNUNGSBILANZ');
       else if (el.dataset.k === 'neu-ja') dialogNeuerAbschluss('JAHRESABSCHLUSS');
       else if (el.dataset.k === 'fristen') setView('fristen');
     };
-  });
-  m.querySelectorAll('[data-demo]').forEach(function (el) {
-    el.onclick = function () { demoLaden(el.dataset.demo); };
   });
 }
 function kachel(tag, titel, zahl, k) {
@@ -349,6 +392,20 @@ function stammdatenDiff(alt, neu) {
   var gb = (neu.geschaeftsfuehrer || []).join(', ');
   if (ga !== gb) aenderungen.push('Geschäftsführer: „' + wert(ga) + '" → „' + wert(gb) + '"');
   return aenderungen;
+}
+/* Löscht ALLE Daten (Unternehmen + sämtliche Abschlüsse) und stellt den leeren
+ * Anfangszustand wieder her — funktioniert in beiden Betriebsarten. */
+function alleDatenLoeschen() {
+  if (Store.schreibeSnapshot) {                 // Website-Modus: ein sauberer Schnitt
+    return Store.schreibeSnapshot({ unternehmen: null, abschluesse: [] });
+  }
+  // Selbst-Hosting: jeden Abschluss und die Unternehmensdatei einzeln entfernen
+  var ids = (S.abschluesse || []).map(function (a) { return a.id; });
+  return ids.reduce(function (kette, id) {
+    return kette.then(function () { return Store.loescheAbschluss(id); });
+  }, Promise.resolve()).then(function () {
+    return Store.loescheUnternehmen ? Store.loescheUnternehmen() : null;
+  });
 }
 function renderStammdaten(m) {
   var u = S.unternehmen || { rechtsform: 'GmbH', geschaeftsjahrTyp: 'kalenderjahr',
@@ -429,7 +486,46 @@ function renderStammdaten(m) {
 
   html += '<div class="btn-reihe"><button class="btn btn-pri" id="stammSpeichern">' +
           'Stammdaten speichern</button></div>';
+
+  if (S.unternehmen) {
+    var loeschAktiv = !!S.unternehmen.loeschenAktiv;
+    html += '<div class="karte"><h2>Löschfunktionen</h2>' +
+      '<label class="checkz"><input type="checkbox" id="loeschToggle"' +
+      (loeschAktiv ? ' checked' : '') + '>' +
+      '<span>Löschen von Abschlüssen erlauben &ndash; blendet einen ' +
+      '&bdquo;löschen&ldquo;-Schalter an jedem Abschluss sowie das Zurücksetzen ' +
+      'aller Daten ein. Standardmäßig aus, damit nichts versehentlich gelöscht ' +
+      'wird.</span></label>';
+    if (loeschAktiv) {
+      html += '<div class="box box-warn" style="margin-top:12px"><b>Alle Daten ' +
+        'zurücksetzen</b>Löscht die Unternehmensdaten und <b>alle</b> Abschlüsse ' +
+        'unwiderruflich und stellt den leeren Anfangszustand her &ndash; etwa, um ' +
+        'geladene Beispieldaten wieder zu entfernen.</div>' +
+        '<div class="btn-reihe"><button class="btn btn-gefahr" id="datenReset">' +
+        'Alle Daten löschen</button></div>';
+    }
+    html += '</div>';
+  }
   m.innerHTML = html;
+
+  var loeschToggle = m.querySelector('#loeschToggle');
+  if (loeschToggle) loeschToggle.onchange = function () {
+    S.unternehmen.loeschenAktiv = loeschToggle.checked;
+    Store.speichereUnternehmen(S.unternehmen).then(function (g) {
+      if (g && !g.fehler) S.unternehmen = g;
+      renderStammdaten(m);
+    });
+  };
+  var datenReset = m.querySelector('#datenReset');
+  if (datenReset) datenReset.onclick = function () {
+    if (!confirm('Wirklich ALLE Daten löschen — Unternehmensdaten und sämtliche ' +
+      'Abschlüsse? Das lässt sich nicht rückgängig machen.')) return;
+    alleDatenLoeschen().then(function () {
+      S.unternehmen = null; S.abschluesse = []; S.aktiv = null;
+      hinweisToast('Alle Daten gelöscht.');
+      boot();
+    });
+  };
 
   m.querySelector('#stammSpeichern').onclick = function () {
     var neu = JSON.parse(JSON.stringify(u));
@@ -597,37 +693,6 @@ var STANDARD_METHODEN =
   'um planmäßige Abschreibungen, angesetzt. Forderungen sind zum Nennwert ' +
   'angesetzt. Verbindlichkeiten sind zum Erfüllungsbetrag passiviert.';
 
-/* ---- Beispieldaten laden (Demodaten-Modul) ---------------------------- */
-/* Baut aus einem Demo-Inhalt einen vollständigen Abschluss: frisches
- * neuerAbschluss()-Gerüst plus die fallspezifischen Felder. */
-function demoAbschluss(inhalt) {
-  var a = neuerAbschluss(inhalt.art);
-  var klon = JSON.parse(JSON.stringify(inhalt));
-  for (var k in klon) if (klon.hasOwnProperty(k)) a[k] = klon[k];
-  return a;
-}
-/* Speichert eine Beispiel-GmbH samt Abschlüssen und springt zur Startseite. */
-function demoLaden(schluessel) {
-  var b = Demodaten.BEISPIELE[schluessel];
-  if (!b) return;
-  Store.speichereUnternehmen(JSON.parse(JSON.stringify(b.unternehmen)))
-    .then(function (u) {
-      S.unternehmen = (u && !u.fehler) ? u : b.unternehmen;
-      return b.abschluesse.reduce(function (kette, inhalt) {
-        return kette.then(function () {
-          return Store.speichereAbschluss(demoAbschluss(inhalt));
-        });
-      }, Promise.resolve());
-    })
-    .then(function () { return Store.ladeState(); })
-    .then(function (st) {
-      S.unternehmen = st.unternehmen;
-      S.abschluesse = st.abschluesse || [];
-      renderNav();
-      hinweisToast('Beispieldaten geladen (' + b.titel + ').');
-      setView('start');
-    });
-}
 
 /* ===========================================================================
  * ERFASSUNGS-ASSISTENT  -  geführte Eröffnungsbilanz in kleinen Schritten
@@ -2136,7 +2201,7 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
     return;
   }
   var tx = parsed.tx;
-  var bankOpt = SKR04.KONTEN.filter(function (k) { return /^18/.test(k.nr); })
+  var bankOpt = SKR04.alleKonten().filter(function (k) { return /^18/.test(k.nr); })
     .map(function (k) {
       return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
     }).join('');
@@ -2246,7 +2311,8 @@ function renderBuchhaltung(m) {
     'die Positionen der Bilanz/GuV dieses Abschlusses übertragen.</div>';
 
   /* Erfassungsformular */
-  var kontoOpt = SKR04.KONTEN.map(function (k) {
+  SKR04.setEigene((S.unternehmen && S.unternehmen.eigeneKonten) || []);
+  var kontoOpt = SKR04.alleKonten().map(function (k) {
     return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
   }).join('');
   html += '<div class="karte"><h2>Buchung erfassen</h2>' +
@@ -2368,9 +2434,42 @@ function renderBuchhaltung(m) {
       '</button></div></div>';
   }
 
+  /* Nutzerdefinierte Konten — zusätzliche Sachkonten zum SKR04-Auszug */
+  var eigeneK = (S.unternehmen && S.unternehmen.eigeneKonten) || [];
+  var vorlageOpt = SKR04.KONTEN.filter(function (k) { return k.seite !== 'EBK'; })
+    .map(function (k) {
+      return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
+    }).join('');
+  html += '<div class="karte"><h2>Eigene Konten</h2>' +
+    '<div class="karte-hint">Fehlt ein Konto im SKR04-Auszug? Hier eigene Konten ' +
+    'anlegen. Über ein <b>Vorlage-Konto</b> erbt das neue Konto dessen Bilanz-/GuV-' +
+    'Zuordnung &ndash; es erscheint danach in allen Konto-Auswahllisten.</div>';
+  if (eigeneK.length) {
+    html += '<table class="liste"><thead><tr><th>Konto</th><th>Bezeichnung</th>' +
+      '<th>verhält sich wie</th><th></th></tr></thead><tbody>';
+    eigeneK.forEach(function (k, i) {
+      var vk = SKR04.kontoFinden(k.vorlage);
+      html += '<tr><td class="mono">' + esc(k.nr) + '</td><td>' + esc(k.name) + '</td>' +
+        '<td class="mono">' + esc(k.vorlage || '?') +
+        (vk ? ' <span style="font-family:inherit">&ndash; ' + esc(vk.name) + '</span>' : '') +
+        '</td><td class="rechts"><span class="btn btn-sm btn-gefahr" data-ekdel="' + i +
+        '">löschen</span></td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div class="karte-hint">Noch keine eigenen Konten angelegt.</div>';
+  }
+  html += '<div class="gitter g3" style="margin-top:10px">' +
+    feldWrap('Kontonummer', 'z. B. 6644', '<input id="ekNr">') +
+    feldWrap('Bezeichnung', 'z. B. Bewirtungskosten', '<input id="ekName">') +
+    feldWrap('Verhält sich wie', 'Vorlage-Konto',
+      '<select id="ekVorlage">' + vorlageOpt + '</select>') +
+    '</div><div class="btn-reihe"><button class="btn" id="ekAdd">Konto anlegen' +
+    '</button></div></div>';
+
   /* Nutzerpflegbare Kontierungsregeln für den Bankimport */
   var regeln = (S.unternehmen && S.unternehmen.kontierungsregeln) || [];
-  var regelKontoOpt = SKR04.KONTEN.filter(function (k) { return k.seite !== 'EBK'; })
+  var regelKontoOpt = SKR04.alleKonten().filter(function (k) { return k.seite !== 'EBK'; })
     .map(function (k) {
       return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
     }).join('');
@@ -2450,7 +2549,17 @@ function renderBuchhaltung(m) {
   };
   m.querySelectorAll('[data-del]').forEach(function (el) {
     el.onclick = function () {
-      a.buchungen.splice(parseInt(el.dataset.del, 10), 1);
+      var idx = parseInt(el.dataset.del, 10);
+      var weg = a.buchungen[idx];
+      // Wird eine Stornobuchung gelöscht, verliert der stornierte Original-
+      // eintrag seine „storniert"-Markierung wieder — sonst bliebe er als
+      // storniert markiert, ohne dass eine Gegenbuchung existiert.
+      if (weg && weg.stornoVon) {
+        a.buchungen.forEach(function (b) {
+          if (b.id === weg.stornoVon) b.storniert = false;
+        });
+      }
+      a.buchungen.splice(idx, 1);
       speichereStill().then(function () { renderBuchhaltung(m); });
     };
   });
@@ -2468,6 +2577,39 @@ function renderBuchhaltung(m) {
       renderBuchhaltung(m);
     });
   };
+  var ekAdd = m.querySelector('#ekAdd');
+  if (ekAdd) ekAdd.onclick = function () {
+    var nr = document.getElementById('ekNr').value.trim();
+    var name = document.getElementById('ekName').value.trim();
+    var vorlage = document.getElementById('ekVorlage').value;
+    if (!nr || !name) { alert('Bitte Kontonummer und Bezeichnung eingeben.'); return; }
+    if (SKR04.kontoFinden(nr)) {
+      alert('Konto ' + nr + ' gibt es bereits — bitte eine andere Nummer wählen.'); return;
+    }
+    if (!S.unternehmen) { alert('Bitte zuerst die Unternehmensdaten anlegen.'); return; }
+    var v = SKR04.kontoFinden(vorlage);
+    if (!v) { alert('Vorlage-Konto nicht gefunden.'); return; }
+    S.unternehmen.eigeneKonten = S.unternehmen.eigeneKonten || [];
+    S.unternehmen.eigeneKonten.push({ nr: nr, name: name, vorlage: vorlage,
+      seite: v.seite, pos: v.pos, kat: v.kat });
+    Store.speichereUnternehmen(S.unternehmen).then(function (g) {
+      if (g && !g.fehler) S.unternehmen = g;
+      hinweisToast('Konto ' + nr + ' angelegt.');
+      renderBuchhaltung(m);
+    });
+  };
+  m.querySelectorAll('[data-ekdel]').forEach(function (el) {
+    el.onclick = function () {
+      if (!S.unternehmen || !S.unternehmen.eigeneKonten) return;
+      if (!confirm('Eigenes Konto löschen? Bereits gebuchte Sätze behalten die ' +
+        'Kontonummer, verlieren aber die Bezeichnung.')) return;
+      S.unternehmen.eigeneKonten.splice(parseInt(el.dataset.ekdel, 10), 1);
+      Store.speichereUnternehmen(S.unternehmen).then(function (g) {
+        if (g && !g.fehler) S.unternehmen = g;
+        renderBuchhaltung(m);
+      });
+    };
+  });
   m.querySelectorAll('[data-regeldel]').forEach(function (el) {
     el.onclick = function () {
       if (!S.unternehmen || !S.unternehmen.kontierungsregeln) return;
@@ -3743,7 +3885,8 @@ function renderAnlagen(m) {
     'Dreifache der linearen, gedeckelt auf 30 %. Das erste Jahr wird monatsgenau ' +
     'gerechnet (§ 7 EStG).</div>';
 
-  var kontoOpt = SKR04.KONTEN.filter(function (k) {
+  SKR04.setEigene((S.unternehmen && S.unternehmen.eigeneKonten) || []);
+  var kontoOpt = SKR04.alleKonten().filter(function (k) {
     return /^0/.test(k.nr) && (k.pos === 'A.I' || k.pos === 'A.II');
   }).map(function (k) {
     return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';

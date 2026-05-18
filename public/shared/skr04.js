@@ -217,8 +217,24 @@
     'P.D': '3900', 'P.E': '3065'
   };
 
+  /* Nutzerdefinierte Konten: zur Laufzeit ueber setEigene() registriert (aus
+   * den Unternehmensdaten). Jeder Eintrag hat dieselbe Form wie ein KONTEN-
+   * Eintrag (nr, name, seite, pos|kat) und wird aus einem Vorlage-Konto
+   * abgeleitet, damit die Bilanz-/GuV-Zuordnung stimmt. */
+  var eigene = [];
+  function setEigene(arr) {
+    eigene = (arr || []).filter(function (k) { return k && k.nr; }).map(function (k) {
+      return { nr: String(k.nr), name: k.name || String(k.nr), seite: k.seite,
+               pos: k.pos, kat: k.kat, vorlage: k.vorlage, eigen: true };
+    });
+  }
+  /* Eingebaute + eigene Konten — Basis fuer alle Konto-Auswahllisten. */
+  function alleKonten() { return KONTEN.concat(eigene); }
+
   function kontoFinden(nr) {
-    for (var i = 0; i < KONTEN.length; i++) if (KONTEN[i].nr === nr) return KONTEN[i];
+    var i;
+    for (i = 0; i < KONTEN.length; i++) if (KONTEN[i].nr === nr) return KONTEN[i];
+    for (i = 0; i < eigene.length; i++) if (eigene[i].nr === nr) return eigene[i];
     return null;
   }
   function vvKonten() {
@@ -226,5 +242,6 @@
   }
 
   return { KONTEN: KONTEN, KAT_GUV: KAT_GUV, EB_KONTO: EB_KONTO,
-           kontoFinden: kontoFinden, vvKonten: vvKonten };
+           kontoFinden: kontoFinden, vvKonten: vvKonten,
+           setEigene: setEigene, alleKonten: alleKonten };
 });

@@ -23,7 +23,6 @@ var JournalExport = require('../public/shared/journalexport.js');
 var Gdpdu      = require('../public/shared/gdpdu.js');
 var Pruefkette = require('../public/shared/pruefkette.js');
 var XBRL       = require('../public/shared/xbrl.js');
-var Demodaten  = require('../public/shared/demodaten.js');
 var Importe    = require('../public/shared/importe.js');
 
 var tests = [], pass = 0, fail = 0;
@@ -673,28 +672,6 @@ test('Prüfkette: Storno-Markierung bricht die Kette nicht', function () {
   Pruefkette.fortschreiben(bu);
   bu[0].storniert = true;   // zulässige Storno-Markierung, kein Inhaltswechsel
   eq(Pruefkette.pruefe(bu).ok, true, 'Storno-Flag zählt nicht zum Buchungsinhalt');
-});
-
-/* ---- Demodaten -------------------------------------------------------- */
-test('Demodaten: alle Beispiel-Abschlüsse sind bilanziell ausgeglichen', function () {
-  Object.keys(Demodaten.BEISPIELE).forEach(function (key) {
-    Demodaten.BEISPIELE[key].abschluesse.forEach(function (ab) {
-      var r = Berechnung.berechne(ab).bilanz;
-      ok(r.ausgeglichen, key + '/' + ab.id + ': Bilanz nicht ausgeglichen (Differenz ' +
-        r.differenz + ' EUR)');
-    });
-  });
-});
-test('Demodaten: zwei Beispiele mit je Eröffnungsbilanz und Jahresabschluss', function () {
-  eq(Object.keys(Demodaten.BEISPIELE).length, 2, 'zwei Beispiele');
-  Object.keys(Demodaten.BEISPIELE).forEach(function (key) {
-    var b = Demodaten.BEISPIELE[key];
-    ok(b.unternehmen && b.unternehmen.name, key + ': Unternehmensname fehlt');
-    ok(b.abschluesse.some(function (a) { return a.art === 'EROEFFNUNGSBILANZ'; }),
-       key + ': Eröffnungsbilanz fehlt');
-    ok(b.abschluesse.some(function (a) { return a.art === 'JAHRESABSCHLUSS'; }),
-       key + ': Jahresabschluss fehlt');
-  });
 });
 
 /* ---- Bankimport-Kontierungsregeln ------------------------------------ */

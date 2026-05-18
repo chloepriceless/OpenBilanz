@@ -135,6 +135,10 @@ function api(req, res, pfad, query) {
   if (pfad === '/api/abschluss' && req.method === 'DELETE') {
     return sendJSON(res, 200, { geloescht: store.loescheAbschluss(query.id) });
   }
+  // Unternehmen löschen (Teil des „Alle Daten zurücksetzen")
+  if (pfad === '/api/unternehmen' && req.method === 'DELETE') {
+    return sendJSON(res, 200, { geloescht: store.loescheUnternehmen() });
+  }
   // E-Bilanz erzeugen und herunterladen
   //   form=ebilanz (Standard): XBRL im ELSTER-EBilanz-Container (Übermittlung)
   //   form=instanz:            reine XBRL-Instanz (zum Validieren)
