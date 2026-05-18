@@ -2782,8 +2782,14 @@ function eroeffnungAnwenden(a, quelle, m) {
   if (res.warn.length) txt += '\n\nNicht übertragbar: ' + res.warn.join('; ');
   if (!confirm(txt)) return;
 
-  var datum = a.gjVon || quelle.stichtag || a.stichtag ||
-              new Date().toISOString().slice(0, 10);
+  // Datum der Eröffnungsbuchung: Ist die Quelle eine Eröffnungsbilanz, gilt
+  // deren Stichtag (der Gründungstag - ggf. unterjährig) und NICHT stur der
+  // 01.01.; bei einem Vorjahres-Abschluss als Quelle der Beginn des neuen
+  // Geschäftsjahres (a.gjVon).
+  var datum = (quelle.art === 'EROEFFNUNGSBILANZ')
+    ? (quelle.stichtag || a.gjVon || a.stichtag)
+    : (a.gjVon || quelle.stichtag || a.stichtag);
+  datum = datum || new Date().toISOString().slice(0, 10);
   var stamp = Date.now();
   res.plan.forEach(function (p, idx) {
     a.buchungen.push({
