@@ -17,6 +17,8 @@ var Taxonomie  = require('../public/shared/taxonomie.js');
 var SKR04      = require('../public/shared/skr04.js');
 var Steuer     = require('../public/shared/steuer.js');
 var Ustva      = require('../public/shared/ustva.js');
+var Mt940      = require('../public/shared/mt940.js');
+var Datev      = require('../public/shared/datev.js');
 var XBRL       = require('../public/shared/xbrl.js');
 
 var tests = [], pass = 0, fail = 0;
@@ -389,6 +391,56 @@ test('Steuer: verdeckte Gewinnausschüttung erhöht KSt- und GewSt-Basis', funct
   eq(s.gewst.gewerbeertrag, 70000, 'Gewerbeertrag inkl. vGA');
   ok(s.hinweise.some(function (h) { return h.indexOf('Gewinnausschüttung') >= 0; }),
      'vGA-Hinweis vorhanden');
+});
+
+/* ---- Bankimport MT940 ------------------------------------------------ */
+test('MT940: liest Umsätze mit Betrag, Richtung und Verwendungszweck', function () {
+  var sta = [
+    ':20:STARTUMS', ':25:10010010/1234567', ':28C:00012/001',
+    ':60F:C240301EUR1000,00',
+    ':61:2403150315C1500,00NTRFNONREF',
+    ':86:166?00GUTSCHRIFT?20Rechnung 2024-005?32MUSTER GMBH',
+    ':61:2403160316D250,50NTRFNONREF',
+    ':86:177?00LASTSCHRIFT?20Stromabschlag?32STADTWERKE',
+    ':62F:C240331EUR2249,50'
+  ].join('\n');
+  var r = Mt940.parse(sta);
+  eq(r.tx.length, 2, 'zwei Umsätze');
+  eq(r.tx[0].datum, '2024-03-15', 'Wertstellungsdatum');
+  eq(r.tx[0].betrag, 1500, 'Betrag Gutschrift');
+  eq(r.tx[0].eingang, true, 'C-Kennzeichen = Eingang');
+  eq(r.tx[0].zweck, 'Rechnung 2024-005', 'Verwendungszweck aus ?20');
+  eq(r.tx[0].partner, 'MUSTER GMBH', 'Partner aus ?32');
+  eq(r.tx[1].eingang, false, 'D-Kennzeichen = Ausgang');
+  eq(r.tx[1].betrag, 250.5, 'Betrag Lastschrift');
+});
+test('MT940: meldet Fehler bei fremdem Format', function () {
+  ok(Mt940.parse('irgendein Text ohne Tags').fehler, 'Fehler bei Nicht-MT940-Datei');
+});
+
+/* ---- DATEV-Import (EXTF) --------------------------------------------- */
+test('DATEV: liest EXTF-Buchungsstapel mit Soll/Haben-Richtung', function () {
+  var extf = [
+    '"EXTF";700;21;"Buchungsstapel";13;20260518;;"";"OpenBilanz";"";;;20260101;4;' +
+      '20260101;20261231;;;1;;0;"EUR"',
+    'Umsatz (ohne Soll/Haben-Kz);Soll/Haben-Kennzeichen;WKZ Umsatz;Kurs;Basis-Umsatz;' +
+      'WKZ Basis-Umsatz;Konto;Gegenkonto;BU-Schluessel;Belegdatum;Belegfeld 1;' +
+      'Belegfeld 2;Skonto;Buchungstext',
+    '1500,00;S;EUR;;;;1800;4400;;1503;;;;"Erloes Maerz"',
+    '250,50;H;EUR;;;;1800;6310;;1603;;;;"Miete"'
+  ].join('\r\n');
+  var r = Datev.parse(extf);
+  eq(r.buchungen.length, 2, 'zwei Buchungen');
+  eq(r.jahr, '2026', 'Jahr aus dem Kopfsatz');
+  eq(r.buchungen[0].soll, '1800', 'S-Kennzeichen: Konto ist Soll');
+  eq(r.buchungen[0].haben, '4400', 'Gegenkonto ist Haben');
+  eq(r.buchungen[0].betrag, 1500, 'Betrag');
+  eq(r.buchungen[0].datum, '2026-03-15', 'Belegdatum TTMM + Jahr');
+  eq(r.buchungen[1].soll, '6310', 'H-Kennzeichen: Gegenkonto ist Soll');
+  eq(r.buchungen[1].haben, '1800', 'Konto ist Haben');
+});
+test('DATEV: meldet Fehler ohne EXTF-Kopfzeile', function () {
+  ok(Datev.parse('a;b;c\n1;2;3').fehler, 'Fehler ohne EXTF-Kopf');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

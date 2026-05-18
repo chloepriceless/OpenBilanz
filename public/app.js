@@ -2018,6 +2018,51 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
     });
   };
 }
+/* Vorschau-Tabelle für den DATEV-Import (vollständige Soll/Haben-Buchungen). */
+function datevVorschau(m, a, parsed, boxId) {
+  var box = m.querySelector(boxId);
+  if (!box) return;
+  if (parsed.fehler) {
+    box.innerHTML = '<div class="box box-warn" style="margin-top:10px">' +
+      esc(parsed.fehler) + '</div>';
+    return;
+  }
+  var bu = parsed.buchungen;
+  var h = '<div class="karte-hint" style="margin-top:10px">' + bu.length +
+    ' Buchung(en) gelesen' + (parsed.jahr ? ' (Wirtschaftsjahr ' + esc(parsed.jahr) + ')' : '') +
+    '. Vor der Übernahme prüfen.</div>' +
+    '<table class="liste"><thead><tr><th></th><th>Datum</th><th>Soll</th>' +
+    '<th>Haben</th><th class="rechts">Betrag</th><th>Text</th></tr></thead><tbody>';
+  bu.forEach(function (b, i) {
+    h += '<tr><td><input type="checkbox" class="dtvImpChk" data-i="' + i + '" checked></td>' +
+      '<td class="mono">' + datumDe(b.datum) + '</td>' +
+      '<td class="mono">' + esc(b.soll) + '</td>' +
+      '<td class="mono">' + esc(b.haben) + '</td>' +
+      '<td class="rechts mono">' + geld(b.betrag) + '</td>' +
+      '<td>' + esc(String(b.text || '').slice(0, 60)) + '</td></tr>';
+  });
+  h += '</tbody></table><div class="btn-reihe"><button class="btn btn-pri" ' +
+    'id="dtvImpUebernehmen">Ausgewählte Buchungen übernehmen</button></div>';
+  box.innerHTML = h;
+  box.querySelector('#dtvImpUebernehmen').onclick = function () {
+    var n = 0, stamp = Date.now();
+    box.querySelectorAll('.dtvImpChk').forEach(function (chk) {
+      if (!chk.checked) return;
+      var b = bu[parseInt(chk.dataset.i, 10)];
+      a.buchungen.push({
+        id: 'B-DATEV-' + stamp + '-' + n, datum: b.datum,
+        betrag: Berechnung.cent(b.betrag), text: String(b.text || '').slice(0, 90),
+        soll: b.soll, haben: b.haben
+      });
+      n++;
+    });
+    if (!n) { alert('Keine Zeile ausgewählt.'); return; }
+    speichereStill().then(function () {
+      hinweisToast(n + ' Buchung(en) aus dem DATEV-Import übernommen.');
+      renderBuchhaltung(m);
+    });
+  };
+}
 function renderBuchhaltung(m) {
   var a = S.aktiv;
   if (!a) { setView('start'); return; }
@@ -2115,6 +2160,14 @@ function renderBuchhaltung(m) {
       'DATEV-Import des Steuerberaters gegenprüfen.</div></div>';
   }
 
+  /* DATEV-Import */
+  html += '<div class="karte"><h2>DATEV-Import</h2>' +
+    '<div class="karte-hint">DATEV-Buchungsstapel im EXTF-Format einlesen — das ' +
+    'Gegenstück zum Export. Soll/Haben-Richtung, Konten, Belegdatum und ' +
+    'Buchungstext werden übernommen; jede Zeile vor dem Import prüfen.</div>' +
+    '<input type="file" id="datevImpDatei" accept=".csv,text/csv,text/plain">' +
+    '<div id="datevImpVorschau"></div></div>';
+
   /* Bankimport CAMT.053 */
   html += '<div class="karte"><h2>Bankimport (CAMT.053)</h2>' +
     '<div class="karte-hint">Kontoauszug im Format CAMT.053 (ISO 20022) einlesen und ' +
@@ -2122,6 +2175,14 @@ function renderBuchhaltung(m) {
     'liefert je Zeile einen Kontovorschlag.</div>' +
     '<input type="file" id="camtDatei" accept=".xml,text/xml,application/xml">' +
     '<div id="camtVorschau"></div></div>';
+
+  /* Bankimport MT940 */
+  html += '<div class="karte"><h2>Bankimport (MT940)</h2>' +
+    '<div class="karte-hint">Kontoauszug im klassischen SWIFT-Format MT940 ' +
+    'einlesen — viele Banken bieten es alternativ zu CAMT.053. Verbuchung wie ' +
+    'beim CAMT-Import: Bankkonto 1800, je Zeile ein Kontovorschlag.</div>' +
+    '<input type="file" id="mt940Datei" accept=".sta,.940,.txt,text/plain">' +
+    '<div id="mt940Vorschau"></div></div>';
 
   /* Broker-Import (Interactive Brokers Flex) */
   html += '<div class="karte"><h2>Broker-Import (Interactive Brokers)</h2>' +
@@ -2221,6 +2282,26 @@ function renderBuchhaltung(m) {
     });
     ladeDatei(txt, 'EXTF_Buchungsstapel_' + (a.bezeichnung || 'Abschluss')
       .replace(/[^\w]+/g, '_') + '.csv', 'text/csv;charset=utf-8');
+  };
+  var datevImpIn = m.querySelector('#datevImpDatei');
+  if (datevImpIn) datevImpIn.onchange = function () {
+    var f = datevImpIn.files && datevImpIn.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () { datevVorschau(m, a, Datev.parse(rd.result), '#datevImpVorschau'); };
+    rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
+    rd.readAsText(f);
+  };
+  var mt940In = m.querySelector('#mt940Datei');
+  if (mt940In) mt940In.onchange = function () {
+    var f = mt940In.files && mt940In.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      camtVorschau(m, a, kontoOpt, Mt940.parse(rd.result), 'MT940', '#mt940Vorschau');
+    };
+    rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
+    rd.readAsText(f);
   };
   var camtIn = m.querySelector('#camtDatei');
   if (camtIn) camtIn.onchange = function () {
