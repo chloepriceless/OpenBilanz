@@ -1,0 +1,8 @@
+{
+  "_hinweis": "Vorlage. Zum Aktivieren diese Datei nach public/rechtliche-links.json kopieren und anpassen. Sie blendet auf einer OEFFENTLICH gehosteten Instanz Impressum-/Datenschutz-Links in der Seitenleiste ein. Ohne die Datei erscheinen keine Links - das ist der richtige Zustand fuer die lokale bzw. heruntergeladene Variante (keine Impressumspflicht). Die Datei rechtliche-links.json ist in .gitignore ausgenommen und gehoert nur in die jeweilige Deployment-Kopie.",
+  "links": [
+    { "text": "Impressum", "url": "/impressum" },
+    { "text": "Datenschutz", "url": "/datenschutz" },
+    { "text": "Haftungsausschluss", "url": "/haftungsausschluss" }
+  ]
+}

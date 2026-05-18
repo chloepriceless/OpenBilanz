@@ -74,6 +74,28 @@ function boot() {
   if (Store.modus === 'website' && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function () {});
   }
+  ladeRechtlicheLinks();
+}
+
+/* Optionale Rechts-Links (Impressum/Datenschutz/Haftungsausschluss) in der
+ * Seitenleiste. Nur für ÖFFENTLICH gehostete Instanzen gedacht: Der Betreiber
+ * legt eine rechtliche-links.json neben die App. Fehlt die Datei — wie im
+ * Repo und in der lokalen Variante — erscheinen keine Links (die lokale
+ * Nutzung begründet keine Impressumspflicht). Vorlage: rechtliche-links.beispiel.json */
+function ladeRechtlicheLinks() {
+  var ziel = document.getElementById('rechtlicheLinks');
+  if (!ziel || typeof fetch !== 'function') return;
+  fetch('rechtliche-links.json').then(function (r) {
+    return r.ok ? r.json() : null;
+  }).then(function (cfg) {
+    var links = cfg && cfg.links;
+    if (!links || !links.length) return;
+    ziel.className = 'sidebar-foot-legal';
+    ziel.innerHTML = links.map(function (l) {
+      return '<a href="' + esc(l.url || '#') + '" target="_blank" rel="noopener">' +
+        esc(l.text || '') + '</a>';
+    }).join('<span aria-hidden="true"> &middot; </span>');
+  }).catch(function () {});
 }
 
 /* ---- Navigation -------------------------------------------------------- */

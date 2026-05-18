@@ -15,6 +15,10 @@ public/wheels/
 # Selbstsigniertes Entwickler-Zertifikat fuer tools/serve-website.py
 tools/.devcert/
 
+# Deployment-spezifische Rechts-Links (Impressum/Datenschutz) - nur fuer
+# oeffentlich gehostete Instanzen. Vorlage: public/rechtliche-links.beispiel.json
+public/rechtliche-links.json
+
 # Sonstiges
 node_modules/
 *.log

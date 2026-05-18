@@ -46,6 +46,9 @@ a{color:var(--akzent)}
 .sidebar-foot{padding:13px 18px;border-top:1px solid #25394a;font-size:12px}
 .sidebar-foot #firmaName{color:#fff;font-weight:500}
 .sidebar-foot-sub{color:#7c91a0;font-size:11px;margin-top:2px}
+.sidebar-foot-legal{margin-top:8px;font-size:11px;color:#7c91a0}
+.sidebar-foot-legal a{color:#7c91a0;text-decoration:none}
+.sidebar-foot-legal a:hover{text-decoration:underline}
 
 /* ---- Main ---- */
 .main{flex:1;padding:26px 34px;max-width:1180px;width:100%}
