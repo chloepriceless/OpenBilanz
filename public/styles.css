@@ -87,6 +87,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--akzent-l);border
 .skip-link{position:absolute;left:-999px;top:0;z-index:200;background:var(--akzent);
   color:#fff;padding:8px 14px;border-radius:0 0 6px 0}
 .skip-link:focus{left:0}
+/* Kontexthilfe: Fachbegriff mit Glossar-Tooltip */
+.gtip{text-decoration:underline dotted;text-underline-offset:2px;cursor:help}
 input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
 input[readonly]{background:var(--line-2);color:var(--ink-mut)}
 textarea{min-height:64px;resize:vertical}

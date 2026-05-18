@@ -463,6 +463,18 @@ function feldWrap(label, sub, inner) {
   return '<label class="feld"><span class="lbl">' + label +
          (sub ? ' <span class="sub">&ndash; ' + sub + '</span>' : '') + '</span>' + inner + '</label>';
 }
+/* Kontexthilfe: Begriff mit Glossar-Erklärung als Tooltip (natives title-
+ * Attribut, auch von Screenreadern vorgelesen). Findet die Erklärung im
+ * GLOSSAR; ohne Treffer wird der Begriff unverändert ausgegeben. */
+function gtip(begriff, anzeige) {
+  var txt = anzeige || begriff, bl = String(begriff).toLowerCase(), treffer = null;
+  for (var i = 0; i < GLOSSAR.length; i++) {
+    if (GLOSSAR[i].t.toLowerCase().indexOf(bl) >= 0) { treffer = GLOSSAR[i]; break; }
+  }
+  return treffer
+    ? '<abbr class="gtip" title="' + esc(treffer.e) + '">' + esc(txt) + '</abbr>'
+    : esc(txt);
+}
 function hinweisToast(t) {
   var d = document.createElement('div');
   d.setAttribute('role', 'status');
@@ -1478,8 +1490,11 @@ function renderSteuer(m) {
   if (!a) { setView('start'); return; }
   var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>';
   html += '<div class="kopf"><h1>Steuern &ndash; ' + esc(a.bezeichnung) + '</h1>' +
-    '<p>Überschlägige Berechnung von Körperschaft- und Gewerbesteuer &ndash; mit ' +
-    'den Besonderheiten der vermögensverwaltenden GmbH (§ 8b KStG, § 9 GewStG).</p></div>';
+    '<p>Überschlägige Berechnung von ' + gtip('Körperschaftsteuer', 'Körperschaft-') +
+    ' und ' + gtip('Gewerbesteuer') + ' &ndash; mit den Besonderheiten der ' +
+    'vermögensverwaltenden GmbH (' + gtip('§ 8b KStG') + ', § 9 GewStG). Fachbegriffe ' +
+    'mit gepunkteter Linie zeigen beim Überfahren eine Kurzerklärung; das vollständige ' +
+    'Glossar steht im gleichnamigen Reiter.</p></div>';
   if (a.art !== 'JAHRESABSCHLUSS') {
     html += '<div class="box box-info">Die Steuerberechnung steht beim ' +
       'Jahresabschluss zur Verfügung &ndash; sie baut auf der GuV auf.</div>';
