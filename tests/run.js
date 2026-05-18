@@ -24,6 +24,7 @@ var Gdpdu      = require('../public/shared/gdpdu.js');
 var Pruefkette = require('../public/shared/pruefkette.js');
 var XBRL       = require('../public/shared/xbrl.js');
 var Demodaten  = require('../public/shared/demodaten.js');
+var Importe    = require('../public/shared/importe.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -694,6 +695,19 @@ test('Demodaten: zwei Beispiele mit je Eröffnungsbilanz und Jahresabschluss', f
     ok(b.abschluesse.some(function (a) { return a.art === 'JAHRESABSCHLUSS'; }),
        key + ': Jahresabschluss fehlt');
   });
+});
+
+/* ---- Bankimport-Kontierungsregeln ------------------------------------ */
+test('Bankimport: nutzerdefinierte Kontierungsregel hat Vorrang', function () {
+  var regeln = [{ muster: 'Stadtwerke', konto: '6325' }];
+  eq(Importe.bankKontoVorschlag('Abschlag STADTWERKE Musterstadt', false, regeln), '6325',
+     'Nutzerregel greift (Teilstring, Groß-/Kleinschreibung egal)');
+  eq(Importe.bankKontoVorschlag('Miete Büro', false, regeln), '6310',
+     'eingebaute Regel greift weiterhin');
+  eq(Importe.bankKontoVorschlag('Unbekannter Umsatz', false, regeln), '6300',
+     'Rückfall auf sonstige Aufwendungen ohne Treffer');
+  eq(Importe.bankKontoVorschlag('Unbekannter Umsatz', true, []), '4400',
+     'Rückfall auf Umsatzerlöse bei einem Eingang');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

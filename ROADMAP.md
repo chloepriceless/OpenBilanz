@@ -77,7 +77,6 @@ Ausbau- und Verifikationsschritte:
 | Punkt | Beschreibung | Nutzen | Aufwand |
 |---|---|---|---|
 | **DATEV-Export verifizieren** | EXTF-Kopfzeile vor produktiver Nutzung gegen die aktuelle DATEV-Formatbeschreibung gegenprüfen. | M | S |
-| **Bankimport: Regelliste** | Nutzerpflegbares Kontierungs-Regelwerk statt des fest eingebauten Regelwerks. | M | M |
 | **UStVA: ELSTER-Datensatz** | Einen ELSTER-importierbaren UStVA-Datensatz erzeugen — bisher nur Kennzahlen-Aufbereitung, Versand über ELSTER. | M | M |
 | **Offenlegung verifizieren** | Amtlich gefordertes Einreichungsformat des Unternehmensregisters vor der Übermittlung prüfen. | M | S |
 

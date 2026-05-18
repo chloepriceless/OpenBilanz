@@ -160,8 +160,19 @@
     return { rechnung: r };
   }
 
-  /* Schlägt aus dem Verwendungszweck ein SKR04-Gegenkonto vor (halbautomatisch). */
-  function bankKontoVorschlag(text, eingang) {
+  /* Schlägt aus dem Verwendungszweck ein SKR04-Gegenkonto vor (halbautomatisch).
+   * userRegeln (optional): [{ muster, konto }] - nutzerdefinierte Regeln. Sie
+   * werden VOR den eingebauten Regeln geprüft (Teilstring-Treffer, Groß-/Klein-
+   * schreibung wird ignoriert) und haben damit Vorrang. */
+  function bankKontoVorschlag(text, eingang, userRegeln) {
+    var t = String(text || ''), tl = t.toLowerCase();
+    if (userRegeln && userRegeln.length) {
+      for (var u = 0; u < userRegeln.length; u++) {
+        var r = userRegeln[u] || {};
+        var muster = String(r.muster || '').trim().toLowerCase();
+        if (muster && r.konto && tl.indexOf(muster) >= 0) return r.konto;
+      }
+    }
     var regeln = [
       [/miete|pacht/i, '6310'], [/telekom|vodafone|\bo2\b|mobilfunk|internet|telefon|1&1/i, '6805'],
       [/hosting|server|domain|cloud|aws|hetzner/i, '6300'], [/versicherung/i, '6400'],
@@ -171,7 +182,7 @@
       [/anwalt|notar|steuerberat|beratung/i, '6825'], [/zins/i, eingang ? '7100' : '7300'],
       [/büro|buero|papier/i, '6815']
     ];
-    for (var i = 0; i < regeln.length; i++) if (regeln[i][0].test(text || '')) return regeln[i][1];
+    for (var i = 0; i < regeln.length; i++) if (regeln[i][0].test(t)) return regeln[i][1];
     return eingang ? '4400' : '6300';
   }
 

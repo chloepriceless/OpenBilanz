@@ -1946,7 +1946,8 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
     '<th>Verwendungszweck</th><th class="rechts">Betrag</th><th>Gegenkonto</th>' +
     '</tr></thead><tbody>';
   tx.forEach(function (t, i) {
-    var vor = t.kontoHint || Importe.bankKontoVorschlag(t.zweck + ' ' + t.partner, t.eingang);
+    var vor = t.kontoHint || Importe.bankKontoVorschlag(t.zweck + ' ' + t.partner, t.eingang,
+      (S.unternehmen && S.unternehmen.kontierungsregeln) || []);
     var sel = kontoOpt.replace('value="' + vor + '"', 'value="' + vor + '" selected');
     h += '<tr><td><input type="checkbox" class="camtChk" data-i="' + i + '" checked></td>' +
       '<td class="mono">' + datumDe(t.datum) + '</td>' +
@@ -2164,6 +2165,37 @@ function renderBuchhaltung(m) {
       '</button></div></div>';
   }
 
+  /* Nutzerpflegbare Kontierungsregeln für den Bankimport */
+  var regeln = (S.unternehmen && S.unternehmen.kontierungsregeln) || [];
+  var regelKontoOpt = SKR04.KONTEN.filter(function (k) { return k.seite !== 'EBK'; })
+    .map(function (k) {
+      return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
+    }).join('');
+  html += '<div class="karte"><h2>Kontierungsregeln</h2>' +
+    '<div class="karte-hint">Eigene Regeln für die Kontovorschläge des Bankimports: ' +
+    'enthält Verwendungszweck oder Partner einen Suchbegriff, wird das zugeordnete ' +
+    'Gegenkonto vorgeschlagen. Eigene Regeln haben Vorrang vor den eingebauten.</div>';
+  if (regeln.length) {
+    html += '<table class="liste"><thead><tr><th>Suchbegriff</th><th>Gegenkonto</th>' +
+      '<th></th></tr></thead><tbody>';
+    regeln.forEach(function (r, i) {
+      var rk = SKR04.kontoFinden(r.konto);
+      html += '<tr><td>' + esc(r.muster) + '</td>' +
+        '<td class="mono">' + esc(r.konto) + (rk ? ' &ndash; ' + esc(rk.name) : '') + '</td>' +
+        '<td class="rechts"><span class="btn btn-sm btn-gefahr" data-regeldel="' + i +
+        '">löschen</span></td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div class="karte-hint">Noch keine eigenen Regeln — es greifen die ' +
+      'eingebauten Vorschläge.</div>';
+  }
+  html += '<div class="gitter g2" style="margin-top:10px">' +
+    feldWrap('Suchbegriff', 'z. B. ein Lieferantenname', '<input id="regelMuster">') +
+    feldWrap('Gegenkonto', '', '<select id="regelKonto">' + regelKontoOpt + '</select>') +
+    '</div><div class="btn-reihe"><button class="btn" id="regelAdd">Regel hinzufügen' +
+    '</button></div></div>';
+
   /* Bankimport CAMT.053 */
   html += '<div class="karte"><h2>Bankimport (CAMT.053)</h2>' +
     '<div class="karte-hint">Kontoauszug im Format CAMT.053 (ISO 20022) einlesen und ' +
@@ -2217,6 +2249,30 @@ function renderBuchhaltung(m) {
     el.onclick = function () {
       a.buchungen.splice(parseInt(el.dataset.del, 10), 1);
       speichereStill().then(function () { renderBuchhaltung(m); });
+    };
+  });
+  var regelAdd = m.querySelector('#regelAdd');
+  if (regelAdd) regelAdd.onclick = function () {
+    var muster = document.getElementById('regelMuster').value.trim();
+    if (!muster) { alert('Bitte einen Suchbegriff eingeben.'); return; }
+    if (!S.unternehmen) { alert('Bitte zuerst die Unternehmensdaten anlegen.'); return; }
+    S.unternehmen.kontierungsregeln = S.unternehmen.kontierungsregeln || [];
+    S.unternehmen.kontierungsregeln.push({ muster: muster,
+      konto: document.getElementById('regelKonto').value });
+    Store.speichereUnternehmen(S.unternehmen).then(function (g) {
+      if (g && !g.fehler) S.unternehmen = g;
+      hinweisToast('Kontierungsregel hinzugefügt.');
+      renderBuchhaltung(m);
+    });
+  };
+  m.querySelectorAll('[data-regeldel]').forEach(function (el) {
+    el.onclick = function () {
+      if (!S.unternehmen || !S.unternehmen.kontierungsregeln) return;
+      S.unternehmen.kontierungsregeln.splice(parseInt(el.dataset.regeldel, 10), 1);
+      Store.speichereUnternehmen(S.unternehmen).then(function (g) {
+        if (g && !g.fehler) S.unternehmen = g;
+        renderBuchhaltung(m);
+      });
     };
   });
   var buFest = m.querySelector('#buFest');
