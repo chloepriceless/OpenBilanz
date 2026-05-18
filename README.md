@@ -103,19 +103,19 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | Live-Prüfung der **Bilanzgleichung** und Plausibilitätshinweise | ✅ |
 | **Druckansicht** (Bilanz in Kontoform, GuV, Anhang) → als PDF speicherbar | ✅ |
 | **E-Bilanz**: XBRL nach Taxonomie 6.9, im ELSTER-`EBilanz`-Container | ✅ |
-| **Kontennachweise** zur E-Bilanz (§ 5b EStG i. d. F. JStG 2024) | ✅ |
+| **Kontennachweise** zur E-Bilanz (§ 5b EStG i. d. F. JStG 2024) | 🟡 |
 | **Validierung** der E-Bilanz gegen die amtliche Taxonomie (Arelle) | ✅ |
 | **Vermögensverwaltende GmbH**: Finanzanlagen, Beteiligungen, Mieterträge | ✅ |
 | **GmbH-Untertypen**: Immobilien-, Trading-, Hybrid-GmbH mit Steuerhinweisen | ✅ |
-| **Steuerschätzung**: KSt (jahresabhängiger Satz), Soli, GewSt — § 8b KStG, § 9 GewStG | ✅ |
+| **Steuerschätzung**: KSt (jahresabhängiger Satz), Soli, GewSt — § 8b KStG, § 9 GewStG | 🟡 |
 | **Buchhaltung** mit Kontenrahmen SKR04 (Buchungsjournal, Saldenliste) | ✅ |
 | **Eröffnungsbuchungen** — Saldenvortrag ins neue Jahr (Eröffnungsbilanzkonto 9000) | ✅ |
 | **GoBD-Festschreibung** — unveränderliche Buchungen, Storno, Änderungsprotokoll | ✅ |
-| **Anlagenverzeichnis & AfA** — linear/degressiv, Anlagenspiegel (§ 284 Abs. 3) | ✅ |
-| **DATEV-Export** — Buchungsstapel im EXTF-Format für den Steuerberater | ✅ |
+| **Anlagenverzeichnis & AfA** — linear/degressiv, Anlagenspiegel (§ 284 Abs. 3) | 🟡 |
+| **DATEV-Export** — Buchungsstapel im EXTF-Format für den Steuerberater | 🟡 |
 | **Bankimport** — Kontoauszüge im Format CAMT.053 (ISO 20022) | ✅ |
-| **UStVA-Aufbereitung** — Umsatzsteuer-Voranmeldung aus den SKR04-Konten | ✅ |
-| **Offenlegung** beim Unternehmensregister (§ 325 HGB) | ✅ |
+| **UStVA-Aufbereitung** — Umsatzsteuer-Voranmeldung aus den SKR04-Konten | 🟡 |
+| **Offenlegung** beim Unternehmensregister (§ 325 HGB) | 🟡 |
 | **Buchungshilfe** — erklärte Standardfälle mit konkreten SKR04-Buchungssätzen | ✅ |
 | **Gesellschafterbeschlüsse** — Generator (Feststellung, Ergebnisverwendung, …) | ✅ |
 | Vorjahresspalte (§ 265 Abs. 2 HGB) | ✅ |
