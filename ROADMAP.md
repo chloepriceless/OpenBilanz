@@ -36,14 +36,28 @@ Seit der ersten Roadmap-Fassung umgesetzt — Details in der
 - **Gesellschafterbeschluss-Generator** — druckbare Vorlagen für Feststellung
   des Jahresabschlusses, Ergebnisverwendung, Einforderung ausstehender
   Einlagen, Geschäftsführer-Beschlüsse sowie Freitext-Beschlüsse.
+- **Kontennachweise zur E-Bilanz** — unverdichtete Kontensalden je HGB-Position
+  aus dem SKR04-Journal, Härtefall-Mussfeld gesetzt (Abschnitt 1.1).
+- **Jahresabhängiger Körperschaftsteuersatz** — 15 % bis VZ 2027, danach
+  stufenweise bis 10 % ab 2032 (Abschnitt 1.2).
+- **GmbH-Untertypen** — Immobilien-, Trading- und Hybrid-GmbH mit
+  typspezifischen Steuerhinweisen (Abschnitt 3, B1).
+- **Anlagenverzeichnis & AfA** — lineare/degressive Abschreibung, Anlagenspiegel,
+  AfA-Buchungen (Abschnitt 3, B2).
+- **DATEV-Export** — Buchungsstapel im EXTF-Format (Abschnitt 3, B3).
+- **Bankimport CAMT.053** — Kontoauszug-Import mit Kontovorschlägen (Abschnitt 3, B4).
+- **UStVA-Aufbereitung** — Umsatzsteuer-Voranmeldung aus den SKR04-Konten
+  (Abschnitt 3, B5).
+- **Offenlegung** — Offenlegungs-Dokument für das Unternehmensregister
+  (Abschnitt 3, B6).
 
 ---
 
 ## 1. Korrektheits-Hinweise (vorrangig prüfen)
 
 Diese Punkte betreffen nicht neue Funktionen, sondern die **fachliche
-Richtigkeit** der bestehenden Ausgabe. Sie sollten vor Feature-Arbeit geklärt
-werden.
+Richtigkeit** der bestehenden Ausgabe. Alle drei sind inzwischen umgesetzt —
+siehe die ✅-Vermerke; die dort genannten Verifikationsschritte bleiben offen.
 
 ### 1.1 Kontennachweise fehlen in der E-Bilanz
 
@@ -63,6 +77,12 @@ noch dieses Härtefall-Feld**.
 Vollausbau: Kontensalden aus dem SKR04-Journal als Kontennachweise mitgeben.
 **Vor Umsetzung fachlich verifizieren.** Nutzen H · Aufwand M.
 
+**✅ Umgesetzt:** `xbrl.js` erzeugt die Kontensalden je HGB-Position aus dem
+SKR04-Journal, führt sie der E-Bilanz-Datei als Kontensalden-Aufstellung bei und
+setzt das Härtefall-Mussfeld. Die E-Bilanz-Ansicht zeigt den Kontennachweis als
+Tabelle. **Offen:** die taxonomiekonforme Einzelfeld-Übermittlung der
+Kontennachweise gegen die de-gaap-ci-6.9-XSD verifizieren.
+
 ### 1.2 Körperschaftsteuersatz fest auf 15 %
 
 `public/shared/steuer.js` setzt `KST_SATZ = 0.15`. Das ist für die
@@ -74,6 +94,10 @@ Körperschaftsteuersatz stufenweise: **2028 → 14 %, 2029 → 13 %, 2030 → 12
 → `KST_SATZ` sollte vom Veranlagungszeitraum abhängig gemacht werden. Relevant
 auch bereits heute für die Bewertung latenter Steuern. Nutzen H · Aufwand S.
 
+**✅ Umgesetzt:** `steuer.js` bestimmt den Körperschaftsteuersatz aus dem
+Veranlagungszeitraum (Wirtschaftsjahr-Ende): 15 % bis 2027, dann 14/13/12/11/
+10 % ab 2028–2032.
+
 ### 1.3 Taxonomie-Version jährlich nachziehen
 
 `taxonomie.js` (Version 6.9, Stand 01.04.2025) ist aktuell. Die
@@ -83,6 +107,11 @@ beginnen (Nichtbeanstandung: auch für WJ 2025 nutzbar).
 
 → Wiederkehrende Aufgabe: Namespace-URIs und Elementnamen bei jedem
 Versionswechsel gegen die neue XSD prüfen. Siehe Beobachtungsliste (Abschnitt 5).
+
+**✅ Dokumentiert:** `taxonomie.js` enthält eine Upgrade-Checkliste für den
+Versionswechsel; die Versionsbehandlung ist über `VERSION`/`STAND`
+parametrisiert. Eine Migration erfolgt, sobald die neue Kerntaxonomie
+veröffentlicht ist.
 
 ---
 
@@ -199,14 +228,25 @@ Zugriff auf den Rechner des Nutzers.
 
 ### Nächste Kandidaten
 
-| Funktion | Beschreibung | Nutzen | Aufwand |
-|---|---|---|---|
-| **GmbH-Untertypen: Immobilien, Trading & Hybrid** | Die GmbH-Profile feiner abbilden, weil die Steuervergünstigungen unterschiedlich empfindlich sind. **Immobilien-GmbH** („Häuser-GmbH"): die *erweiterte Grundstückskürzung* (§ 9 Nr. 1 S. 2 GewStG) verlangt **Ausschließlichkeit** — kommt ein operativer Teil hinzu, entfällt sie **vollständig**; dafür ein deutlicher Warnhinweis im Tool. **Trading-GmbH** (Aktien/Wertpapiere): die § 8b-KStG-Behandlung der Aktiengewinne ist **nicht** an Ausschließlichkeit gebunden — sie bleibt auch bei zusätzlicher operativer Tätigkeit erhalten (**hybride GmbH**). Operativer Teil und Aktienteil werden je mit ihren eigenen Regeln getrennt ausgewiesen. | H | M |
-| **Anlagenverzeichnis & AfA** | Anlagengitter mit linearer **und** degressiver AfA (degressive AfA für bewegliche WG mit Anschaffung 01.07.2025–31.12.2027 wieder zulässig: 3× linear, max. 30 %); speist Bilanz, GuV-Abschreibungen und den Anlagenspiegel (§ 284 Abs. 3 HGB). | H | M |
-| **DATEV-Export (EXTF)** | Buchungsstapel im DATEV-Format exportieren — macht OpenBilanz anschlussfähig an den Steuerberater. Format dokumentiert; `ledermann/datev` (MIT) als Layout-Referenz. | H | S–M |
-| **Bankimport CAMT.053** | Kontoauszüge als CAMT.053 (ISO 20022) importieren; MT940 wurde von deutschen Banken zum 23.11.2025 abgeschaltet. Mit Regelwerk halbautomatisch in SKR04 buchen. | H | M |
-| **UStVA-Aufbereitung** | Umsatzsteuer-Voranmeldung aus den SKR04-USt-Konten berechnen und als ELSTER-importierbaren Datensatz ausgeben. Monatliche/quartalsweise Pflicht jeder operativen GmbH. | H | M |
-| **Offenlegung Unternehmensregister** | Den Offenlegungs-Datensatz (XML/XBRL, abweichend von der Steuer-E-Bilanz) für `unternehmensregister.de` erzeugen — Pflicht binnen 12 Monaten nach Bilanzstichtag, Ordnungsgeld ab 2.500 € (§ 335 HGB). | H | M |
+> ✅ **Alle bisher hier gelisteten Kandidaten (B1–B6) sind umgesetzt** — siehe
+> Abschnitt „Bereits umgesetzt". Es bleiben offene Verifikations- bzw.
+> Ausbauschritte:
+>
+> - **B1 GmbH-Untertypen** — umgesetzt (Untertyp + Steuerhinweise). Der
+>   getrennte Ausweis von operativem Teil und Kapitalanlageteil in eigenen
+>   Rechenkreisen ist bewusst nicht erfolgt; die Hinweise reichen für die
+>   Orientierungsrechnung.
+> - **B2 Anlagenverzeichnis & AfA** — umgesetzt (linear/degressiv,
+>   Anlagenspiegel, AfA-Buchungen). Abgänge/Teilwertabschreibungen offen.
+> - **B3 DATEV-Export** — umgesetzt; die EXTF-Kopfzeile vor produktiver Nutzung
+>   gegen die aktuelle DATEV-Formatbeschreibung gegenprüfen.
+> - **B4 Bankimport CAMT.053** — umgesetzt; das Kontierungs-Regelwerk ist fest
+>   eingebaut, eine nutzerpflegbare Regelliste wäre ein Ausbau.
+> - **B5 UStVA-Aufbereitung** — umgesetzt als Kennzahlen-Aufbereitung; ein
+>   ELSTER-importierbarer Datensatz ist nicht erzeugt (Versand über ELSTER).
+> - **B6 Offenlegung** — umgesetzt als Offenlegungs-Dokument (PDF) und XBRL;
+>   das amtlich geforderte Einreichungsformat des Unternehmensregisters vor der
+>   Übermittlung prüfen.
 
 ### Später
 

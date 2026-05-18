@@ -67,12 +67,19 @@ exportierbare `.obz`-Datei (optional passwortverschlüsselt).
 | Live-Prüfung der **Bilanzgleichung** und Plausibilitätshinweise | ✅ |
 | **Druckansicht** (Bilanz in Kontoform, GuV, Anhang) → als PDF speicherbar | ✅ |
 | **E-Bilanz**: XBRL nach Taxonomie 6.9, im ELSTER-`EBilanz`-Container | ✅ |
+| **Kontennachweise** zur E-Bilanz (§ 5b EStG i. d. F. JStG 2024) | ✅ |
 | **Validierung** der E-Bilanz gegen die amtliche Taxonomie (Arelle) | ✅ |
 | **Vermögensverwaltende GmbH**: Finanzanlagen, Beteiligungen, Mieterträge | ✅ |
-| **Steuerschätzung**: KSt, Soli, GewSt inkl. § 8b KStG und § 9 GewStG | ✅ |
+| **GmbH-Untertypen**: Immobilien-, Trading-, Hybrid-GmbH mit Steuerhinweisen | ✅ |
+| **Steuerschätzung**: KSt (jahresabhängiger Satz), Soli, GewSt, § 8b/§ 9 | ✅ |
 | **Buchhaltung** mit Kontenrahmen SKR04 (Buchungsjournal, Saldenliste) | ✅ |
 | **Eröffnungsbuchungen** — Saldenvortrag ins neue Jahr (Eröffnungsbilanzkonto 9000) | ✅ |
 | **GoBD-Festschreibung** — unveränderliche Buchungen, Storno, Änderungsprotokoll | ✅ |
+| **Anlagenverzeichnis & AfA** — linear/degressiv, Anlagenspiegel (§ 284 Abs. 3) | ✅ |
+| **DATEV-Export** — Buchungsstapel im EXTF-Format für den Steuerberater | ✅ |
+| **Bankimport** — Kontoauszüge im Format CAMT.053 (ISO 20022) | ✅ |
+| **UStVA-Aufbereitung** — Umsatzsteuer-Voranmeldung aus den SKR04-Konten | ✅ |
+| **Offenlegung** beim Unternehmensregister (§ 325 HGB) | ✅ |
 | **Buchungshilfe** — erklärte Standardfälle mit konkreten SKR04-Buchungssätzen | ✅ |
 | **Gesellschafterbeschlüsse** — Generator (Feststellung, Ergebnisverwendung, …) | ✅ |
 | Vorjahresspalte (§ 265 Abs. 2 HGB) | ✅ |
@@ -150,6 +157,43 @@ dem Abschluss übernommen.
 > Die Beschlussvorlagen sind unverbindliche Muster und ersetzen keine
 > Rechtsberatung. Ladungs- und Formvorschriften sowie der Gesellschaftsvertrag
 > sind eigenverantwortlich zu beachten.
+
+---
+
+## Anlagen, DATEV, Bank & Umsatzsteuer
+
+### Anlagenverzeichnis & AfA
+
+Der Reiter „Anlagenverzeichnis" führt die Anlagegüter der GmbH mit linearer
+oder degressiver Abschreibung (degressiv für bewegliche Wirtschaftsgüter mit
+Anschaffung 01.07.2025–31.12.2027). Er zeigt je Anlage den AfA-Verlauf und den
+Anlagenspiegel (§ 284 Abs. 3 HGB) für ein wählbares Geschäftsjahr; die
+jährlichen AfA-Buchungen lassen sich in die Buchhaltung eines Jahresabschlusses
+übernehmen.
+
+### DATEV-Export
+
+Das Buchungsjournal lässt sich als DATEV-Buchungsstapel im **EXTF-Format**
+exportieren — für die Übergabe an den Steuerberater (im Reiter „Buchhaltung").
+
+### Bankimport (CAMT.053)
+
+Kontoauszüge im Format **CAMT.053** (ISO 20022) werden eingelesen; die Umsätze
+erhalten je Zeile einen SKR04-Kontovorschlag aus dem Verwendungszweck und
+werden nach Prüfung als Buchungen übernommen.
+
+### Umsatzsteuer-Voranmeldung
+
+Der Reiter „Umsatzsteuer" bereitet die **UStVA-Kennzahlen** (Kz 81/86/66/83)
+aus den SKR04-USt-Konten eines wählbaren Zeitraums auf — eine Aufbereitung, der
+Versand läuft über ELSTER.
+
+### Offenlegung
+
+Der Reiter „Offenlegung" erzeugt den beim **Unternehmensregister**
+einzureichenden Jahresabschluss im Umfang der Größenklasse (kleine GmbH: Bilanz
+und Anhang, ohne GuV — § 326 HGB) als druckbares PDF und als XBRL. Mit Hinweis
+auf die Zwölf-Monats-Frist und das Ordnungsgeld (§§ 325, 335 HGB).
 
 ---
 
