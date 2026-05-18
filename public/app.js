@@ -97,6 +97,7 @@ function renderNav() {
       if (!istEB) n.push(navUnter('steuer', 'Steuern'));
       if (!istEB) n.push(navUnter('ustva', 'Umsatzsteuer'));
       if (!istEB) n.push(navUnter('bwa', 'BWA'));
+      if (!istEB) n.push(navUnter('kapst', 'Kapitalertragsteuer'));
       n.push(navUnter('ebilanz', 'E-Bilanz'));
       if (!istEB) n.push(navUnter('offenlegung', 'Offenlegung'));
       n.push(navUnter('druck', 'Druckansicht'));
@@ -155,6 +156,7 @@ function setView(view) {
   else if (view === 'buchhaltung')renderBuchhaltung(m);
   else if (view === 'ustva')      renderUstva(m);
   else if (view === 'bwa')        renderBwa(m);
+  else if (view === 'kapst')      renderKapst(m);
   else if (view === 'fristen')    renderFristen(m);
   else if (view === 'hilfe')      renderHilfe(m);
   else if (view === 'beschluesse')renderBeschluesse(m);
@@ -1563,6 +1565,76 @@ function renderUstva(m) {
   }
   m.querySelector('#ustVon').addEventListener('input', zeigen);
   m.querySelector('#ustBis').addEventListener('input', zeigen);
+  zeigen();
+}
+
+/* ===========================================================================
+ * KAPITALERTRAGSTEUER  -  Assistent zur Gewinnausschüttung
+ * ========================================================================= */
+function renderKapst(m) {
+  var a = S.aktiv;
+  if (!a) { setView('start'); return; }
+  if (a.art !== 'JAHRESABSCHLUSS') { setView('editor'); return; }
+  a.kapst = a.kapst || {};
+  var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>';
+  html += '<div class="kopf"><h1>Kapitalertragsteuer &ndash; ' + esc(a.bezeichnung) +
+    '</h1><p>Bei einer Gewinnausschüttung behält die GmbH Kapitalertragsteuer ein ' +
+    'und meldet sie an. Dieser Assistent berechnet die Beträge.</p></div>';
+  html += '<div class="box box-info"><b>Kapitalertragsteuer</b>Auf eine offene ' +
+    'Gewinnausschüttung fallen 25 % Kapitalertragsteuer zzgl. 5,5 % Solidaritäts' +
+    'zuschlag auf die Kapitalertragsteuer an (§§ 43, 43a EStG). Die GmbH behält ' +
+    'den Betrag ein, zahlt nur den Nettobetrag aus und meldet die Steuer ' +
+    'elektronisch über ELSTER an — bis zum 10. des auf den Zufluss folgenden ' +
+    'Monats. Eine etwaige Kirchensteuer der Gesellschafter ist hier nicht ' +
+    'abgebildet.</div>';
+  html += '<div class="karte"><h2>Angaben</h2><div class="gitter g2">' +
+    feldWrap('Ausschüttungsbetrag brutto (EUR)', 'beschlossene Ausschüttung',
+      '<input class="zahl" type="text" inputmode="decimal" id="ksBrutto" value="' +
+      eingabeWert(a.kapst.brutto) + '">') +
+    feldWrap('Tag des Zuflusses / der Auszahlung', '',
+      '<input type="date" id="ksDatum" value="' + esc(a.kapst.datum || '') + '">') +
+    '</div></div><div id="ksErgebnis"></div>';
+  m.innerHTML = html;
+  m.querySelector('[data-z]').onclick = function () {
+    speichereStill().then(function () { setView('editor'); });
+  };
+  function zeile(lbl, betrag, summe) {
+    return '<tr class="' + (summe ? 'zeile-summe' : 'zeile-R') + '"><td class="p-lbl">' +
+      lbl + '</td><td class="p-wert"><span class="wert-ro">' + geld(betrag) +
+      '</span></td></tr>';
+  }
+  function zeigen() {
+    var brutto = Berechnung.num(m.querySelector('#ksBrutto').value);
+    var datum = m.querySelector('#ksDatum').value;
+    a.kapst.brutto = brutto; a.kapst.datum = datum;
+    var kapst = Berechnung.cent(brutto * 0.25);
+    var soli = Berechnung.cent(kapst * 0.055);
+    var abzug = Berechnung.cent(kapst + soli);
+    var frist = '';
+    if (datum) {
+      var d = new Date(datum);
+      if (!isNaN(d.getTime())) {
+        d.setMonth(d.getMonth() + 1); d.setDate(10);
+        frist = d.toISOString().slice(0, 10);
+      }
+    }
+    var h = '<div class="karte"><h2>Berechnung</h2><table class="pos-tab">' +
+      zeile('Ausschüttung brutto', brutto) +
+      zeile('Kapitalertragsteuer 25 %', kapst) +
+      zeile('Solidaritätszuschlag 5,5 % der Kapitalertragsteuer', soli) +
+      zeile('= einzubehaltender Steuerabzug', abzug, true) +
+      zeile('= Nettoauszahlung an die Gesellschafter', Berechnung.cent(brutto - abzug), true) +
+      '</table><div class="karte-hint" style="margin-top:8px">' +
+      (frist ? 'Anmeldung und Abführung bis spätestens <b>' + datumDe(frist) +
+        '</b> (10. des Folgemonats) elektronisch über ELSTER. ' : '') +
+      'Buchung: der einbehaltene Steuerabzug auf Konto 3700 (Verbindlichkeiten aus ' +
+      'Steuern), die Nettoauszahlung über das Bankkonto. Den ' +
+      'Ergebnisverwendungsbeschluss erzeugt der Reiter „Gesellschafterbeschlüsse".' +
+      '</div></div>';
+    document.getElementById('ksErgebnis').innerHTML = h;
+  }
+  m.querySelector('#ksBrutto').addEventListener('input', zeigen);
+  m.querySelector('#ksDatum').addEventListener('input', zeigen);
   zeigen();
 }
 
