@@ -351,6 +351,46 @@ test('UStVA: steuerfreie Umsätze ohne Vorsteuerabzug melden Kz 48 + Hinweis', f
      'Hinweis auf Vorsteueraufteilung § 15 Abs. 4');
 });
 
+/* ---- Steuer: Verlustvortrag / Hinzurechnungen / vGA ------------------ */
+test('Steuer: Verlustvortrag mindert zu versteuerndes Einkommen', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', steuer: { hebesatz: 400, verlustvortrag: 30000 } };
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 50000 });
+  eq(s.kst.zvE, 20000, 'zvE = 50.000 - 30.000 Verlustvortrag');
+  eq(s.verlustvortrag.eingesetztKst, 30000, 'voller Verlustvortrag genutzt');
+  eq(s.verlustvortrag.restKst, 0, 'kein Restvortrag');
+});
+test('Steuer: Verlustvortrag begrenzt auf das Einkommen, Rest bleibt', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', steuer: { hebesatz: 400, verlustvortrag: 80000 } };
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 50000 });
+  eq(s.kst.zvE, 0, 'zvE auf 0 gemindert');
+  eq(s.verlustvortrag.restKst, 30000, 'Restvortrag 80.000 - 50.000');
+});
+test('Steuer: Mindestbesteuerung § 10d - 60 % über 1 Mio EUR', function () {
+  var r = Steuer.verlustabzug(2000000, 5000000);
+  eq(r.abzug, 1600000, 'abziehbar: 1 Mio voll + 60 % von 1 Mio');
+  eq(r.rest, 3400000, 'verbleibender Vortrag');
+});
+test('Steuer: GewSt-Hinzurechnung § 8 Nr. 1 über Freibetrag', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', steuer: { hebesatz: 400, zinsaufwand: 250000 } };
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 100000 });
+  eq(s.hinzurechnungGewSt, 12500, '25 % von (250.000 - 200.000 Freibetrag)');
+  eq(s.gewst.gewerbeertrag, 112500, 'Gewerbeertrag inkl. Hinzurechnung');
+});
+test('Steuer: GewSt-Hinzurechnung bleibt unter Freibetrag aus', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', steuer: { hebesatz: 400, zinsaufwand: 50000,
+    mietenUnbeweglich: 100000 } };   // Basis 50.000 + 50 % v. 100.000 = 100.000
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 100000 });
+  eq(s.hinzurechnungGewSt, 0, 'unter 200.000 EUR keine Hinzurechnung');
+});
+test('Steuer: verdeckte Gewinnausschüttung erhöht KSt- und GewSt-Basis', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', steuer: { hebesatz: 400, vga: 20000 } };
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 50000 });
+  eq(s.kst.zvE, 70000, 'zvE = 50.000 + 20.000 vGA');
+  eq(s.gewst.gewerbeertrag, 70000, 'Gewerbeertrag inkl. vGA');
+  ok(s.hinweise.some(function (h) { return h.indexOf('Gewinnausschüttung') >= 0; }),
+     'vGA-Hinweis vorhanden');
+});
+
 /* ---- Lauf ------------------------------------------------------------- */
 console.log('OpenBilanz - Test-Suite\n');
 tests.forEach(function (t) {

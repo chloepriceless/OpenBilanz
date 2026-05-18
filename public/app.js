@@ -1347,7 +1347,27 @@ function renderSteuer(m) {
     'nur eigener Grundbesitz (§ 9 Nr. 1 Satz 2 GewStG)', 'check');
   html += sf('finanzunternehmen', 'Anteile im Handelsbestand (§ 8b Abs. 7 KStG)',
     'Trading-GmbH / Finanzunternehmen — keine 95-%-Freistellung', 'check');
-  html += '</div></div><div id="steuerErgebnis"></div>';
+  html += '</div></div>';
+  html += '<div class="karte"><h2>Weitere Sonderfälle</h2>' +
+    '<div class="karte-hint">Verlustvortrag, verdeckte Gewinnausschüttung und ' +
+    'gewerbesteuerliche Hinzurechnungen. Leer lassen, wenn nicht zutreffend.</div>' +
+    '<div class="gitter g2">';
+  html += sf('verlustvortrag', 'Verlustvortrag aus Vorjahren (EUR)',
+    '§ 10d EStG / § 10a GewStG, mit Mindestbesteuerung');
+  html += sf('vga', 'Verdeckte Gewinnausschüttung (EUR)', '§ 8 Abs. 3 KStG');
+  html += sf('zinsaufwand', 'Entgelte für Schulden / Zinsaufwand (EUR)',
+    '§ 8 Nr. 1a GewStG — zu 100 %');
+  html += sf('mietenBeweglich', 'Mieten/Pachten bewegliche WG (EUR)',
+    '§ 8 Nr. 1d GewStG — zu 20 %');
+  html += sf('mietenUnbeweglich', 'Mieten/Pachten unbewegliche WG (EUR)',
+    '§ 8 Nr. 1e GewStG — zu 50 %');
+  html += sf('lizenzen', 'Lizenz-/Konzessionsentgelte (EUR)',
+    '§ 8 Nr. 1f GewStG — zu 25 %');
+  html += '</div><div class="gitter" style="margin-top:12px">';
+  html += sf('anteilseignerwechsel', 'Anteilseignerwechsel über 50 % im Zeitraum',
+    'nicht genutzter Verlustvortrag kann untergehen (§ 8c KStG)', 'check');
+  html += '</div></div>';
+  html += '<div id="steuerErgebnis"></div>';
 
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () {
@@ -1384,6 +1404,9 @@ function steuerErgebnis(a) {
     '</table><div class="karte-hint" style="margin-top:8px">Durchschnittliche ' +
     'Steuerbelastung: ' + geld(s.durchschnittsbelastung) + ' % des Ergebnisses vor ' +
     'Steuern.</div></div>';
+  (s.hinweise || []).forEach(function (hw) {
+    h += '<div class="box box-warn">' + esc(hw) + '</div>';
+  });
   document.getElementById('steuerErgebnis').innerHTML = h;
 }
 /* Typ-spezifische steuerliche Hinweise je GmbH-Untertyp (Immobilien / Trading
