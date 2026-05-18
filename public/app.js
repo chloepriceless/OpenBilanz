@@ -3174,25 +3174,42 @@ function afaPlan(anlage) {
   var degressiv = anlage.methode === 'degressiv';
   var satz = Math.min(3 / ND, 0.30);
   var linJahr = AK / ND;
-  var plan = [], bw = AK, jahr = jahr0, idx = 0, restMon = ND * 12;
+  // außerplanmäßige Teilwertabschreibung (§ 253 Abs. 3 S. 5/6 HGB)
+  var twJahr = parseInt(String(anlage.teilwertDatum || '').slice(0, 4), 10) || 0;
+  var twBetrag = Berechnung.num(anlage.teilwertBetrag);
+  // Abgang (Verkauf/Verschrottung) - der Plan endet im Abgangsjahr
+  var abJahr = parseInt(String(anlage.abgangDatum || '').slice(0, 4), 10) || 0;
+  var abMonat = parseInt(String(anlage.abgangDatum || '').slice(5, 7), 10) || 12;
+  var plan = [], bw = AK, jahr = jahr0, restMon = ND * 12;
   while (bw > 0.005 && plan.length < ND + 4 && restMon > 0) {
-    var mon = (idx === 0) ? (13 - monat0) : 12;
+    var startM = (jahr === jahr0) ? monat0 : 1;
+    var endM = (abJahr && jahr === abJahr) ? abMonat : 12;
+    var mon = Math.max(0, endM - startM + 1);
     if (mon > restMon) mon = restMon;
     var afa;
     if (degressiv) {
-      var afaDeg = bw * satz * (mon / 12);
-      var afaLin = bw * mon / restMon;          // linear auf Restbuchwert/Restmonate
-      afa = Math.max(afaDeg, afaLin);
+      afa = Math.max(bw * satz * (mon / 12), restMon > 0 ? bw * mon / restMon : bw);
     } else {
       afa = linJahr * (mon / 12);
     }
     if (afa > bw) afa = bw;
     afa = Math.round(afa * 100) / 100;
-    bw = Math.round((bw - afa) * 100) / 100;
-    plan.push({ jahr: jahr, monate: mon, afa: afa, buchwert: bw });
-    restMon -= mon; jahr++; idx++;
+    var tw = 0;
+    if (twJahr === jahr && twBetrag > 0) {
+      tw = Math.min(twBetrag, Math.round((bw - afa) * 100) / 100);
+      if (tw < 0) tw = 0;
+    }
+    bw = Math.round((bw - afa - tw) * 100) / 100;
+    var istAbgang = !!(abJahr && jahr === abJahr);
+    plan.push({ jahr: jahr, monate: mon, afa: afa, teilwert: tw,
+                buchwert: bw, abgang: istAbgang });
+    restMon -= mon;
+    if (istAbgang) break;             // nach dem Abgangsjahr endet der Plan
+    jahr++;
   }
-  if (bw > 0.005 && plan.length) {              // Rundungsrest in die letzte Zeile
+  // Rundungsrest in die letzte Zeile (nur ohne Abgang - beim Abgang bleibt
+  // der Restbuchwert stehen und wird über die Abgangsbuchung ausgebucht)
+  if (bw > 0.005 && plan.length && !plan[plan.length - 1].abgang) {
     var last = plan[plan.length - 1];
     last.afa = Math.round((last.afa + bw) * 100) / 100;
     last.buchwert = 0;
@@ -3203,24 +3220,41 @@ function afaPlan(anlage) {
 function afaImJahr(anlage, jahr) {
   var p = afaPlan(anlage), i;
   for (i = 0; i < p.length; i++) if (p[i].jahr === jahr) return p[i];
-  if (p.length && jahr > p[p.length - 1].jahr) return { jahr: jahr, monate: 0, afa: 0, buchwert: 0 };
-  return { jahr: jahr, monate: 0, afa: 0, buchwert: Berechnung.num(anlage.anschaffungskosten) };
+  if (p.length && jahr > p[p.length - 1].jahr)
+    return { jahr: jahr, monate: 0, afa: 0, teilwert: 0, buchwert: 0 };
+  return { jahr: jahr, monate: 0, afa: 0, teilwert: 0,
+           buchwert: Berechnung.num(anlage.anschaffungskosten) };
 }
-/* kumulierte AfA bis einschließlich Jahresende. */
+/* kumulierte Abschreibung (planmäßige AfA + Teilwert) bis Jahresende. */
 function afaKumuliert(anlage, jahr) {
   var s = 0;
-  afaPlan(anlage).forEach(function (z) { if (z.jahr <= jahr) s += z.afa; });
+  afaPlan(anlage).forEach(function (z) {
+    if (z.jahr <= jahr) s += z.afa + (z.teilwert || 0);
+  });
   return Math.round(s * 100) / 100;
+}
+/* Abgangsjahr einer Anlage (0 = kein Abgang erfasst). */
+function abgangsJahr(anlage) {
+  return parseInt(String((anlage && anlage.abgangDatum) || '').slice(0, 4), 10) || 0;
+}
+/* Restbuchwert zum Abgang (Buchwert am Ende des Abgangsjahres). */
+function restbuchwertAbgang(anlage) {
+  var p = afaPlan(anlage);
+  var z = p[p.length - 1];
+  return (z && z.abgang) ? z.buchwert : 0;
 }
 /* AfA-Verlauf einer Anlage als Tabelle. */
 function afaVerlaufHtml(an) {
   var p = afaPlan(an);
   if (!p.length) return '<div class="karte-hint">Unvollständige Angaben — kein AfA-Plan.</div>';
   var h = '<table class="liste"><thead><tr><th>Jahr</th><th>Monate</th>' +
-    '<th class="rechts">AfA</th><th class="rechts">Buchwert Jahresende</th></tr></thead><tbody>';
+    '<th class="rechts">AfA</th><th class="rechts">Teilwert-AfA</th>' +
+    '<th class="rechts">Buchwert Jahresende</th></tr></thead><tbody>';
   p.forEach(function (z) {
-    h += '<tr><td class="mono">' + z.jahr + '</td><td class="mono">' + z.monate + '</td>' +
+    h += '<tr><td class="mono">' + z.jahr + (z.abgang ? ' · Abgang' : '') + '</td>' +
+      '<td class="mono">' + z.monate + '</td>' +
       '<td class="rechts mono">' + geld(z.afa) + '</td>' +
+      '<td class="rechts mono">' + (z.teilwert ? geld(z.teilwert) : '–') + '</td>' +
       '<td class="rechts mono">' + geld(z.buchwert) + '</td></tr>';
   });
   return h + '</tbody></table>';
@@ -3229,19 +3263,25 @@ function afaVerlaufHtml(an) {
 function anlagenspiegelHtml(jahr) {
   var anlagen = (S.unternehmen && S.unternehmen.anlagen) || [];
   if (!anlagen.length) return '<div class="karte-hint">Keine Anlagegüter erfasst.</div>';
-  var t = { ak: 0, kumA: 0, afa: 0, kumE: 0, bw: 0 }, zeilen = '';
+  var t = { ak: 0, kumA: 0, abg: 0, afa: 0, kumE: 0, bw: 0 }, zeilen = '';
   anlagen.forEach(function (an) {
     var aJahr = parseInt(String(an.anschaffungsdatum || '').slice(0, 4), 10);
     if (aJahr && jahr < aJahr) return;                 // noch nicht im Bestand
+    var abJ = abgangsJahr(an);
+    if (abJ && jahr > abJ) return;                     // bereits abgegangen
     var ak = Berechnung.num(an.anschaffungskosten);
     var kumA = afaKumuliert(an, jahr - 1);
-    var afa = afaImJahr(an, jahr).afa;
-    var kumE = afaKumuliert(an, jahr);
-    var bw = afaImJahr(an, jahr).buchwert;
-    t.ak += ak; t.kumA += kumA; t.afa += afa; t.kumE += kumE; t.bw += bw;
-    zeilen += '<tr><td>' + esc(an.bezeichnung || '') + '</td>' +
+    var zJ = afaImJahr(an, jahr);
+    var afa = Berechnung.cent(zJ.afa + (zJ.teilwert || 0));
+    var istAbgang = abJ === jahr;
+    var abg = istAbgang ? ak : 0;
+    var kumE = istAbgang ? 0 : afaKumuliert(an, jahr);
+    var bw = istAbgang ? 0 : zJ.buchwert;
+    t.ak += ak; t.kumA += kumA; t.abg += abg; t.afa += afa; t.kumE += kumE; t.bw += bw;
+    zeilen += '<tr><td>' + esc(an.bezeichnung || '') + (istAbgang ? ' · Abgang' : '') + '</td>' +
       '<td class="rechts mono">' + geld(ak) + '</td>' +
       '<td class="rechts mono">' + geld(kumA) + '</td>' +
+      '<td class="rechts mono">' + (abg ? geld(abg) : '–') + '</td>' +
       '<td class="rechts mono">' + geld(afa) + '</td>' +
       '<td class="rechts mono">' + geld(kumE) + '</td>' +
       '<td class="rechts mono">' + geld(bw) + '</td></tr>';
@@ -3249,11 +3289,13 @@ function anlagenspiegelHtml(jahr) {
   if (!zeilen) return '<div class="karte-hint">Im Jahr ' + jahr + ' kein Anlagegut im Bestand.</div>';
   return '<table class="liste" style="margin-top:10px"><thead><tr><th>Anlagegut</th>' +
     '<th class="rechts">Anschaffungskosten</th><th class="rechts">kum. AfA Anfang</th>' +
-    '<th class="rechts">AfA ' + jahr + '</th><th class="rechts">kum. AfA Ende</th>' +
-    '<th class="rechts">Buchwert Ende</th></tr></thead><tbody>' + zeilen +
+    '<th class="rechts">Abgang (AK)</th><th class="rechts">Abschreibung ' + jahr + '</th>' +
+    '<th class="rechts">kum. AfA Ende</th><th class="rechts">Buchwert Ende</th>' +
+    '</tr></thead><tbody>' + zeilen +
     '<tr class="zeile-summe"><td>Summe</td>' +
     '<td class="rechts mono">' + geld(t.ak) + '</td>' +
     '<td class="rechts mono">' + geld(t.kumA) + '</td>' +
+    '<td class="rechts mono">' + geld(t.abg) + '</td>' +
     '<td class="rechts mono">' + geld(t.afa) + '</td>' +
     '<td class="rechts mono">' + geld(t.kumE) + '</td>' +
     '<td class="rechts mono">' + geld(t.bw) + '</td></tr></tbody></table>';
@@ -3268,31 +3310,104 @@ function afaBuchungenErzeugen(jaId, m) {
     ja.buchungen = ja.buchungen || [];
     ja.protokoll = ja.protokoll || [];
     var neu = 0, stamp = Date.now();
-    anlagen.forEach(function (an, i) {
-      var z = afaImJahr(an, jahr);
-      if (!(z.afa > 0)) return;
-      var quelle = (an.id || ('idx' + i)) + ':' + jahr;
-      if (ja.buchungen.some(function (b) { return b.afaQuelle === quelle; })) return;
-      ja.buchungen.push({
-        id: 'B-AfA-' + stamp + '-' + i, datum: ja.gjBis || ja.stichtag,
-        betrag: z.afa, text: 'Abschreibung ' + (an.bezeichnung || an.konto || '') + ' ' + jahr,
-        soll: afaKontoZu(an.konto), haben: an.konto, afaQuelle: quelle
-      });
+    function buchung(b) {
+      if (ja.buchungen.some(function (x) { return x.afaQuelle === b.afaQuelle; })) return;
+      b.id = 'B-AfA-' + stamp + '-' + ja.buchungen.length;
+      b.datum = ja.gjBis || ja.stichtag;
+      ja.buchungen.push(b);
       neu++;
+    }
+    anlagen.forEach(function (an, i) {
+      var key = an.id || ('idx' + i);
+      var z = afaImJahr(an, jahr);
+      var afaGes = Berechnung.cent(z.afa + (z.teilwert || 0));
+      if (afaGes > 0) {
+        buchung({ betrag: afaGes, soll: afaKontoZu(an.konto), haben: an.konto,
+          text: 'Abschreibung ' + (an.bezeichnung || an.konto || '') + ' ' + jahr +
+            (z.teilwert > 0 ? ' (inkl. Teilwertabschreibung)' : ''),
+          afaQuelle: key + ':' + jahr });
+      }
+      // Abgang: Restbuchwert ausbuchen, Erlös vereinnahmen, Ergebnis ausweisen
+      if (abgangsJahr(an) === jahr) {
+        var R = restbuchwertAbgang(an);
+        var E = Berechnung.cent(an.abgangErloes);
+        var minER = Math.min(E, R);
+        if (minER > 0) {
+          buchung({ betrag: minER, soll: '1800', haben: an.konto,
+            text: 'Anlagenabgang ' + (an.bezeichnung || '') + ' — Buchwert/Erlös',
+            afaQuelle: key + ':abgang-bw:' + jahr });
+        }
+        if (E > R) {
+          buchung({ betrag: Berechnung.cent(E - R), soll: '1800', haben: '4900',
+            text: 'Gewinn aus Anlagenabgang ' + (an.bezeichnung || ''),
+            afaQuelle: key + ':abgang-gewinn:' + jahr });
+        } else if (R > E) {
+          buchung({ betrag: Berechnung.cent(R - E), soll: '6900', haben: an.konto,
+            text: 'Verlust aus Anlagenabgang ' + (an.bezeichnung || ''),
+            afaQuelle: key + ':abgang-verlust:' + jahr });
+        }
+      }
     });
     if (!neu) {
-      alert('Keine neuen AfA-Buchungen für ' + jahr + ' — entweder keine Abschreibung ' +
-        'in diesem Jahr oder bereits gebucht.');
+      alert('Keine neuen Anlagen-Buchungen für ' + jahr + ' — entweder nichts ' +
+        'abzuschreiben/kein Abgang in diesem Jahr oder bereits gebucht.');
       return;
     }
     ja.protokoll.push({ zeit: new Date().toISOString(),
-      text: neu + ' AfA-Buchung(en) aus dem Anlagenverzeichnis übernommen' });
+      text: neu + ' Anlagen-Buchung(en) (AfA/Abgang) aus dem Anlagenverzeichnis übernommen' });
     Store.speichereAbschluss(ja).then(function (g) {
       if (g && !g.fehler && S.aktiv && S.aktiv.id === ja.id) S.aktiv = g;
-      hinweisToast(neu + ' AfA-Buchung(en) im Jahresabschluss erzeugt. Dort „Salden ' +
+      hinweisToast(neu + ' Anlagen-Buchung(en) im Jahresabschluss erzeugt. Dort „Salden ' +
         'übernehmen" überträgt sie in Bilanz und GuV.');
     });
   });
+}
+/* Dialog: Abgang (Verkauf/Verschrottung) und Teilwertabschreibung erfassen. */
+function dialogAnlageSonderfall(i) {
+  var u = S.unternehmen;
+  var an = u && u.anlagen && u.anlagen[i];
+  if (!an) return;
+  var html = '<h3>Abgang / Teilwertabschreibung</h3>' +
+    '<p class="karte-hint">' + esc(an.bezeichnung || 'Anlagegut') + '</p>' +
+    '<div class="box box-info"><b>Abgang</b>Verkauf oder Verschrottung. Der AfA-Plan ' +
+    'endet im Abgangsjahr (zeitanteilig); die Abgangsbuchungen entstehen anschließend ' +
+    'über „AfA-Buchungen übernehmen".</div>' +
+    '<div class="gitter g2">' +
+    feldWrap('Abgangsdatum', 'leer = kein Abgang',
+      '<input type="date" id="asAbDatum" value="' + esc(an.abgangDatum || '') + '">') +
+    feldWrap('Verkaufserlös (EUR, netto)', '0 bei Verschrottung',
+      '<input class="zahl" type="text" inputmode="decimal" id="asAbErloes" value="' +
+      eingabeWert(an.abgangErloes) + '">') +
+    '</div>' +
+    '<div class="box box-info" style="margin-top:12px"><b>Teilwertabschreibung</b>' +
+    'Außerplanmäßige Abschreibung auf einen voraussichtlich dauerhaft niedrigeren Wert ' +
+    '(§ 253 Abs. 3 Satz 5 HGB) — zusätzlich zur planmäßigen AfA.</div>' +
+    '<div class="gitter g2">' +
+    feldWrap('Datum der Teilwertabschreibung', 'leer = keine',
+      '<input type="date" id="asTwDatum" value="' + esc(an.teilwertDatum || '') + '">') +
+    feldWrap('Betrag (EUR)', '',
+      '<input class="zahl" type="text" inputmode="decimal" id="asTwBetrag" value="' +
+      eingabeWert(an.teilwertBetrag) + '">') +
+    '</div>' +
+    '<div class="btn-reihe" style="margin-top:16px">' +
+    '<button class="btn btn-pri" id="asOk">Speichern</button>' +
+    '<button class="btn" id="asAbbruch">Abbrechen</button></div>';
+  dialog(html);
+  document.getElementById('asAbbruch').onclick = dialogZu;
+  document.getElementById('asOk').onclick = function () {
+    var abD = document.getElementById('asAbDatum').value;
+    var twD = document.getElementById('asTwDatum').value;
+    an.abgangDatum = abD || '';
+    an.abgangErloes = abD ? Berechnung.num(document.getElementById('asAbErloes').value) : 0;
+    an.teilwertDatum = twD || '';
+    an.teilwertBetrag = twD ? Berechnung.num(document.getElementById('asTwBetrag').value) : 0;
+    Store.speichereUnternehmen(u).then(function (g) {
+      if (g && !g.fehler) S.unternehmen = g;
+      dialogZu();
+      hinweisToast('Anlagegut aktualisiert.');
+      setView('anlagen');
+    });
+  };
 }
 function renderAnlagen(m) {
   if (!S.unternehmen) { setView('stammdaten'); return; }
@@ -3340,7 +3455,10 @@ function renderAnlagen(m) {
       '<th>Anschaffung</th><th class="rechts">AK</th><th>ND</th><th>Methode</th>' +
       '<th class="rechts">Buchwert</th><th></th></tr></thead><tbody>';
     anlagen.forEach(function (an, i) {
-      html += '<tr><td>' + esc(an.bezeichnung || '') + '</td>' +
+      var abJ = abgangsJahr(an);
+      html += '<tr><td>' + esc(an.bezeichnung || '') +
+        (abJ ? ' <span class="tag tag-eb">Abgang ' + datumDe(an.abgangDatum) + '</span>' : '') +
+        (an.teilwertBetrag ? ' <span class="tag tag-entwurf">Teilwert-AfA</span>' : '') + '</td>' +
         '<td class="mono">' + esc(an.konto || '') + '</td>' +
         '<td class="mono">' + datumDe(an.anschaffungsdatum) + '</td>' +
         '<td class="rechts mono">' + geld(an.anschaffungskosten) + '</td>' +
@@ -3348,6 +3466,7 @@ function renderAnlagen(m) {
         '<td>' + (an.methode === 'degressiv' ? 'degressiv' : 'linear') + '</td>' +
         '<td class="rechts mono">' + geld(afaImJahr(an, jahrJetzt).buchwert) + '</td>' +
         '<td class="rechts"><span class="btn btn-sm" data-verlauf="' + i + '">Verlauf</span> ' +
+        '<span class="btn btn-sm" data-ansond="' + i + '">Abgang/Teilwert</span> ' +
         '<span class="btn btn-sm btn-gefahr" data-andel="' + i + '">löschen</span></td></tr>';
       html += '<tr id="anVerlauf' + i + '" style="display:none"><td colspan="8">' +
         afaVerlaufHtml(an) + '</td></tr>';
@@ -3405,6 +3524,9 @@ function renderAnlagen(m) {
       var z = document.getElementById('anVerlauf' + el.dataset.verlauf);
       if (z) z.style.display = z.style.display === 'none' ? '' : 'none';
     };
+  });
+  m.querySelectorAll('[data-ansond]').forEach(function (el) {
+    el.onclick = function () { dialogAnlageSonderfall(parseInt(el.dataset.ansond, 10)); };
   });
   m.querySelectorAll('[data-andel]').forEach(function (el) {
     el.onclick = function () {

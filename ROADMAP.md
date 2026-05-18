@@ -76,7 +76,6 @@ Ausbau- und Verifikationsschritte:
 
 | Punkt | Beschreibung | Nutzen | Aufwand |
 |---|---|---|---|
-| **Anlagen: Abgänge & Teilwert-AfA** | Anlagenabgänge und Teilwertabschreibungen ergänzen — bisher nur lineare/degressive AfA, Anlagenspiegel und AfA-Buchungen. | M | M |
 | **DATEV-Export verifizieren** | EXTF-Kopfzeile vor produktiver Nutzung gegen die aktuelle DATEV-Formatbeschreibung gegenprüfen. | M | S |
 | **Bankimport: Regelliste** | Nutzerpflegbares Kontierungs-Regelwerk statt des fest eingebauten Regelwerks. | M | M |
 | **UStVA: ELSTER-Datensatz** | Einen ELSTER-importierbaren UStVA-Datensatz erzeugen — bisher nur Kennzahlen-Aufbereitung, Versand über ELSTER. | M | M |
