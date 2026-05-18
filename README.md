@@ -131,6 +131,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **GoBD-Verfahrensdokumentation** — geführter Fragebogen → Dokument | 🟡 |
 | **Journal-Export** — Buchungsjournal maschinenlesbar als CSV und JSON | 🟡 |
 | **GDPdU-Export** — Datenträgerüberlassung (Z3) für die Betriebsprüfung | 🟡 |
+| **Prüfkette** — SHA-256-Verkettung festgeschriebener Buchungen, Integritätsprüfung | 🟡 |
 
 ### Zwei Erfassungswege
 
@@ -388,6 +389,7 @@ public/shared/mt940.js        Parser für MT940-Bankauszüge (SWIFT)
 public/shared/datev.js        Parser für DATEV-EXTF-Buchungsstapel
 public/shared/journalexport.js  Buchungsjournal als CSV / JSON
 public/shared/gdpdu.js        GDPdU-Datenträgerüberlassung (Z3)
+public/shared/pruefkette.js   SHA-256-Hash-Verkettung festgeschriebener Buchungen
 public/shared/validate-browser.js  E-Bilanz-Konsistenzprüfung im Browser
 public/pyodide-worker.js      Arelle-Validierung im Browser (experimentell)
 tests/run.js                  Test-Suite

@@ -21,6 +21,7 @@ var Mt940      = require('../public/shared/mt940.js');
 var Datev      = require('../public/shared/datev.js');
 var JournalExport = require('../public/shared/journalexport.js');
 var Gdpdu      = require('../public/shared/gdpdu.js');
+var Pruefkette = require('../public/shared/pruefkette.js');
 var XBRL       = require('../public/shared/xbrl.js');
 
 var tests = [], pass = 0, fail = 0;
@@ -479,6 +480,57 @@ test('GDPdU-Export: CSV-Datenzeilen und beschreibende index.xml', function () {
   ok(g.indexXml.indexOf('<!DOCTYPE DataSet') >= 0, 'GDPdU-DTD referenziert');
   ok(g.indexXml.indexOf('<VariableColumn>') >= 0, 'Spaltenbeschreibung enthalten');
   ok(g.indexXml.indexOf(g.csvDateiname) >= 0, 'index.xml verweist auf die CSV-Datei');
+});
+
+/* ---- Prüfkette (Integrität festgeschriebener Buchungen) -------------- */
+test('Prüfkette: SHA-256 stimmt mit den FIPS-180-4-Testvektoren', function () {
+  eq(Pruefkette.sha256('abc'),
+     'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad', 'SHA-256("abc")');
+  eq(Pruefkette.sha256(''),
+     'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'SHA-256("")');
+});
+test('Prüfkette: verkettet festgeschriebene Buchungen und prüft sie', function () {
+  var bu = [
+    { id: 'B-1', datum: '2026-01-10', soll: '1800', haben: '4400', betrag: 1190, text: 'a', fest: true },
+    { id: 'B-2', datum: '2026-01-12', soll: '6300', haben: '1800', betrag: 50, text: 'b', fest: true },
+    { id: 'B-3', datum: '2026-01-15', soll: '1800', haben: '4400', betrag: 200, text: 'c' }
+  ];
+  Pruefkette.fortschreiben(bu);
+  ok(bu[0].hash && bu[1].hash, 'festgeschriebene Buchungen erhalten einen Hash');
+  ok(!bu[2].hash, 'nicht festgeschriebene Buchung bleibt ohne Hash');
+  var r = Pruefkette.pruefe(bu);
+  eq(r.ok, true, 'Kette intakt');
+  eq(r.anzahl, 2, 'zwei verkettete Buchungen');
+});
+test('Prüfkette: erkennt nachträgliche Änderung einer Buchung', function () {
+  var bu = [
+    { id: 'B-1', datum: '2026-01-10', soll: '1800', haben: '4400', betrag: 1190, text: 'a', fest: true },
+    { id: 'B-2', datum: '2026-01-12', soll: '6300', haben: '1800', betrag: 50, text: 'b', fest: true }
+  ];
+  Pruefkette.fortschreiben(bu);
+  bu[0].betrag = 9999;   // Manipulation nach der Festschreibung
+  var r = Pruefkette.pruefe(bu);
+  eq(r.ok, false, 'Manipulation erkannt');
+  eq(r.bruchId, 'B-1', 'die gebrochene Buchung wird benannt');
+});
+test('Prüfkette: spätere Festschreibung verlängert die Kette stabil', function () {
+  var bu = [
+    { id: 'B-1', datum: '2026-01-10', soll: '1800', haben: '4400', betrag: 100, text: 'a', fest: true }
+  ];
+  Pruefkette.fortschreiben(bu);
+  var h1 = bu[0].hash;
+  bu.push({ id: 'B-2', datum: '2026-02-01', soll: '1800', haben: '4400', betrag: 200, text: 'b', fest: true });
+  Pruefkette.fortschreiben(bu);
+  eq(bu[0].hash, h1, 'bestehende Buchung behält ihren Hash');
+  eq(Pruefkette.pruefe(bu).ok, true, 'die verlängerte Kette ist intakt');
+});
+test('Prüfkette: Storno-Markierung bricht die Kette nicht', function () {
+  var bu = [
+    { id: 'B-1', datum: '2026-01-10', soll: '1800', haben: '4400', betrag: 100, text: 'a', fest: true }
+  ];
+  Pruefkette.fortschreiben(bu);
+  bu[0].storniert = true;   // zulässige Storno-Markierung, kein Inhaltswechsel
+  eq(Pruefkette.pruefe(bu).ok, true, 'Storno-Flag zählt nicht zum Buchungsinhalt');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

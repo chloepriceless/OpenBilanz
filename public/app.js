@@ -2146,6 +2146,18 @@ function renderBuchhaltung(m) {
     html += '</tbody></table></div>';
   }
 
+  /* Prüfkette / Integrität */
+  if (a.buchungen.some(function (b) { return b.fest; })) {
+    html += '<div class="karte"><h2>Prüfkette (Integrität)</h2>' +
+      '<div class="karte-hint">Festgeschriebene Buchungen werden per SHA-256 ' +
+      'lückenlos verkettet — jede Buchung sichert den Hash ihrer Vorgängerin. ' +
+      'Eine nachträgliche Änderung bricht die Kette und wird hier erkennbar ' +
+      '(§ 146 Abs. 4 AO). Für echte Beweiskraft den Ketten-Hash extern sichern ' +
+      '(z. B. Git-Push, Ausdruck).</div>' +
+      '<div class="btn-reihe"><button class="btn" id="buPruef">Integrität prüfen' +
+      '</button></div><div id="pruefErgebnis"></div></div>';
+  }
+
   /* DATEV-Export */
   if (a.buchungen.length) {
     html += '<div class="karte"><h2>DATEV-Export</h2>' +
@@ -2251,9 +2263,29 @@ function renderBuchhaltung(m) {
     a.buchungen.forEach(function (b) {
       if (!b.fest) { b.fest = true; b.festAm = new Date().toISOString(); n++; }
     });
+    var kopf = Pruefkette.fortschreiben(a.buchungen);
     a.protokoll.push({ zeit: new Date().toISOString(),
-      text: n + ' Buchung(en) festgeschrieben' });
+      text: n + ' Buchung(en) festgeschrieben — Prüfketten-Hash ' +
+        (kopf ? kopf.slice(0, 16) + '…' : '—') });
     speichereStill().then(function () { renderBuchhaltung(m); });
+  };
+  var buPruef = m.querySelector('#buPruef');
+  if (buPruef) buPruef.onclick = function () {
+    var r = Pruefkette.pruefe(a.buchungen);
+    var box = m.querySelector('#pruefErgebnis');
+    if (!box) return;
+    if (r.ok) {
+      box.innerHTML = '<div class="box box-gut"><b>Prüfkette intakt</b>' +
+        r.anzahl + ' festgeschriebene Buchung(en) sind lückenlos verkettet.' +
+        (r.kopf ? ' Ketten-Hash: <code>' + esc(r.kopf.slice(0, 24)) + '…</code>' : '') +
+        (r.ohneHash ? ' (' + r.ohneHash + ' ältere Buchung(en) noch ohne Hash — ' +
+          'werden bei der nächsten Festschreibung verkettet.)' : '') + '</div>';
+    } else {
+      box.innerHTML = '<div class="box box-warn"><b>Prüfkette unterbrochen</b>' +
+        'Die festgeschriebene Buchung <code>' + esc(r.bruchId) + '</code> stimmt ' +
+        'nicht mehr mit ihrem Prüf-Hash überein — sie wurde nach der Festschreibung ' +
+        'verändert. Den ursprünglichen Stand aus einer Sicherung wiederherstellen.</div>';
+    }
   };
   m.querySelectorAll('[data-storno]').forEach(function (el) {
     el.onclick = function () {

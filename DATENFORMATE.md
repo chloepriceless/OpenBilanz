@@ -62,11 +62,13 @@ Datenteil liegt dann AES-GCM-verschlüsselt unter `daten` (siehe `obz.js`).
 
 ```jsonc
 { "id": "B-…", "datum": "2026-03-01", "soll": "1800", "haben": "4400",
-  "betrag": 1190.00, "text": "Erlös März", "fest": true }
+  "betrag": 1190.00, "text": "Erlös März", "fest": true, "hash": "a1b2c3…" }
 ```
 
 `soll`/`haben` sind SKR04-Kontonummern, `betrag` ist positiv, `fest` markiert
-GoBD-festgeschriebene (unveränderliche) Buchungen.
+GoBD-festgeschriebene (unveränderliche) Buchungen. `hash` ist der
+SHA-256-Ketten-Hash festgeschriebener Buchungen — er sichert über den Hash der
+Vorgängerbuchung die Reihenfolge und Unverändertheit (`pruefkette.js`).
 
 ## 2. Buchungsjournal — CSV / JSON
 
