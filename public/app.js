@@ -284,6 +284,10 @@ function renderStammdaten(m) {
              ['trading', 'Trading-/Wertpapier-GmbH'],
              ['hybrid', 'Hybrid (operativ + Kapitalanlage)'],
              ['vermögensverwaltend', 'vermögensverwaltend (Beteiligungen allgemein)']]);
+  html += f('versteuerungsart', 'USt-Versteuerungsart',
+            'Soll = Regelfall; Ist auf Antrag (§ 20 UStG, Vorjahresumsatz ≤ 800.000 €)', 'select',
+            [['soll', 'Soll-Versteuerung (nach vereinbarten Entgelten)'],
+             ['ist', 'Ist-Versteuerung (nach vereinnahmten Entgelten)']]);
   html += '</div></div>';
 
   html += '<div class="karte"><h2>Geschäftsführung</h2>' +
@@ -1486,30 +1490,7 @@ function datevExtf(a, u) {
  * Bereitet die UStVA-Kennzahlen aus den SKR04-USt-Konten eines Zeitraums auf.
  * Eine Aufbereitung, kein ELSTER-Versand.
  * ========================================================================= */
-/* Rechnet die UStVA-Kennzahlen aus den Buchungen im Zeitraum [von, bis]. */
-function ustvaBerechne(buchungen, von, bis) {
-  var s = {};
-  (buchungen || []).forEach(function (b) {
-    if (!b) return;
-    var d = b.datum || '';
-    if (von && d < von) return;
-    if (bis && d > bis) return;
-    if (b.soll)  { s[b.soll]  = s[b.soll]  || { soll: 0, haben: 0 }; s[b.soll].soll  += Number(b.betrag) || 0; }
-    if (b.haben) { s[b.haben] = s[b.haben] || { soll: 0, haben: 0 }; s[b.haben].haben += Number(b.betrag) || 0; }
-  });
-  function hs(nr) { var k = s[nr]; return k ? Berechnung.cent(k.haben - k.soll) : 0; }
-  function sh(nr) { var k = s[nr]; return k ? Berechnung.cent(k.soll - k.haben) : 0; }
-  var kz81 = Berechnung.cent(hs('4400') + hs('4000'));   // Umsätze 19 % (netto)
-  var kz86 = hs('4300');                                 // Umsätze 7 % (netto)
-  var ust19 = Berechnung.cent(kz81 * 0.19);
-  var ust7 = Berechnung.cent(kz86 * 0.07);
-  var ustBerechnet = Berechnung.cent(ust19 + ust7);
-  var ustGebucht = Berechnung.cent(hs('3806') + hs('3801'));
-  var kz66 = Berechnung.cent(sh('1406') + sh('1401'));   // abziehbare Vorsteuer
-  return { kz81: kz81, kz86: kz86, ust19: ust19, ust7: ust7,
-           ustBerechnet: ustBerechnet, ustGebucht: ustGebucht, kz66: kz66,
-           kz83: Berechnung.cent(ustBerechnet - kz66) };
-}
+/* Die UStVA-Kennzahlen-Berechnung liegt in public/shared/ustva.js (testbar). */
 function renderUstva(m) {
   var a = S.aktiv;
   if (!a) { setView('start'); return; }
@@ -1519,6 +1500,12 @@ function renderUstva(m) {
              String(new Date().getFullYear());
   var von0 = a.gjVon || (jahr + '-01-01');
   var bis0 = a.gjBis || a.stichtag || (jahr + '-12-31');
+  var vart = (S.unternehmen && S.unternehmen.versteuerungsart) === 'ist' ? 'ist' : 'soll';
+  var vartText = vart === 'ist'
+    ? 'Ist-Versteuerung (§ 20 UStG) — die Umsatzsteuer entsteht mit dem ' +
+      'Zahlungseingang; Erlöse zum Zahlungsdatum buchen.'
+    : 'Soll-Versteuerung (§ 13 UStG, Regelfall) — die Umsatzsteuer entsteht mit ' +
+      'der Rechnungsstellung; Erlöse zum Rechnungsdatum buchen.';
 
   var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>' +
     '<div class="kopf"><h1>Umsatzsteuer-Voranmeldung &ndash; ' + esc(a.bezeichnung) +
@@ -1527,7 +1514,8 @@ function renderUstva(m) {
   html += '<div class="box box-info"><b>Aufbereitung, kein Versand</b>Die ' +
     'Voranmeldung wird über ELSTER übermittelt. Hier werden die Kennzahlen aus den ' +
     'SKR04-Konten ermittelt: Erlöse 4400/4000 (19 %), 4300 (7 %), Vorsteuer ' +
-    '1406/1401. Soll-/Ist-Versteuerung und Sonderfälle sind nicht abgebildet.</div>';
+    '1406/1401.<br><b>Versteuerungsart:</b> ' + vartText +
+    ' (Einstellung in den Unternehmensdaten.)</div>';
   html += '<div class="karte"><h2>Zeitraum</h2><div class="gitter g3">' +
     feldWrap('von', '', '<input type="date" id="ustVon" value="' + esc(von0) + '">') +
     feldWrap('bis', '', '<input type="date" id="ustBis" value="' + esc(bis0) + '">') +
@@ -1543,7 +1531,7 @@ function renderUstva(m) {
   }
   function zeigen() {
     var von = m.querySelector('#ustVon').value, bis = m.querySelector('#ustBis').value;
-    var u = ustvaBerechne(a.buchungen, von, bis);
+    var u = Ustva.berechne(a.buchungen, von, bis, { versteuerungsart: vart });
     var h = '<div class="karte"><h2>Kennzahlen</h2><table class="pos-tab">' +
       zeile('81', 'Steuerpflichtige Umsätze zum Steuersatz 19 % (netto)', u.kz81) +
       zeile('86', 'Steuerpflichtige Umsätze zum Steuersatz 7 % (netto)', u.kz86) +
@@ -1561,6 +1549,9 @@ function renderUstva(m) {
         ? ' — weicht von der aus den Netto-Erlösen berechneten USt ab; bitte die ' +
           'USt-Buchungen prüfen.'
         : '.') + '</div></div>';
+    (u.hinweise || []).forEach(function (hw) {
+      h += '<div class="box box-warn">' + esc(hw) + '</div>';
+    });
     document.getElementById('ustvaErgebnis').innerHTML = h;
   }
   m.querySelector('#ustVon').addEventListener('input', zeigen);

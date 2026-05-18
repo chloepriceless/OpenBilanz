@@ -16,6 +16,7 @@ var Berechnung = require('../public/shared/berechnung.js');
 var Taxonomie  = require('../public/shared/taxonomie.js');
 var SKR04      = require('../public/shared/skr04.js');
 var Steuer     = require('../public/shared/steuer.js');
+var Ustva      = require('../public/shared/ustva.js');
 var XBRL       = require('../public/shared/xbrl.js');
 
 var tests = [], pass = 0, fail = 0;
@@ -278,6 +279,49 @@ test('Steuer: KSt-Betrag folgt dem VZ des Abschlusses', function () {
   var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 100000 });
   eq(s.kst.satz, 0.14, 'Satz aus VZ 2028');
   eq(s.kst.betrag, 14000, 'KSt VZ 2028');
+});
+
+/* ---- UStVA / Versteuerungsart ---------------------------------------- */
+test('UStVA: Kennzahlen aus Erlös- und Vorsteuerkonten', function () {
+  var bu = [
+    { datum: '2026-03-10', soll: '1200', haben: '4400', betrag: 10000 },  // Erlös 19 %
+    { datum: '2026-03-10', soll: '1200', haben: '3806', betrag: 1900 },   // USt 19 %
+    { datum: '2026-03-12', soll: '1406', haben: '1800', betrag: 570 },    // Vorsteuer 19 %
+    { datum: '2026-03-12', soll: '6300', haben: '1800', betrag: 3000 }
+  ];
+  var u = Ustva.berechne(bu, '2026-03-01', '2026-03-31');
+  eq(u.kz81, 10000, 'Kz 81 (Umsätze 19 %)');
+  eq(u.ust19, 1900, 'USt 19 %');
+  eq(u.kz66, 570, 'Kz 66 (abziehbare Vorsteuer)');
+  eq(u.kz83, 1330, 'Kz 83 (Zahllast) = 1900 - 570');
+  eq(u.ustGebucht, 1900, 'gebuchte USt aus Konto 3806');
+});
+test('UStVA: Versteuerungsart - Standard ist Soll', function () {
+  var u = Ustva.berechne([], null, null);
+  eq(u.versteuerungsart, 'soll', 'Standard Soll');
+  eq(u.hinweise.length, 0, 'keine Hinweise');
+});
+test('UStVA: Ist-Versteuerung warnt bei Erlös über Forderungskonto', function () {
+  var bu = [{ datum: '2026-05-02', soll: '1200', haben: '4400', betrag: 5000 }];
+  var ist  = Ustva.berechne(bu, null, null, { versteuerungsart: 'ist' });
+  var soll = Ustva.berechne(bu, null, null, { versteuerungsart: 'soll' });
+  eq(ist.versteuerungsart, 'ist', 'Art ist');
+  eq(ist.hinweise.length, 1, 'Ist: Hinweis auf Forderungsbuchung');
+  eq(soll.hinweise.length, 0, 'Soll: kein Hinweis');
+});
+test('UStVA: Ist-Versteuerung ohne Forderungsbuchung - kein Hinweis', function () {
+  // Erlös direkt über Bank gebucht (Zahlungseingang) -> Ist-konform
+  var bu = [{ datum: '2026-05-02', soll: '1800', haben: '4400', betrag: 5000 }];
+  var u = Ustva.berechne(bu, null, null, { versteuerungsart: 'ist' });
+  eq(u.hinweise.length, 0, 'kein Hinweis bei Buchung über Geldkonto');
+});
+test('UStVA: Zeitraumfilter grenzt Buchungen ab', function () {
+  var bu = [
+    { datum: '2026-01-15', soll: '1800', haben: '4400', betrag: 1000 },
+    { datum: '2026-02-15', soll: '1800', haben: '4400', betrag: 2000 }
+  ];
+  eq(Ustva.berechne(bu, '2026-01-01', '2026-01-31').kz81, 1000, 'nur Januar-Umsatz');
+  eq(Ustva.berechne(bu, null, null).kz81, 3000, 'ohne Filter beide Umsätze');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */
