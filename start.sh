@@ -9,6 +9,9 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 PORT="${PORT:-3000}"
+# Standardmaessig nur lokal erreichbar (keine Authentifizierung im Tool).
+# Fuer bewussten Netzwerk-Zugriff:  HOST=0.0.0.0 ./start.sh
+HOST="${HOST:-127.0.0.1}"
 echo "OpenBilanz startet auf http://localhost:${PORT}"
 echo "Zum Beenden: Strg+C"
-PORT="$PORT" node server.js
+PORT="$PORT" HOST="$HOST" node server.js

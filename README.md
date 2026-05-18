@@ -48,6 +48,12 @@ cd OpenBilanz
 Dann im Browser öffnen: **http://localhost:3000**. Die Daten liegen als
 JSON-Dateien im Ordner `data/`.
 
+> **Sicherheit:** Der Server lauscht standardmäßig nur auf `127.0.0.1`
+> (Loopback) und ist damit ausschließlich vom selben Rechner erreichbar. Er hat
+> **keine Authentifizierung** — soll er bewusst im Netzwerk erreichbar sein,
+> `HOST=0.0.0.0 node server.js` setzen. Das nur in einem vertrauenswürdigen Netz
+> tun, da dann jeder im Netz die Buchhaltungsdaten lesen und ändern kann.
+
 **2. Website-Modus (rein im Browser)** — der Ordner `public/` wird statisch
 ausgeliefert (z. B. GitHub Pages, Cloudflare Pages). Alle Daten bleiben dann
 **ausschließlich im Browser** des Nutzers (IndexedDB); es werden keinerlei

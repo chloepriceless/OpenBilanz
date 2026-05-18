@@ -15,6 +15,12 @@ var store = require('./lib/store.js');
 var xbrl = require('./public/shared/xbrl.js');
 
 var PORT = parseInt(process.env.PORT, 10) || 3000;
+/* Standardmäßig nur auf der Loopback-Adresse lauschen: Das Tool hat KEINE
+ * Authentifizierung und im Selbst-Hosting-Modus liegen die Steuerdaten
+ * serverseitig (./data). Eine Bindung auf alle Interfaces (0.0.0.0) würde sie
+ * jedem im selben Netz zugänglich machen. Für einen bewussten Netzwerk-Zugriff
+ * HOST=0.0.0.0 setzen — nur in einem vertrauenswürdigen Netz tun. */
+var HOST = process.env.HOST || '127.0.0.1';
 var PUBLIC = path.join(__dirname, 'public');
 
 var MIME = {
@@ -147,10 +153,19 @@ var server = http.createServer(function (req, res) {
 });
 
 store.init();
-server.listen(PORT, function () {
+server.listen(PORT, HOST, function () {
+  var lokal = HOST === '127.0.0.1' || HOST === 'localhost' || HOST === '::1';
   console.log('');
   console.log('  OpenBilanz läuft.');
   console.log('  Im Browser öffnen:  http://localhost:' + PORT);
+  if (!lokal) {
+    console.log('');
+    console.log('  ACHTUNG: HOST=' + HOST + ' — der Server ist im Netzwerk');
+    console.log('  erreichbar und hat KEINE Authentifizierung. Jeder, der den');
+    console.log('  Port erreicht, kann die Buchhaltungsdaten lesen und ändern.');
+    console.log('  Nur in einem vertrauenswürdigen Netz verwenden.');
+  }
+  console.log('');
   console.log('  Beenden mit Strg+C');
   console.log('');
 });
