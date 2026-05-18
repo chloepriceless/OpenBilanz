@@ -1375,6 +1375,101 @@ function datevExtf(a, u) {
   return '﻿' + kopf + '\r\n' + spalten + '\r\n' +
     zeilen.join('\r\n') + (zeilen.length ? '\r\n' : '');
 }
+/* Bankimport CAMT.053 (ISO 20022 Kontoauszug). Parst die XML-Datei und liefert
+ * die Umsätze als [{ datum, betrag, eingang, zweck, partner }]. */
+function parseCamt(xmlText) {
+  var doc;
+  try { doc = new DOMParser().parseFromString(String(xmlText), 'application/xml'); }
+  catch (e) { return { fehler: 'Die Datei ist kein gültiges XML.' }; }
+  if (!doc || doc.getElementsByTagName('parsererror').length) {
+    return { fehler: 'Die Datei ist kein gültiges XML.' };
+  }
+  function all(root, name) {
+    var out = [], els = root.getElementsByTagName('*'), i;
+    for (i = 0; i < els.length; i++) if (els[i].localName === name) out.push(els[i]);
+    return out;
+  }
+  function first(root, name) { var a = all(root, name); return a.length ? a[0] : null; }
+  function txt(el) { return el ? String(el.textContent || '').trim() : ''; }
+  var ntrys = all(doc, 'Ntry');
+  if (!ntrys.length) {
+    return { fehler: 'Keine Umsätze (Ntry) gefunden — ist das eine CAMT.053-Datei?' };
+  }
+  var tx = ntrys.map(function (n) {
+    var dtRoot = first(n, 'BookgDt') || first(n, 'ValDt') || n;
+    return {
+      datum: txt(first(dtRoot, 'Dt')).slice(0, 10),
+      betrag: parseFloat(txt(first(n, 'Amt')).replace(',', '.')) || 0,
+      eingang: txt(first(n, 'CdtDbtInd')) === 'CRDT',
+      zweck: all(n, 'Ustrd').map(txt).join(' '),
+      partner: txt(first(n, 'Nm'))
+    };
+  });
+  return { tx: tx };
+}
+/* Schlägt aus dem Verwendungszweck ein SKR04-Gegenkonto vor (halbautomatisch). */
+function bankKontoVorschlag(text, eingang) {
+  var regeln = [
+    [/miete|pacht/i, '6310'], [/telekom|vodafone|\bo2\b|mobilfunk|internet|telefon|1&1/i, '6805'],
+    [/hosting|server|domain|cloud|aws|hetzner/i, '6300'], [/versicherung/i, '6400'],
+    [/gehalt|lohn/i, '6020'], [/sozialvers|krankenkasse|aok|tk\b/i, '6110'],
+    [/finanzamt|umsatzsteuer|ust\b/i, '3700'], [/gewerbesteuer/i, '7610'],
+    [/koerperschaftsteuer|körperschaftsteuer/i, '7600'], [/reise|hotel|bahn|flug/i, '6650'],
+    [/anwalt|notar|steuerberat|beratung/i, '6825'], [/zins/i, eingang ? '7100' : '7300'],
+    [/büro|buero|papier/i, '6815']
+  ];
+  for (var i = 0; i < regeln.length; i++) if (regeln[i][0].test(text || '')) return regeln[i][1];
+  return eingang ? '4400' : '6300';
+}
+/* Rendert die Vorschau-Tabelle des Bankimports und bindet die Übernahme. */
+function camtVorschau(m, a, kontoOpt, parsed) {
+  var box = m.querySelector('#camtVorschau');
+  if (!box) return;
+  if (parsed.fehler) {
+    box.innerHTML = '<div class="box box-warn" style="margin-top:10px">' +
+      esc(parsed.fehler) + '</div>';
+    return;
+  }
+  var tx = parsed.tx;
+  var h = '<div class="karte-hint" style="margin-top:10px">' + tx.length +
+    ' Umsatz/-sätze gelesen. Gegenkonto je Zeile prüfen, dann übernehmen.</div>' +
+    '<table class="liste"><thead><tr><th></th><th>Datum</th><th>Partner</th>' +
+    '<th>Verwendungszweck</th><th class="rechts">Betrag</th><th>Gegenkonto</th>' +
+    '</tr></thead><tbody>';
+  tx.forEach(function (t, i) {
+    var vor = bankKontoVorschlag(t.zweck + ' ' + t.partner, t.eingang);
+    var sel = kontoOpt.replace('value="' + vor + '"', 'value="' + vor + '" selected');
+    h += '<tr><td><input type="checkbox" class="camtChk" data-i="' + i + '" checked></td>' +
+      '<td class="mono">' + datumDe(t.datum) + '</td>' +
+      '<td>' + esc(t.partner || '') + '</td>' +
+      '<td>' + esc(String(t.zweck || '').slice(0, 70)) + '</td>' +
+      '<td class="rechts mono">' + (t.eingang ? '+' : '−') + geld(t.betrag) + '</td>' +
+      '<td><select class="camtKonto" data-i="' + i + '">' + sel + '</select></td></tr>';
+  });
+  h += '</tbody></table><div class="btn-reihe"><button class="btn btn-pri" ' +
+    'id="camtUebernehmen">Ausgewählte Buchungen übernehmen</button></div>';
+  box.innerHTML = h;
+  box.querySelector('#camtUebernehmen').onclick = function () {
+    var n = 0, stamp = Date.now();
+    box.querySelectorAll('.camtChk').forEach(function (chk) {
+      if (!chk.checked) return;
+      var i = parseInt(chk.dataset.i, 10), t = tx[i];
+      var konto = box.querySelector('.camtKonto[data-i="' + i + '"]').value;
+      a.buchungen.push({
+        id: 'B-CAMT-' + stamp + '-' + i, datum: t.datum,
+        betrag: Berechnung.cent(t.betrag),
+        text: ((t.partner ? t.partner + ' — ' : '') + (t.zweck || 'Bankumsatz')).slice(0, 90),
+        soll: t.eingang ? '1800' : konto, haben: t.eingang ? konto : '1800'
+      });
+      n++;
+    });
+    if (!n) { alert('Keine Zeile ausgewählt.'); return; }
+    speichereStill().then(function () {
+      hinweisToast(n + ' Buchung(en) aus dem Bankimport übernommen.');
+      renderBuchhaltung(m);
+    });
+  };
+}
 function renderBuchhaltung(m) {
   var a = S.aktiv;
   if (!a) { setView('start'); return; }
@@ -1472,6 +1567,14 @@ function renderBuchhaltung(m) {
       'DATEV-Import des Steuerberaters gegenprüfen.</div></div>';
   }
 
+  /* Bankimport CAMT.053 */
+  html += '<div class="karte"><h2>Bankimport (CAMT.053)</h2>' +
+    '<div class="karte-hint">Kontoauszug im Format CAMT.053 (ISO 20022) einlesen und ' +
+    'halbautomatisch verbuchen. Das Bankkonto ist Konto 1800; der Verwendungszweck ' +
+    'liefert je Zeile einen Kontovorschlag.</div>' +
+    '<input type="file" id="camtDatei" accept=".xml,text/xml,application/xml">' +
+    '<div id="camtVorschau"></div></div>';
+
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
   m.querySelector('#buAdd').onclick = function () {
@@ -1554,6 +1657,15 @@ function renderBuchhaltung(m) {
     });
     ladeDatei(txt, 'EXTF_Buchungsstapel_' + (a.bezeichnung || 'Abschluss')
       .replace(/[^\w]+/g, '_') + '.csv', 'text/csv;charset=utf-8');
+  };
+  var camtIn = m.querySelector('#camtDatei');
+  if (camtIn) camtIn.onchange = function () {
+    var f = camtIn.files && camtIn.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () { camtVorschau(m, a, kontoOpt, parseCamt(rd.result)); };
+    rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
+    rd.readAsText(f);
   };
 }
 
