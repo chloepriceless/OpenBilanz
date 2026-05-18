@@ -88,6 +88,12 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 
 ## Was das Tool kann
 
+> **Legende.** ✅ **getestet** — im Betrieb geprüft: die Funktion läuft, Eingaben
+> werden verarbeitet und Ergebnisse erscheinen. Das ist **keine** Bestätigung der
+> rechnerischen oder steuerlichen Richtigkeit — die kann nur ein Steuerberater
+> geben. 🟡 **umgesetzt, noch nicht getestet** — implementiert, aber noch nicht
+> im Betrieb geprüft.
+
 | Funktion | Status |
 |---|---|
 | **Eröffnungsbilanz** erstellen (§ 242 Abs. 1 HGB) | ✅ |
@@ -101,26 +107,30 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Validierung** der E-Bilanz gegen die amtliche Taxonomie (Arelle) | ✅ |
 | **Vermögensverwaltende GmbH**: Finanzanlagen, Beteiligungen, Mieterträge | ✅ |
 | **GmbH-Untertypen**: Immobilien-, Trading-, Hybrid-GmbH mit Steuerhinweisen | ✅ |
-| **Steuerschätzung**: KSt (jahresabhängiger Satz), Soli, GewSt — § 8b KStG, §§ 8/9 GewStG, Verlustvortrag (§ 10d/§ 10a), verdeckte Gewinnausschüttung | ✅ |
+| **Steuerschätzung**: KSt (jahresabhängiger Satz), Soli, GewSt — § 8b KStG, § 9 GewStG | ✅ |
 | **Buchhaltung** mit Kontenrahmen SKR04 (Buchungsjournal, Saldenliste) | ✅ |
 | **Eröffnungsbuchungen** — Saldenvortrag ins neue Jahr (Eröffnungsbilanzkonto 9000) | ✅ |
 | **GoBD-Festschreibung** — unveränderliche Buchungen, Storno, Änderungsprotokoll | ✅ |
 | **Anlagenverzeichnis & AfA** — linear/degressiv, Anlagenspiegel (§ 284 Abs. 3) | ✅ |
-| **DATEV-Im-/Export** — Buchungsstapel im EXTF-Format (Austausch mit dem Steuerberater) | ✅ |
-| **Bankimport** — Kontoauszüge in den Formaten CAMT.053 (ISO 20022) und MT940 (SWIFT) | ✅ |
-| **UStVA-Aufbereitung** — aus den SKR04-Konten, mit Soll-/Ist-Versteuerung, Kleinunternehmer § 19, Reverse-Charge § 13b und steuerfreien Umsätzen § 4 | ✅ |
-| **Journal-Export** — Buchungsjournal maschinenlesbar als CSV und JSON | ✅ |
-| **GDPdU-Export** — Datenträgerüberlassung (Z3) für die Betriebsprüfung | ✅ |
+| **DATEV-Export** — Buchungsstapel im EXTF-Format für den Steuerberater | ✅ |
+| **Bankimport** — Kontoauszüge im Format CAMT.053 (ISO 20022) | ✅ |
+| **UStVA-Aufbereitung** — Umsatzsteuer-Voranmeldung aus den SKR04-Konten | ✅ |
 | **Offenlegung** beim Unternehmensregister (§ 325 HGB) | ✅ |
-| **Broker-Import** — Interactive-Brokers-Flex-Berichte (Trades, Dividenden) | ✅ |
-| **E-Rechnung** — XRechnung / ZUGFeRD einlesen und verbuchen | ✅ |
-| **BWA** — betriebswirtschaftliche Auswertung mit Kennzahlen | ✅ |
-| **Kapitalertragsteuer-Assistent** — 25 % KapSt + Soli auf Ausschüttungen | ✅ |
-| **GoBD-Verfahrensdokumentation** — geführter Fragebogen → Dokument | ✅ |
 | **Buchungshilfe** — erklärte Standardfälle mit konkreten SKR04-Buchungssätzen | ✅ |
 | **Gesellschafterbeschlüsse** — Generator (Feststellung, Ergebnisverwendung, …) | ✅ |
 | Vorjahresspalte (§ 265 Abs. 2 HGB) | ✅ |
 | Test-Suite (`npm test`) | ✅ |
+| **Steuer-Sonderfälle** — § 8b Abs. 7 (Handelsbestand), Verlustvortrag (§ 10d/§ 10a), GewSt-Hinzurechnungen § 8, verdeckte Gewinnausschüttung | 🟡 |
+| **DATEV-Import** — EXTF-Buchungsstapel einlesen | 🟡 |
+| **Bankimport MT940** — Kontoauszüge im SWIFT-Format MT940 | 🟡 |
+| **UStVA-Sonderfälle** — Soll-/Ist-Versteuerung, Kleinunternehmer § 19, Reverse-Charge § 13b, steuerfreie Umsätze § 4 | 🟡 |
+| **Broker-Import** — Interactive-Brokers-Flex-Berichte (Trades, Dividenden) | 🟡 |
+| **E-Rechnung** — XRechnung / ZUGFeRD einlesen und verbuchen | 🟡 |
+| **BWA** — betriebswirtschaftliche Auswertung mit Kennzahlen | 🟡 |
+| **Kapitalertragsteuer-Assistent** — 25 % KapSt + Soli auf Ausschüttungen | 🟡 |
+| **GoBD-Verfahrensdokumentation** — geführter Fragebogen → Dokument | 🟡 |
+| **Journal-Export** — Buchungsjournal maschinenlesbar als CSV und JSON | 🟡 |
+| **GDPdU-Export** — Datenträgerüberlassung (Z3) für die Betriebsprüfung | 🟡 |
 
 ### Zwei Erfassungswege
 
