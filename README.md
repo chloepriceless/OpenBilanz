@@ -86,6 +86,11 @@ exportierbare `.obz`-Datei (optional passwortverschlüsselt).
 | **Bankimport** — Kontoauszüge im Format CAMT.053 (ISO 20022) | ✅ |
 | **UStVA-Aufbereitung** — Umsatzsteuer-Voranmeldung aus den SKR04-Konten | ✅ |
 | **Offenlegung** beim Unternehmensregister (§ 325 HGB) | ✅ |
+| **Broker-Import** — Interactive-Brokers-Flex-Berichte (Trades, Dividenden) | ✅ |
+| **E-Rechnung** — XRechnung / ZUGFeRD einlesen und verbuchen | ✅ |
+| **BWA** — betriebswirtschaftliche Auswertung mit Kennzahlen | ✅ |
+| **Kapitalertragsteuer-Assistent** — 25 % KapSt + Soli auf Ausschüttungen | ✅ |
+| **GoBD-Verfahrensdokumentation** — geführter Fragebogen → Dokument | ✅ |
 | **Buchungshilfe** — erklärte Standardfälle mit konkreten SKR04-Buchungssätzen | ✅ |
 | **Gesellschafterbeschlüsse** — Generator (Feststellung, Ergebnisverwendung, …) | ✅ |
 | Vorjahresspalte (§ 265 Abs. 2 HGB) | ✅ |

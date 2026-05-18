@@ -50,6 +50,13 @@ Seit der ersten Roadmap-Fassung umgesetzt — Details in der
   (Abschnitt 3, B5).
 - **Offenlegung** — Offenlegungs-Dokument für das Unternehmensregister
   (Abschnitt 3, B6).
+- **GmbH-Varianten** — § 8b Abs. 7 KStG: Anteile im Handelsbestand einer
+  Trading-GmbH ohne 95-%-Freistellung; typabhängige Steuerhinweise.
+- **Broker-Import** — Interactive-Brokers-Flex-XML (Trades, Dividenden, Zinsen).
+- **GoBD-Verfahrensdokumentation** — geführter Fragebogen, druckbares Dokument.
+- **E-Rechnung** — XRechnung-/ZUGFeRD-XML einlesen und als Eingangsrechnung buchen.
+- **BWA** — kurzfristige Erfolgsrechnung und Kennzahlen aus der GuV.
+- **Kapitalertragsteuer-Assistent** — 25 % KapSt + Soli auf Gewinnausschüttungen.
 
 ---
 
@@ -250,15 +257,17 @@ Zugriff auf den Rechner des Nutzers.
 
 ### Später
 
-| Funktion | Beschreibung | Nutzen | Aufwand |
-|---|---|---|---|
-| **Broker-Import (Interactive Brokers Flex/XML)** | Depotauszüge in SKR04-Buchungssätze überführen — passt zum vv-GmbH-Fokus. `Daywalker7754/Generosity` zeigt die Zuordnung (GPL-2.0, nur Referenz). | H (vv-GmbH) | M |
-| **GoBD-Verfahrensdokumentation** | Geführter Fragebogen, der eine zugeschnittene Verfahrensdokumentation als PDF erzeugt. | M | S |
-| **E-Rechnung empfangen/anzeigen** | Eingehende ZUGFeRD-/XRechnung-Dateien (EN 16931) parsen und Buchungsvorschläge bilden. Empfang ist seit 01.01.2025 Pflicht. | M | M |
-| **ERiC-Übermittlung (optionales Modul)** | E-Bilanz tatsächlich ans Finanzamt übermitteln. ERiC ist kostenlos, aber registrierungspflichtig und nicht weiterverteilbar — daher opt-in und nicht zero-dependency. | H | L |
-| **BWA / Auswertungen** | Betriebswirtschaftliche Auswertung aus vorhandenen Daten ableiten. | M | S |
-| **KapSt-Anmeldung bei Gewinnausschüttung** | Assistent: 25 % Kapitalertragsteuer + Soli berechnen und den Anmeldungs-Datensatz erzeugen (Tagesanmeldung). Die Ausschüttungs-/Ergebnisverwendungsbeschluss-Vorlage ist über den Beschluss-Generator bereits abgedeckt. | M | S–M |
-| **SKR03 zusätzlich zu SKR04** | Zweiten Kontenrahmen unterstützen. | M | M |
+> ✅ **Umgesetzt:** Broker-Import (Interactive Brokers Flex), GoBD-Verfahrens-
+> dokumentation, E-Rechnung empfangen/anzeigen (XRechnung/ZUGFeRD), BWA/
+> Auswertungen und der KapSt-Anmeldungs-Assistent — siehe „Bereits umgesetzt".
+>
+> **Bewusst noch offen:**
+> - **ERiC-Übermittlung** — nicht baubar: ERiC ist registrierungspflichtig und
+>   nicht weiterverteilbar. Die E-Bilanz-Ansicht dokumentiert den ERiC-Weg.
+> - **SKR03 zusätzlich zu SKR04** — nicht autonom umgesetzt: eine verlässliche
+>   SKR03-Kontenliste braucht eine geprüfte Quelle (nicht aus dem Gedächtnis
+>   transkribieren — Korrektheitsrisiko), und die Umstellung ist ein Refactor
+>   der auf SKR04 verdrahteten Komfortfunktionen. Eigener fokussierter Schritt.
 
 ### Voraussichtlich außerhalb des Fokus
 
