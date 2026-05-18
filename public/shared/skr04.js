@@ -157,6 +157,7 @@
     { nr: '6827', name: 'Abschluss- und Prüfungskosten', seite: 'AUFWAND', kat: 'sonstaufwand' },
     { nr: '6830', name: 'Buchführungskosten', seite: 'AUFWAND', kat: 'sonstaufwand' },
     { nr: '6900', name: 'Verluste aus dem Abgang von Anlagevermögen', seite: 'AUFWAND', kat: 'sonstaufwand', vv: true },
+    { nr: '6905', name: 'Verluste aus dem Abgang von Umlaufvermögen', seite: 'AUFWAND', kat: 'sonstaufwand', vv: true },
 
     /* ===== Klasse 7: Finanzerträge/-aufwendungen und Steuern ========= */
     { nr: '7000', name: 'Erträge aus Beteiligungen', seite: 'ERTRAG', kat: 'beteiligungsertrag', vv: true },
@@ -169,6 +170,7 @@
     { nr: '7600', name: 'Körperschaftsteuer', seite: 'AUFWAND', kat: 'ertragsteuer' },
     { nr: '7608', name: 'Solidaritätszuschlag', seite: 'AUFWAND', kat: 'ertragsteuer' },
     { nr: '7610', name: 'Gewerbesteuer', seite: 'AUFWAND', kat: 'ertragsteuer' },
+    { nr: '7639', name: 'Anrechenbare ausländische Quellensteuer', seite: 'AUFWAND', kat: 'ertragsteuer', vv: true },
     { nr: '7685', name: 'Sonstige Steuern', seite: 'AUFWAND', kat: 'sonststeuer' },
 
     /* ===== Klasse 9: Vortrags- und statistische Konten =============== */

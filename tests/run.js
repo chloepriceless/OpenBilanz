@@ -111,6 +111,61 @@ test('Prüfung meldet unausgeglichene Bilanz', function () {
   var p = Berechnung.pruefe(eb);
   ok(p.meldungen.some(function (m) { return m.stufe === 'fehler'; }), 'Fehler erwartet');
 });
+test('Prüfung: Eigenkapitalquote unter 10 % wird gemeldet', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.IV': 500000 }, passiva: { 'P.C.4': 475000 }, guv: {} } };
+  var p = Berechnung.pruefe(ja);
+  ok(p.meldungen.some(function (m) { return m.text.indexOf('Eigenkapitalquote') >= 0; }),
+     'EK-Quoten-Warnung erwartet');
+});
+test('Prüfung: Gewinn ohne Steuerrückstellung wird gemeldet', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.IV': 85000 }, passiva: {}, guv: { 'gkv.1': 100000, 'gkv.8': 40000 } } };
+  var p = Berechnung.pruefe(ja);
+  ok(p.meldungen.some(function (m) { return m.text.indexOf('Steuerrückstellung') >= 0; }),
+     'Hinweis auf fehlende Steuerrückstellung erwartet');
+});
+test('Prüfung: gebuchte Steuerrückstellung unterdrückt den Steuer-Hinweis', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.IV': 92000 }, passiva: { 'P.B.2': 7000 },
+      guv: { 'gkv.1': 100000, 'gkv.8': 40000 } } };
+  var p = Berechnung.pruefe(ja);
+  ok(!p.meldungen.some(function (m) { return m.text.indexOf('Steuerrückstellung') >= 0; }),
+     'kein Steuer-Hinweis bei vorhandener Rückstellung');
+});
+test('Prüfung: Abschreibungen ohne Anlagevermögen werden gemeldet', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.IV': 74000 }, passiva: { 'P.B.2': 7000 },
+      guv: { 'gkv.1': 50000, 'gkv.7': 8000 } } };
+  var p = Berechnung.pruefe(ja);
+  ok(p.meldungen.some(function (m) { return m.text.indexOf('Abschreibungen') >= 0 &&
+     m.text.indexOf('Anlagevermögen') >= 0; }), 'Abschreibungs-Hinweis erwartet');
+});
+test('Prüfung: Beteiligungserträge ohne Finanzanlagen werden gemeldet', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.IV': 60000 }, passiva: { 'P.B.2': 5000 }, guv: { 'gkv.9': 30000 } } };
+  var p = Berechnung.pruefe(ja);
+  ok(p.meldungen.some(function (m) { return m.text.indexOf('Finanzanlagen (A.III)') >= 0; }),
+     'Hinweis auf fehlende Finanzanlagen erwartet');
+});
+test('Prüfung: Vorjahresabweichung über 20 % nur mit Vorjahr', function () {
+  var vorjahr = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.IV': 100000 }, passiva: { 'P.C.4': 75000 }, guv: {} } };
+  var ja = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.IV': 150000 }, passiva: { 'P.C.4': 125000 }, guv: {} } };
+  ok(!Berechnung.pruefe(ja).meldungen.some(function (m) { return m.text.indexOf('Vorjahr') >= 0; }),
+     'ohne Vorjahr kein Abweichungs-Hinweis');
+  var mit = Berechnung.pruefe(ja, vorjahr);
+  ok(mit.meldungen.some(function (m) { return m.stufe === 'info' &&
+     m.text.indexOf('Bilanzsumme') >= 0; }), 'Abweichungs-Hinweis mit Vorjahr erwartet');
+});
 
 /* ---- SKR04-Kontenmapping (Integritaet) ------------------------------- */
 test('SKR04: jedes Konto-pos ist eine gueltige HGB-Position', function () {
@@ -150,6 +205,20 @@ test('SKR04: vermögensverwaltende Konten vorhanden', function () {
   ok(SKR04.vvKonten().length >= 10, 'zu wenige vv-Konten');
   ok(SKR04.kontoFinden('0820'), 'Beteiligungen (0820) fehlt');
   ok(SKR04.kontoFinden('7000'), 'Erträge aus Beteiligungen (7000) fehlt');
+});
+test('SKR04: Wertpapier-Abgang hat Ertrags- und Verlustkonto (Trading-GmbH)', function () {
+  var ertrag = SKR04.kontoFinden('4906'), verlust = SKR04.kontoFinden('6905');
+  ok(ertrag, 'Konto 4906 (Erträge aus Abgang Umlaufvermögen) fehlt');
+  ok(verlust, 'Konto 6905 (Verluste aus Abgang Umlaufvermögen) fehlt');
+  eq(ertrag.seite, 'ERTRAG', '4906 ist ein Ertragskonto');
+  eq(verlust.seite, 'AUFWAND', '6905 ist ein Aufwandskonto');
+  ok(verlust.vv, '6905 ist für die vermögensverwaltende GmbH markiert');
+});
+test('SKR04: Konto für anrechenbare ausländische Quellensteuer (7639)', function () {
+  var k = SKR04.kontoFinden('7639');
+  ok(k, 'Konto 7639 (anrechenbare ausländische Quellensteuer) fehlt');
+  eq(k.seite, 'AUFWAND', '7639 ist ein Aufwandskonto');
+  eq(k.kat, 'ertragsteuer', '7639 zählt zu den Steuern vom Einkommen und Ertrag');
 });
 test('SKR04: mehrere Bankkonten für verschiedene Banken', function () {
   ['1800', '1810', '1820', '1830', '1840'].forEach(function (nr) {
@@ -291,6 +360,24 @@ test('Steuer: KSt-Betrag folgt dem VZ des Abschlusses', function () {
   var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 100000 });
   eq(s.kst.satz, 0.14, 'Satz aus VZ 2028');
   eq(s.kst.betrag, 14000, 'KSt VZ 2028');
+});
+test('Steuer: ausländische Quellensteuer wird auf die KSt angerechnet (§ 26 KStG)', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', steuer: { hebesatz: 400, auslQuellensteuer: 2000 } };
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 100000 });
+  eq(s.kst.betrag, 15000, 'KSt brutto unverändert (15 % von 100.000)');
+  eq(s.kst.auslQuellensteuer, 2000, 'Quellensteuer voll angerechnet');
+});
+test('Steuer: Quellensteuer-Anrechnung auf den Höchstbetrag (KSt) begrenzt', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', steuer: { hebesatz: 400, auslQuellensteuer: 9999 } };
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 10000 });
+  eq(s.kst.betrag, 1500, 'KSt 15 % von 10.000');
+  eq(s.kst.auslQuellensteuer, 1500, 'Anrechnung auf die anfallende KSt begrenzt');
+});
+test('Steuer: Quellensteuer mindert die Gesamtsteuer', function () {
+  var g = { werte: {}, jahresergebnis: 100000 };
+  var ohne = Steuer.berechne({ steuer: { hebesatz: 400 } }, g);
+  var mit  = Steuer.berechne({ steuer: { hebesatz: 400, auslQuellensteuer: 2000 } }, g);
+  eq(ohne.gesamtsteuer - mit.gesamtsteuer, 2000, 'Gesamtsteuer um die Anrechnung niedriger');
 });
 
 /* ---- UStVA / Versteuerungsart ---------------------------------------- */

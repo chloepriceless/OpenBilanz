@@ -809,7 +809,19 @@ function aktualisiereStatus() {
     var ek = Berechnung.bestimmeGroessenklasse(merk, a.gjVon || a.stichtag, {});
     a.groessenklasse = ek.klasse;
   }
-  var pr = Berechnung.pruefe(a);
+  // Vorjahres-Abschluss für die Abweichungsprüfung (§ 265 Abs. 2 HGB) einmalig
+  // je Vorjahr-Id nachladen und zwischenspeichern (aktualisiereStatus läuft bei
+  // jeder Eingabe - kein Nachladen pro Tastendruck).
+  var vj = (S.vorjahr && S.vorjahr.id === a.vorjahrId) ? S.vorjahr : null;
+  if (!a.vorjahrId) { S.vorjahr = null; }
+  else if (!vj && S.vorjahrLaedt !== a.vorjahrId) {
+    S.vorjahrLaedt = a.vorjahrId;
+    Store.ladeAbschluss(a.vorjahrId).then(function (v) {
+      S.vorjahrLaedt = null;
+      if (v && !v.fehler) { S.vorjahr = v; if (S.aktiv === a) aktualisiereStatus(); }
+    });
+  }
+  var pr = Berechnung.pruefe(a, vj);
   var r = pr.berechnung;
 
   document.querySelectorAll('[data-zelle]').forEach(function (el) {
@@ -1357,6 +1369,8 @@ function renderSteuer(m) {
   html += sf('beteiligungsertraege', 'Beteiligungserträge / Dividenden (EUR)', '§ 8b KStG');
   html += sf('veraeusserungsgewinne', 'Veräußerungsgewinne aus Anteilen (EUR)',
     '§ 8b Abs. 2 KStG');
+  html += sf('auslQuellensteuer', 'Anrechenbare ausländische Quellensteuer (EUR)',
+    'auf ausländische Dividenden, § 26 KStG');
   html += sf('immobilienertrag', 'Begünstigter Grundstücksertrag (EUR)',
     'bei erweiterter Kürzung');
   html += sf('gezahlteGrundsteuer', 'Im Geschäftsjahr gezahlte Grundsteuer (EUR)',
@@ -1422,6 +1436,8 @@ function steuerErgebnis(a) {
     steuerZeile({ text: 'Körperschaftsteuer + Solidaritätszuschlag',
       betrag: Berechnung.cent(s.kst.betrag + s.kst.soli) }) +
     steuerZeile({ text: 'Gewerbesteuer', betrag: s.gewst.betrag }) +
+    (s.kst.auslQuellensteuer > 0 ? steuerZeile({ text: '- anrechenbare ausländische ' +
+      'Quellensteuer (§ 26 KStG)', betrag: -s.kst.auslQuellensteuer }) : '') +
     steuerZeile({ text: 'Steuerbelastung gesamt', betrag: s.gesamtsteuer, summe: true }) +
     steuerZeile({ text: 'Ergebnis nach Steuern', betrag: s.ergebnisNachSteuern, summe: true }) +
     '</table><div class="karte-hint" style="margin-top:8px">Durchschnittliche ' +
@@ -2663,7 +2679,30 @@ function renderHilfe(m) {
     'getrennt auf das USt-Konto (3806/3801). Bei Eingangsrechnungen analog mit ' +
     'Vorsteuer (1406/1401).</div>';
 
-  html += fall('6. Jahresabschluss abschließen',
+  html += '<div class="box box-info"><b>Wertpapiere: Umlauf- oder Anlagevermögen?</b>' +
+    'Wertpapiere, die eine GmbH kurzfristig handelt, gehören ins <b>Umlaufvermögen</b> ' +
+    '(Konto 1510, Bilanzposten B.III). Dort gilt das strenge Niederstwertprinzip ' +
+    '(§ 253 Abs. 4 HGB): Sinkt der Kurs zum Bilanzstichtag unter die Anschaffungskosten, ' +
+    'ist zwingend abzuschreiben. Dauerhaft gehaltene Beteiligungen sind dagegen ' +
+    '<b>Finanzanlagen</b> (Konto 0820, Bilanzposten A.III). Die steuerliche Behandlung ' +
+    'von Veräußerungsgewinnen und Dividenden (§ 8b KStG) bildet die Steuerschätzung ab.</div>';
+
+  html += fall('6. Wertpapiergeschäfte (Trading- / vermögensverwaltende GmbH)',
+    'Kauf, Verkauf und Bewertung von Wertpapieren des Umlaufvermögens. Gewinn oder ' +
+    'Verlust eines Verkaufs ist die Differenz zwischen Verkaufserlös und Buchwert — er ' +
+    'wird über ein eigenes Ertrags- (4906) bzw. Aufwandskonto (6905) erfasst. Ein ' +
+    'Verkauf wird in zwei Buchungen abgebildet: zuerst der Erlös bis zur Höhe des ' +
+    'Buchwerts, dann getrennt der realisierte Gewinn bzw. Verlust.',
+    [['1510', '1800', 'Wertpapiere gekauft — Anschaffungskosten inkl. Spesen, per Bank bezahlt'],
+     ['1800', '1510', 'Wertpapiere verkauft — Erlös bis zur Höhe des Buchwerts'],
+     ['1800', '4906', 'realisierter Kursgewinn — Verkaufserlös über dem Buchwert'],
+     ['6905', '1510', 'realisierter Kursverlust — Buchwert über dem Verkaufserlös'],
+     ['7210', '1510', 'Abwertung zum Stichtag — Kurswert unter Anschaffungskosten (§ 253 Abs. 4 HGB)'],
+     ['1800', '7000', 'Dividende / Beteiligungsertrag gutgeschrieben'],
+     ['1800', '7100', 'Zinserträge (Anleihen, Tages- oder Festgeld)'],
+     ['6300', '1800', 'Depot-, Order- oder sonstige Bankgebühren']]);
+
+  html += fall('7. Jahresabschluss abschließen',
     'Sind alle Buchungen erfasst, in der Buchhaltung „Salden in Bilanz/GuV übernehmen“ ' +
     'klicken — die Kontensalden füllen Bilanz und GuV. Anschließend „Buchungen ' +
     'festschreiben“: festgeschriebene Buchungen sind unveränderlich (GoBD), Korrekturen ' +

@@ -182,6 +182,18 @@
       (vz && vz >= 2028 ? ' (VZ ' + vz + ')' : ''), betrag: kst });
     kstSchritte.push({ text: 'Solidaritätszuschlag 5,5 %', betrag: soli });
 
+    // § 26 KStG - Anrechnung ausländischer Quellensteuer auf die KSt. Der
+    // Anrechnungshöchstbetrag ist hier vereinfacht die anfallende KSt; die
+    // genaue Begrenzung (anteilige deutsche Steuer auf die ausländischen
+    // Einkünfte, getrennt je Staat) erfordert die ausländischen Einkünfte.
+    var auslQuSt = n(st.auslQuellensteuer);
+    var quStAnrechenbar = auslQuSt > 0 ? cent(Math.min(auslQuSt, kst)) : 0;
+    if (auslQuSt > 0) {
+      kstSchritte.push({ text: '- anrechenbare ausländische Quellensteuer (§ 26 KStG)' +
+        (quStAnrechenbar < auslQuSt ? ' - auf den Höchstbetrag begrenzt' : ''),
+        betrag: -quStAnrechenbar });
+    }
+
     /* ---- Gewerbesteuer ---- */
     var gewSchritte = [];
     var gewerbeertrag = vorSteuern;
@@ -267,6 +279,14 @@
         'Töpfe; hier wird derselbe Wert für beide angesetzt. Weichen sie ab, die ' +
         'Werte getrennt prüfen.');
     }
+    if (auslQuSt > 0) {
+      hinweise.push('Ausländische Quellensteuer: hier vereinfacht bis zur Höhe der ' +
+        'Körperschaftsteuer angerechnet (§ 26 KStG). Der Anrechnungshöchstbetrag ist ' +
+        'tatsächlich je Staat auf die anteilige deutsche Steuer auf die ausländischen ' +
+        'Einkünfte begrenzt. Wichtig: Bei nach § 8b KStG zu 95 % steuerfreien ' +
+        'Dividenden ist die Quellensteuer regelmäßig nur sehr begrenzt anrechenbar - ' +
+        'unbedingt steuerlich prüfen lassen.');
+    }
     if (st.anteilseignerwechsel) {
       hinweise.push('§ 8c KStG: Bei einem Anteilseignerwechsel von mehr als 50 % ' +
         'geht ein nicht genutzter Verlustvortrag grundsätzlich unter. Ein Antrag ' +
@@ -274,10 +294,11 @@
         'steuerlich prüfen lassen.');
     }
 
-    var gesamt = cent(kst + soli + gewst);
+    var gesamt = cent(kst + soli + gewst - quStAnrechenbar);
     return {
       ergebnisVorSteuern: vorSteuern,
-      kst: { zvE: zvE, betrag: kst, soli: soli, satz: satz, schritte: kstSchritte },
+      kst: { zvE: zvE, betrag: kst, soli: soli, satz: satz,
+             auslQuellensteuer: quStAnrechenbar, schritte: kstSchritte },
       gewst: { gewerbeertrag: gewerbeertragGerundet, messbetrag: messbetrag,
                betrag: gewst, hebesatz: hebesatz, schritte: gewSchritte },
       hinzurechnungGewSt: hinzurechnung,

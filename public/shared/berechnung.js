@@ -213,8 +213,11 @@
     };
   }
 
-  /* ---- Plausibilitätsprüfungen ---------------------------------------- */
-  function pruefe(abschluss) {
+  /* ---- Plausibilitätsprüfungen ----------------------------------------
+   * pruefe(abschluss, vorjahr?) - der zweite Parameter ist optional: ein
+   * vollständiger Vorjahres-Abschluss derselben Struktur ermöglicht die
+   * Abweichungsprüfung (§ 265 Abs. 2 HGB). Fehlt er, entfällt nur diese. */
+  function pruefe(abschluss, vorjahr) {
     var r = berechne(abschluss);
     var meldungen = [];
     var kap = r.bilanz.kapital;
@@ -247,6 +250,86 @@
               kap0(r.bilanz.fehlbetrag) + ' EUR ausgewiesen (§ 268 Abs. 3 HGB). ' +
               'Prüfen Sie eine mögliche Überschuldung.' });
     }
+
+    /* --- erweiterte Plausibilitätsprüfungen --------------------------- */
+    var istJA = abschluss.art === 'JAHRESABSCHLUSS';
+    var verf = r.guv.verfahren;
+    function guvSumme(ids) {
+      var s = 0;
+      for (var i = 0; i < (ids || []).length; i++) s += r.guv.werte[ids[i]] || 0;
+      return s;
+    }
+    // Umsatzerlöse verfahrensunabhängig (nur eine der drei IDs ist belegt)
+    function umsatzVon(g) {
+      return (g.werte['gkv.1'] || 0) + (g.werte['ukv.1'] || 0) + (g.werte['kst.1'] || 0);
+    }
+    var idAfa    = { GKV: ['gkv.7'], KLEINST: ['kst.5'] }[verf] || [];
+    var idBeteil = { GKV: ['gkv.9', 'gkv.10'], UKV: ['ukv.8', 'ukv.9'] }[verf] || [];
+    var idEStr   = { GKV: ['gkv.14'], UKV: ['ukv.13'], KLEINST: ['kst.7'] }[verf] || [];
+
+    // Eigenkapitalquote: dünne Kapitaldecke (nur bei ausgeglichener Bilanz mit
+    // positivem EK - ein negatives EK ist bereits über den Fehlbetrag gemeldet)
+    if (r.bilanz.ausgeglichen && r.bilanz.summeAktiva > 0 && r.bilanz.eigenkapital > 0) {
+      var ekQuote = r.bilanz.eigenkapital / r.bilanz.summeAktiva;
+      if (ekQuote < 0.10) {
+        meldungen.push({ stufe: 'warnung',
+          text: 'Eigenkapitalquote nur ' + (Math.round(ekQuote * 1000) / 10) + ' % ' +
+                '(Eigenkapital ' + kap0(r.bilanz.eigenkapital) + ' EUR, Bilanzsumme ' +
+                kap0(r.bilanz.summeAktiva) + ' EUR). Unter 10 % ist die Kapitaldecke ' +
+                'dünn - bei weiteren Verlusten droht eine bilanzielle Überschuldung.' });
+      }
+    }
+
+    if (istJA) {
+      // Positives Ergebnis, aber keine Ertragsteuer/Steuerrückstellung erfasst
+      var eStr = guvSumme(idEStr);
+      var vorSteuer = r.guv.jahresergebnis + eStr;
+      if (vorSteuer > 1 && eStr <= 0 && (r.bilanz.passiva['P.B.2'] || 0) <= 0) {
+        meldungen.push({ stufe: 'warnung',
+          text: 'Ergebnis vor Steuern ' + kap0(vorSteuer) + ' EUR, aber weder ein ' +
+                'Ertragsteueraufwand in der GuV noch eine Steuerrückstellung (Posten ' +
+                'P.B.2) erfasst. Eine GmbH schuldet auf den Gewinn Körperschaftsteuer, ' +
+                'Solidaritätszuschlag und Gewerbesteuer - Steuerrückstellung prüfen.' });
+      }
+      // Abschreibungen gebucht, aber kein Anlagevermögen ausgewiesen
+      var afa = guvSumme(idAfa);
+      if (afa > 0 && (r.bilanz.aktiva['A'] || 0) <= 0) {
+        meldungen.push({ stufe: 'warnung',
+          text: 'Abschreibungen ' + kap0(afa) + ' EUR gebucht, aber kein Anlagevermögen ' +
+                '(Posten A.) in der Bilanz. Prüfen, ob Anlagegüter erfasst sind - die ' +
+                'Sofortabschreibung geringwertiger Wirtschaftsgüter ist allerdings zulässig.' });
+      }
+      // Beteiligungs-/Finanzanlageerträge ohne entsprechende Bilanzposten
+      var beteil = guvSumme(idBeteil);
+      var finanzVerm = (r.bilanz.aktiva['A.III'] || 0) + (r.bilanz.aktiva['B.III'] || 0);
+      if (beteil > 0 && finanzVerm <= 0) {
+        meldungen.push({ stufe: 'warnung',
+          text: 'Erträge aus Beteiligungen/Finanzanlagen ' + kap0(beteil) + ' EUR gebucht, ' +
+                'aber weder Finanzanlagen (A.III) noch Wertpapiere (B.III) in der Bilanz. ' +
+                'Sind die Bestände am Stichtag noch vorhanden? (Bei unterjährigem Verkauf ok.)' });
+      }
+    }
+
+    // Vorjahresvergleich (§ 265 Abs. 2, § 284 HGB): nur wenn ein Vorjahres-
+    // Abschluss übergeben wurde. Abweichungen über 20 % sind erläuterungswürdig.
+    if (vorjahr && (vorjahr.werte || vorjahr.kapital)) {
+      var rv = berechne(vorjahr);
+      var abw = function (jetzt, vor, label) {
+        if (Math.abs(vor) < 1) return;
+        var q = Math.abs(jetzt - vor) / Math.abs(vor);
+        if (q > 0.20) {
+          meldungen.push({ stufe: 'info',
+            text: label + ' weicht um ' + Math.round(q * 100) + ' % vom Vorjahr ab ' +
+                  '(Vorjahr ' + kap0(vor) + ' EUR, aktuell ' + kap0(jetzt) + ' EUR). ' +
+                  'Wesentliche Abweichungen sind im Anhang zu erläutern (§ 284 HGB).' });
+        }
+      };
+      abw(r.bilanz.summeAktiva, rv.bilanz.summeAktiva, 'Die Bilanzsumme');
+      if (istJA && vorjahr.art === 'JAHRESABSCHLUSS') {
+        abw(umsatzVon(r.guv), umsatzVon(rv.guv), 'Die Umsatzerlöse');
+      }
+    }
+
     return { berechnung: r, meldungen: meldungen };
   }
   function kap0(n) {
