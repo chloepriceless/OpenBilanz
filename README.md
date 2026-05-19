@@ -8,10 +8,13 @@
 Jahresabschluss einer GmbH — nach HGB, mit E-Bilanz-Export und Validierung
 gegen die amtliche Taxonomie. Nachvollziehbar, lokal und prüfbar.**
 
-Eine selbst betriebene, kostenlose Alternative zur Eröffnungsbilanz- und
-Jahresabschluss-Funktion kommerzieller Dienste. Alle Daten bleiben auf deinem
-Rechner. Geeignet für die kleine **operativ tätige** GmbH und die
-**vermögensverwaltende** GmbH (Immobilien, Beteiligungen, Wertpapiere).
+OpenBilanz ist für alle, die die Buchhaltung ihrer GmbH selbst übernehmen
+wollen, statt sie ganz aus der Hand zu geben — wer mag, kommt damit auch ohne
+Steuerberater aus. Und wer an einer Stelle unsicher ist, zieht trotzdem einen
+hinzu: Die Vorarbeit ist dann schon getan, das schont den Geldbeutel. Alle
+Daten bleiben auf deinem Rechner. Geeignet für die kleine **operativ tätige**
+GmbH und die **vermögensverwaltende** GmbH (Immobilien, Beteiligungen,
+Wertpapiere).
 
 > ⚠️ **Ohne Gewähr.** OpenBilanz wird ohne jede Gewähr für die Richtigkeit der
 > Berechnungen, Gliederungen und der erzeugten E-Bilanz bereitgestellt und
@@ -19,10 +22,12 @@ Rechner. Geeignet für die kleine **operativ tätige** GmbH und die
 > jeden Abschluss vor Abgabe an das Finanzamt fachlich prüfen lassen.
 > Siehe [Haftungsausschluss](#haftungsausschluss).
 
-> 🚧 **Work in Progress.** OpenBilanz steckt noch in aktiver Entwicklung. Nicht
-> alle Funktionen sind ausgereift, Schnittstellen und Berechnungen können sich
-> ändern, und Fehler sind wahrscheinlich. Noch nicht für den produktiven
-> Einsatz ohne fachliche Prüfung gedacht.
+> 🚧 **Work in Progress.** OpenBilanz wird aktiv weiterentwickelt und kann
+> funktional schon einiges. Manche Funktionen sind aber noch jung, und
+> Schnittstellen oder Berechnungen können sich noch ändern. Wenn dir etwas
+> auffällt oder fehlt: gern gleich ein
+> [Issue](https://github.com/chloepriceless/OpenBilanz/issues) öffnen — so
+> bringen wir die Software gemeinsam dahin, wo sie hin soll.
 
 > 🙏 **Gegenprüfung erwünscht.** Wer Erfahrung mit HGB-Rechnungslegung,
 > E-Bilanz oder Steuerrecht hat: Ich würde mich sehr freuen, wenn jemand mit
@@ -439,7 +444,7 @@ MIT-Lizenz — siehe [LICENSE](LICENSE). Zur Herkunft verwendeter Daten siehe
 
 ## Haftungsausschluss
 
-OpenBilanz ist ein freies Hilfsmittel zur **Erstellung** von Eröffnungsbilanz,
+OpenBilanz ist ein freies Hilfsmittel zur **Vorbereitung** von Eröffnungsbilanz,
 Jahresabschluss und E-Bilanz und setzt die gesetzlichen Gliederungs- und
 Rechenregeln nach bestem Wissen von KI/CLaude um. Dennoch gilt:
 
