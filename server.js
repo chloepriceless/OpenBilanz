@@ -21,7 +21,25 @@ var PORT = parseInt(process.env.PORT, 10) || 3000;
  * jedem im selben Netz zugänglich machen. Für einen bewussten Netzwerk-Zugriff
  * HOST=0.0.0.0 setzen — nur in einem vertrauenswürdigen Netz tun. */
 var HOST = process.env.HOST || '127.0.0.1';
+/* "Netzwerk-Betrieb" = an eine nicht-lokale Adresse gebunden. Der Server hat
+ * keine Authentifizierung; im Netz erreichbar heisst daher: jeder mit Zugriff
+ * auf den Port kann die Buchhaltungsdaten lesen und ändern. Dieser Modus ist
+ * nur mit ausdrücklicher Bestätigung (OPENBILANZ_UNSAFE_NETWORK=1) erlaubt und
+ * blendet zusätzlich eine Warnleiste in die Oberfläche ein. */
+var NETZBETRIEB = !(HOST === '127.0.0.1' || HOST === 'localhost' || HOST === '::1');
+var NETZ_FREIGEGEBEN = process.env.OPENBILANZ_UNSAFE_NETWORK === '1';
 var PUBLIC = path.join(__dirname, 'public');
+
+/* Rote Warnleiste für den Netzwerk-Betrieb. Reines HTML mit Inline-Style — die
+ * strenge CSP der index.html erlaubt kein Inline-JavaScript, Inline-Styles
+ * dagegen schon (style-src 'unsafe-inline'). */
+var NETZ_WARNUNG =
+  '<div role="alert" style="position:sticky;top:0;z-index:99999;background:#b00020;' +
+  'color:#fff;padding:.7rem 1rem;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.35);' +
+  'font:600 14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif">' +
+  '⚠ Netzwerk-Betrieb ohne Authentifizierung &ndash; jede Person mit Zugriff auf ' +
+  'diesen Port kann die Buchhaltungsdaten lesen und &auml;ndern. Nur in einem ' +
+  'vertrauensw&uuml;rdigen Netz verwenden.</div>';
 
 var MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -84,9 +102,12 @@ function statisch(res, urlPfad) {
     /* Selbst-Hosting-Modus: den Betriebsmodus in index.html umschreiben, damit
      * der Browser die Node-API statt IndexedDB nutzt. */
     if (rel === '/index.html') {
-      buf = Buffer.from(String(buf).replace(
+      var html = String(buf).replace(
         'name="openbilanz-mode" content="website"',
-        'name="openbilanz-mode" content="selfhost"'));
+        'name="openbilanz-mode" content="selfhost"');
+      /* Im Netzwerk-Betrieb die rote Warnleiste direkt nach <body> einsetzen. */
+      if (NETZBETRIEB) html = html.replace('<body>', '<body>\n' + NETZ_WARNUNG);
+      buf = Buffer.from(html);
     }
     res.writeHead(200, {
       'Content-Type': MIME[path.extname(datei)] || 'application/octet-stream',
@@ -199,6 +220,25 @@ var server = http.createServer(function (req, res) {
     statisch(res, u.pathname);
   }
 });
+
+/* Netzwerk-Betrieb nur mit ausdrücklicher Bestätigung: ohne gesetztes
+ * OPENBILANZ_UNSAFE_NETWORK=1 würde ein versehentliches HOST=0.0.0.0 die
+ * Buchhaltungsdaten ungeschützt im Netz freigeben — dann lieber nicht starten. */
+if (NETZBETRIEB && !NETZ_FREIGEGEBEN) {
+  console.error('');
+  console.error('  OpenBilanz wurde NICHT gestartet.');
+  console.error('');
+  console.error('  HOST=' + HOST + ' macht den Server im Netzwerk erreichbar.');
+  console.error('  OpenBilanz hat KEINE Authentifizierung — jede Person, die den');
+  console.error('  Port erreicht, könnte die Buchhaltungsdaten lesen und ändern.');
+  console.error('');
+  console.error('  Ist das bewusst gewollt — und nur in einem vertrauenswürdigen');
+  console.error('  Netz! — zusätzlich diese Variable setzen:');
+  console.error('');
+  console.error('      OPENBILANZ_UNSAFE_NETWORK=1');
+  console.error('');
+  process.exit(1);
+}
 
 store.init();
 server.listen(PORT, HOST, function () {
