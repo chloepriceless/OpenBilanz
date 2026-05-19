@@ -4,9 +4,9 @@
 
 # OpenBilanz
 
-**Lokales Open-Source-Tool zur Erstellung von Eröffnungsbilanz und
+**Lokales Open-Source-Tool zur Vorbereitung von Eröffnungsbilanz und
 Jahresabschluss einer GmbH — nach HGB, mit E-Bilanz-Export und Validierung
-gegen die amtliche Taxonomie. Ohne Steuerberater, ohne Klickerei in ELSTER.**
+gegen die amtliche Taxonomie. Nachvollziehbar, lokal und prüfbar.**
 
 Eine selbst betriebene, kostenlose Alternative zur Eröffnungsbilanz- und
 Jahresabschluss-Funktion kommerzieller Dienste. Alle Daten bleiben auf deinem

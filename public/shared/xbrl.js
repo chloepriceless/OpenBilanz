@@ -23,11 +23,11 @@
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = factory(require('./taxonomie.js'), require('./berechnung.js'),
-      require('./skr04.js'));
+      require('./skr04.js'), require('./version.js'));
   } else {
-    root.Xbrl = factory(root.Taxonomie, root.Berechnung, root.SKR04);
+    root.Xbrl = factory(root.Taxonomie, root.Berechnung, root.SKR04, root.Version);
   }
-})(typeof self !== 'undefined' ? self : this, function (Taxonomie, Berechnung, SKR04) {
+})(typeof self !== 'undefined' ? self : this, function (Taxonomie, Berechnung, SKR04, Version) {
   'use strict';
 
   var EBILANZ_NS = 'http://rzf.fin-nrw.de/RMS/EBilanz/2016/XMLSchema';
@@ -215,7 +215,9 @@
     var inst = xbrlInstanz(unternehmen, abschluss);
     var xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
       '<!-- E-Bilanz XBRL-Instanz, Kerntaxonomie ' + Taxonomie.VERSION +
-      ' (Stand ' + Taxonomie.STAND + ') - erzeugt mit OpenBilanz -->\n' +
+      ' (Stand ' + Taxonomie.STAND + ')\n' +
+      '     erzeugt mit ' + Version.signatur() + ' am ' +
+      new Date().toISOString().slice(0, 10) + ' -->\n' +
       inst.zeilen.join('\n').replace(/^  /, '').replace(/\n  /g, '\n');
     return { xml: xml, warnungen: inst.warnungen };
   }
@@ -224,8 +226,9 @@
   function erzeugeEBilanz(unternehmen, abschluss) {
     var inst = xbrlInstanz(unternehmen, abschluss);
     var xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
-      '<!-- E-Bilanz im ELSTER-EBilanz-Container, Kerntaxonomie ' + Taxonomie.VERSION +
-      ' - erzeugt mit OpenBilanz. Übermittlung über ERiC. -->\n' +
+      '<!-- E-Bilanz im ELSTER-EBilanz-Container, Kerntaxonomie ' + Taxonomie.VERSION + '\n' +
+      '     erzeugt mit ' + Version.signatur() + ' am ' +
+      new Date().toISOString().slice(0, 10) + ' - Übermittlung über ERiC. -->\n' +
       '<EBilanz xmlns="' + EBILANZ_NS + '" version="1">\n' +
       '  <stichtag>' + esc(ohneTrenn(inst.stichtag)) + '</stichtag>\n' +
       inst.zeilen.join('\n') + '\n' +

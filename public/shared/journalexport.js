@@ -10,10 +10,12 @@
  * Aufbau aller Formate: siehe DATENFORMATE.md.
  * ========================================================================= */
 (function (root, factory) {
-  var api = factory();
+  var Version = (typeof module !== 'undefined' && module.exports)
+    ? require('./version.js') : root.Version;
+  var api = factory(Version);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.JournalExport = api;
-})(typeof self !== 'undefined' ? self : this, function () {
+})(typeof self !== 'undefined' ? self : this, function (Version) {
   'use strict';
 
   /* CSV-Feld: in "…" einschließen, sobald Sonderzeichen vorkommen. */
@@ -46,6 +48,7 @@
       format: 'openbilanz-journal',
       version: 1,
       exportiertAm: new Date().toISOString(),
+      erzeugtMit: Version.signatur(),
       abschluss: {
         id: a.id || null, bezeichnung: a.bezeichnung || null,
         art: a.art || null, stichtag: a.stichtag || null

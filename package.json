@@ -1,11 +1,12 @@
 {
   "name": "openbilanz",
   "version": "2.0.0",
-  "description": "Lokales Tool zur Erstellung von Eroeffnungsbilanz und Jahresabschluss einer GmbH nach HGB inkl. E-Bilanz-XBRL-Export und Validierung - ohne Steuerberater, ohne ELSTER-Klickerei.",
+  "description": "Lokales Open-Source-Tool zur Vorbereitung von Eroeffnungsbilanz und Jahresabschluss einer GmbH nach HGB inkl. E-Bilanz-XBRL-Export und Validierung gegen die amtliche Taxonomie.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/run.js"
+    "test": "node tests/run.js",
+    "stamp": "node tools/stamp-version.js"
   },
   "keywords": [
     "gmbh", "hgb", "bilanz", "jahresabschluss", "eroeffnungsbilanz",

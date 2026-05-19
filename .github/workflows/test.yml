@@ -1,0 +1,26 @@
+name: Tests
+
+# Läuft NICHT bei jedem Commit. Die Test-Suite wird nur dann ausgeführt, wenn
+# eine Version festgenagelt wird — d. h. ein Tag der Form v* (z. B. v2.0.0)
+# gepusht wird — sowie manuell über den "Run workflow"-Knopf.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Quellcode auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # OpenBilanz hat keine npm-Abhängigkeiten — kein "npm install" nötig.
+      - name: Test-Suite ausführen
+        run: npm test

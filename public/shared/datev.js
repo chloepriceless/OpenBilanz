@@ -15,10 +15,12 @@
  * jahr } oder { fehler: '…' }.
  * ========================================================================= */
 (function (root, factory) {
-  var api = factory();
+  var Version = (typeof module !== 'undefined' && module.exports)
+    ? require('./version.js') : root.Version;
+  var api = factory(Version);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Datev = api;
-})(typeof self !== 'undefined' ? self : this, function () {
+})(typeof self !== 'undefined' ? self : this, function (Version) {
   'use strict';
 
   /* Zerlegt eine DATEV-CSV-Zeile (Trenner ';', Felder optional in "…"). */
@@ -124,7 +126,7 @@
     var berater = String(u.datevBeraterNr || '').replace(/\D/g, '');
     var mandant = String(u.datevMandantNr || '').replace(/\D/g, '');
     var kopf = ['"EXTF"', '700', '21', '"Buchungsstapel"', '13', ts, '', '""',
-      '"OpenBilanz"', '""', berater, mandant, wjBeginn, '4', wjBeginn, bis,
+      q('OpenBilanz v' + Version.app), '""', berater, mandant, wjBeginn, '4', wjBeginn, bis,
       q('OpenBilanz ' + (a.bezeichnung || '')), '""', '1', '', '0', '"EUR"',
       '', '', '', '', '', '', '', '', ''].join(';');
     var spalten = ['Umsatz (ohne Soll/Haben-Kz)', 'Soll/Haben-Kennzeichen', 'WKZ Umsatz',
