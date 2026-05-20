@@ -52,5 +52,64 @@
     });
   }
 
-  return { pruefe: pruefe, anwenden: anwenden, sortiert: sortiert };
+  /* --- Wiederkehrende Buchungen ----------------------------------------
+   * Vorlage erhaelt optional ein Feld
+   *   wiederkehrend: { takt: 'monatlich' | 'quartalsweise' | 'jaehrlich',
+   *                    letzteAusfuehrung: 'YYYY-MM-DD' (optional) }
+   * Wenn letzteAusfuehrung leer ist, wird die Vorlage ab dem ersten Anwenden
+   * faellig - bis dahin ohne Belaestigung.
+   */
+  var MONATE = { monatlich: 1, quartalsweise: 3, jaehrlich: 12 };
+
+  function iso(d) {
+    // toISOString -> 'YYYY-MM-DD'; lokal/UTC unkritisch fuer reine Tagesvergleiche.
+    return d.toISOString().slice(0, 10);
+  }
+  function parseDatum(s) {
+    if (!s) return null;
+    if (s instanceof Date) return isNaN(s.getTime()) ? null : s;
+    var d = new Date(String(s));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function naechsteFaelligkeit(vorlage) {
+    var w = vorlage && vorlage.wiederkehrend;
+    if (!w || !MONATE[w.takt]) return null;
+    var ref = parseDatum(w.letzteAusfuehrung);
+    if (!ref) {
+      // Noch nie ausgefuehrt - faellig "heute" (Aufrufer entscheidet via istFaellig).
+      return iso(new Date());
+    }
+    var d = new Date(ref.getFullYear(), ref.getMonth() + MONATE[w.takt], ref.getDate());
+    return iso(d);
+  }
+
+  function istFaellig(vorlage, heute) {
+    var n = naechsteFaelligkeit(vorlage);
+    if (!n) return false;
+    var h = heute instanceof Date ? iso(heute)
+          : (typeof heute === 'string' && heute ? heute : iso(new Date()));
+    return n <= h;
+  }
+
+  /* Alle faelligen Vorlagen aus einer Liste, plus naechsterTermin als Info. */
+  function faellige(liste, heute) {
+    return (liste || []).map(function (v) {
+      return { vorlage: v, naechsterTermin: naechsteFaelligkeit(v) };
+    }).filter(function (x) { return x.naechsterTermin && istFaellig(x.vorlage, heute); });
+  }
+
+  /* Setzt letzteAusfuehrung auf das angegebene Datum (oder heute) und
+   * gibt die Vorlage zurueck. Aufrufer ist fuer das Persistieren zustaendig. */
+  function markiereAusgefuehrt(vorlage, datum) {
+    if (!vorlage) return vorlage;
+    if (!vorlage.wiederkehrend) return vorlage;
+    var d = parseDatum(datum) || new Date();
+    vorlage.wiederkehrend.letzteAusfuehrung = iso(d);
+    return vorlage;
+  }
+
+  return { pruefe: pruefe, anwenden: anwenden, sortiert: sortiert,
+           naechsteFaelligkeit: naechsteFaelligkeit, istFaellig: istFaellig,
+           faellige: faellige, markiereAusgefuehrt: markiereAusgefuehrt };
 });

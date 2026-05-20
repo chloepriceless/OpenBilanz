@@ -2475,6 +2475,25 @@ function renderBuchhaltung(m) {
     'laufende Buchhaltung. Mit &bdquo;Salden übernehmen&ldquo; werden die Kontensalden in ' +
     'die Positionen der Bilanz/GuV dieses Abschlusses übertragen.</div>';
 
+  // Faellige wiederkehrende Vorlagen (unaufdringliche Hinweisbox)
+  var faelligeListe = Vorlagen.faellige(
+    (S.unternehmen && S.unternehmen.eigeneVorlagen) || [],
+    a.stichtag || undefined
+  );
+  if (faelligeListe.length) {
+    html += '<div class="box box-warn"><b>Wiederkehrende Buchungen fällig</b>' +
+      faelligeListe.length + ' Vorlage(n) sind seit dem letzten Anwenden wieder fällig. ' +
+      'Übernahme legt einen Entwurf ins Formular — Festschreibung wie immer manuell.' +
+      '<ul style="margin-top:8px">';
+    faelligeListe.forEach(function (f, i) {
+      html += '<li>' + esc(f.vorlage.name) + ' · ' + esc(f.vorlage.soll) + ' an ' +
+        esc(f.vorlage.haben) +
+        (f.vorlage.betrag ? ' · ' + geld(f.vorlage.betrag) : '') +
+        ' &nbsp;<span class="btn btn-sm" data-faellig="' + i + '">übernehmen</span></li>';
+    });
+    html += '</ul></div>';
+  }
+
   /* Erfassungsformular */
   SKR04.setEigene((S.unternehmen && S.unternehmen.eigeneKonten) || []);
   var kontoOpt = SKR04.alleKonten().map(function (k) {
@@ -2683,12 +2702,19 @@ function renderBuchhaltung(m) {
   if (vorlagen.length) {
     html += '<table class="liste"><thead><tr><th>Name</th><th>Text</th>' +
       '<th>Soll</th><th>Haben</th><th class="rechts">Betrag</th>' +
-      '<th></th></tr></thead><tbody>';
+      '<th>Wiederkehrend</th><th></th></tr></thead><tbody>';
     vorlagen.forEach(function (v, i) {
+      var w = v.wiederkehrend && v.wiederkehrend.takt;
+      var wText = w ? esc(w) +
+        (v.wiederkehrend.letzteAusfuehrung
+          ? ' · nächste: ' + esc(Vorlagen.naechsteFaelligkeit(v) || '–')
+          : ' · neu')
+        : '—';
       html += '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.text || '') + '</td>' +
         '<td class="mono">' + esc(v.soll) + '</td>' +
         '<td class="mono">' + esc(v.haben) + '</td>' +
         '<td class="rechts mono">' + (v.betrag ? geld(v.betrag) : '—') + '</td>' +
+        '<td>' + wText + '</td>' +
         '<td class="rechts"><span class="btn btn-sm btn-gefahr" data-vorldel="' + i +
         '">löschen</span></td></tr>';
     });
@@ -2702,6 +2728,11 @@ function renderBuchhaltung(m) {
     feldWrap('Default-Betrag', 'optional', '<input class="zahl" id="vorlBetrag" inputmode="decimal">') +
     feldWrap('Soll-Konto', '', '<select id="vorlSoll">' + vorlKontoOpt + '</select>') +
     feldWrap('Haben-Konto', '', '<select id="vorlHaben">' + vorlKontoOpt + '</select>') +
+    feldWrap('Wiederkehrend', 'optional', '<select id="vorlTakt">' +
+      '<option value="">— nein —</option>' +
+      '<option value="monatlich">monatlich</option>' +
+      '<option value="quartalsweise">quartalsweise</option>' +
+      '<option value="jaehrlich">jährlich</option></select>') +
     '<div style="display:flex;align-items:flex-end"><button class="btn" id="vorlAdd">' +
     'Vorlage speichern</button></div>' +
     '</div></div>';
@@ -2831,22 +2862,44 @@ function renderBuchhaltung(m) {
       });
     };
   });
-  // Vorlage auf das Erfassungsformular anwenden
-  var buVorl = m.querySelector('#buVorlage');
-  if (buVorl) buVorl.onchange = function () {
-    var i = parseInt(buVorl.value, 10);
-    if (!isFinite(i)) return;
-    var v = vorlagen[i];
+  // Hilfsfunktion: Vorlage als Buchungsentwurf ins Formular schreiben
+  function uebernehmeVorlage(v) {
     if (!v) return;
-    var b = Vorlagen.anwenden(v, document.getElementById('buDatum').value || a.stichtag || '');
+    var datumF = document.getElementById('buDatum');
+    var datum = (datumF && datumF.value) || a.stichtag || '';
+    var b = Vorlagen.anwenden(v, datum);
     document.getElementById('buText').value = b.text || '';
     document.getElementById('buSoll').value = b.soll || document.getElementById('buSoll').value;
     document.getElementById('buHaben').value = b.haben || document.getElementById('buHaben').value;
     if (b.betrag) document.getElementById('buBetrag').value = b.betrag;
-    if (b.datum) document.getElementById('buDatum').value = b.datum;
-    buVorl.selectedIndex = 0;  // zurücksetzen
+    if (b.datum && datumF) datumF.value = b.datum;
+    // Bei wiederkehrenden Vorlagen merken, wann zuletzt angewendet wurde.
+    if (v.wiederkehrend) {
+      Vorlagen.markiereAusgefuehrt(v, datum);
+      Store.speichereUnternehmen(S.unternehmen).then(function (g) {
+        if (g && !g.fehler) S.unternehmen = g;
+      });
+    }
     document.getElementById('buBetrag').focus();
+  }
+
+  // Vorlage auf das Erfassungsformular anwenden (Dropdown im Formular)
+  var buVorl = m.querySelector('#buVorlage');
+  if (buVorl) buVorl.onchange = function () {
+    var i = parseInt(buVorl.value, 10);
+    if (!isFinite(i)) return;
+    uebernehmeVorlage(vorlagen[i]);
+    buVorl.selectedIndex = 0;
   };
+  // "Übernehmen"-Knopf in der Fälligkeits-Hinweisbox
+  m.querySelectorAll('[data-faellig]').forEach(function (el) {
+    el.onclick = function () {
+      var idx = parseInt(el.dataset.faellig, 10);
+      if (!isFinite(idx) || !faelligeListe[idx]) return;
+      uebernehmeVorlage(faelligeListe[idx].vorlage);
+      renderBuchhaltung(m);
+    };
+  });
   var vorlAdd = m.querySelector('#vorlAdd');
   if (vorlAdd) vorlAdd.onclick = function () {
     var v = {
@@ -2857,6 +2910,8 @@ function renderBuchhaltung(m) {
       haben: document.getElementById('vorlHaben').value
     };
     if (v.betrag) v.betrag = Berechnung.num(v.betrag);
+    var takt = document.getElementById('vorlTakt').value;
+    if (takt) v.wiederkehrend = { takt: takt };
     var p = Vorlagen.pruefe(v);
     if (!p.ok) { alert('Vorlage ungültig:\n• ' + p.fehler.join('\n• ')); return; }
     if (!S.unternehmen) { alert('Bitte zuerst die Unternehmensdaten anlegen.'); return; }

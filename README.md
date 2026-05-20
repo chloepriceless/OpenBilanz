@@ -157,6 +157,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Nebenkosten des Geldverkehrs** — eigenes Konto SKR04 6855 (Bank-, Depot-, Ordergebühren) statt Sammelposten 6300 | 🟡 |
 | **Befehlssuche (Cmd/Ctrl+K)** — Fuzzy-Sprungleiste zu Reitern, Abschlüssen, SKR04-Konten und Glossarbegriffen | 🟡 |
 | **Buchungsvorlagen** — häufige Geschäftsvorfälle als Template (Name, Text, Soll, Haben, optionaler Default-Betrag) | 🟡 |
+| **Wiederkehrende Buchungen** — Vorlagen mit Takt (monatlich/quartalsweise/jährlich), Fälligkeits-Hinweisbox in der Buchhaltung | 🟡 |
 
 ### Zwei Erfassungswege
 

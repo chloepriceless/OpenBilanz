@@ -1279,6 +1279,44 @@ test('Vorlagen: sortiert alphabetisch nach Name', function () {
   eq(s[0].name, 'Adobe', 'A zuerst');
   eq(s[2].name, 'Zebra', 'Z zuletzt');
 });
+test('Vorlagen: naechsteFaelligkeit folgt dem Takt', function () {
+  var v = { name: 'X', soll: '6805', haben: '1800',
+    wiederkehrend: { takt: 'monatlich', letzteAusfuehrung: '2026-04-15' } };
+  eq(Vorlagen.naechsteFaelligkeit(v), '2026-05-15', 'monatlich');
+  v.wiederkehrend.takt = 'quartalsweise';
+  eq(Vorlagen.naechsteFaelligkeit(v), '2026-07-15', 'quartalsweise');
+  v.wiederkehrend.takt = 'jaehrlich';
+  eq(Vorlagen.naechsteFaelligkeit(v), '2027-04-15', 'jährlich');
+});
+test('Vorlagen: istFaellig vergleicht naechsten Termin mit heute', function () {
+  var v = { name: 'X', soll: '6805', haben: '1800',
+    wiederkehrend: { takt: 'monatlich', letzteAusfuehrung: '2026-04-15' } };
+  ok(!Vorlagen.istFaellig(v, '2026-05-01'), 'vor Termin: nicht fällig');
+  ok(Vorlagen.istFaellig(v, '2026-05-15'), 'am Termin: fällig');
+  ok(Vorlagen.istFaellig(v, '2026-06-30'), 'nach Termin: fällig');
+});
+test('Vorlagen: ohne wiederkehrend-Flag nicht fällig', function () {
+  ok(!Vorlagen.istFaellig({ name: 'X' }, '2026-05-20'), 'keine Wiederholung');
+});
+test('Vorlagen: ohne letzteAusfuehrung sofort fällig (Erstaufruf)', function () {
+  var v = { name: 'X', wiederkehrend: { takt: 'monatlich' } };
+  ok(Vorlagen.istFaellig(v, '2026-05-20'), 'erstmalige Fälligkeit');
+});
+test('Vorlagen: faellige filtert nur den fälligen Teil', function () {
+  var liste = [
+    { name: 'A', wiederkehrend: { takt: 'monatlich', letzteAusfuehrung: '2026-04-01' } },
+    { name: 'B', wiederkehrend: { takt: 'monatlich', letzteAusfuehrung: '2026-05-10' } },
+    { name: 'C' }
+  ];
+  var r = Vorlagen.faellige(liste, '2026-05-15');
+  eq(r.length, 1, 'nur A fällig');
+  eq(r[0].vorlage.name, 'A', '');
+});
+test('Vorlagen: markiereAusgefuehrt setzt letzteAusfuehrung', function () {
+  var v = { name: 'X', wiederkehrend: { takt: 'monatlich' } };
+  Vorlagen.markiereAusgefuehrt(v, '2026-05-20');
+  eq(v.wiederkehrend.letzteAusfuehrung, '2026-05-20', '');
+});
 
 /* ---- Lauf ------------------------------------------------------------- */
 /* Sequenziell laufen lassen, async-Tests (Promise-Rückgabewert) werden
