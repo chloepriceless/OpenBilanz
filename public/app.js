@@ -2155,14 +2155,41 @@ function eRechnungVorschau(m, a, kontoOpt, parsed) {
   }
   var r = parsed.rechnung;
   var aufwOpt = kontoOpt.replace('value="6300"', 'value="6300" selected');
+  var profilZeile = r.profil
+    ? '<tr><td>Profil</td><td>' + esc(r.profil) + '</td></tr>' : '';
+  var warnBox = '';
+  if (r.warnungen && r.warnungen.length) {
+    warnBox = '<div class="box box-warn" style="margin-top:10px"><b>Plausibilität:</b>' +
+      '<ul style="margin:6px 0 0 18px">' +
+      r.warnungen.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') +
+      '</ul></div>';
+  }
+  var posBlock = '';
+  if (r.positionen && r.positionen.length) {
+    posBlock = '<details style="margin-top:10px"><summary>' + r.positionen.length +
+      ' Position(en)</summary>' +
+      '<table class="liste"><thead><tr><th>Bezeichnung</th>' +
+      '<th class="rechts">Menge</th><th>Einheit</th>' +
+      '<th class="rechts">Einzelpreis</th><th class="rechts">Netto</th>' +
+      '<th class="rechts">USt %</th></tr></thead><tbody>' +
+      r.positionen.map(function (p) {
+        return '<tr><td>' + esc(p.bezeichnung || '—') + '</td>' +
+          '<td class="rechts mono">' + (p.menge || 0) + '</td>' +
+          '<td class="mono">' + esc(p.einheit || '') + '</td>' +
+          '<td class="rechts mono">' + geld(p.einzelpreis) + '</td>' +
+          '<td class="rechts mono">' + geld(p.netto) + '</td>' +
+          '<td class="rechts mono">' + (p.ustSatz || 0) + '</td></tr>';
+      }).join('') + '</tbody></table></details>';
+  }
   box.innerHTML = '<table class="liste" style="margin-top:10px"><tbody>' +
     '<tr><td>Rechnungsnummer</td><td class="mono">' + esc(r.nummer || '—') + '</td></tr>' +
     '<tr><td>Rechnungsdatum</td><td class="mono">' + datumDe(r.datum) + '</td></tr>' +
     '<tr><td>Rechnungssteller</td><td>' + esc(r.verkaeufer || '—') + '</td></tr>' +
+    profilZeile +
     '<tr><td>Nettobetrag</td><td class="rechts mono">' + geld(r.netto) + '</td></tr>' +
     '<tr><td>Umsatzsteuer</td><td class="rechts mono">' + geld(r.ust) + '</td></tr>' +
     '<tr><td>Bruttobetrag</td><td class="rechts mono">' + geld(r.brutto) + '</td></tr>' +
-    '</tbody></table>' +
+    '</tbody></table>' + warnBox + posBlock +
     '<div class="gitter g2" style="margin-top:10px">' +
     feldWrap('Aufwandskonto', 'Soll-Konto für den Nettobetrag',
       '<select id="erKonto">' + aufwOpt + '</select>') +
@@ -2526,10 +2553,13 @@ function renderBuchhaltung(m) {
 
   /* E-Rechnung (XRechnung / ZUGFeRD) */
   html += '<div class="karte"><h2>E-Rechnung (XRechnung / ZUGFeRD)</h2>' +
-    '<div class="karte-hint">Eingehende E-Rechnung als XML einlesen (XRechnung ' +
-    'oder die XML aus einer ZUGFeRD-PDF). Die Beträge werden ausgelesen und als ' +
-    'Eingangsrechnung gegen Verbindlichkeiten (3300) gebucht.</div>' +
-    '<input type="file" id="erDatei" accept=".xml,text/xml,application/xml">' +
+    '<div class="karte-hint">Eingehende E-Rechnung als XML oder als ZUGFeRD-/' +
+    'Factur-X-PDF einlesen. Profil, Beträge und Positionen werden ausgelesen, ' +
+    'Plausi (Brutto = Netto + USt, Summe Positionen = Netto, Pflichtfelder) ' +
+    'geprüft, und die Eingangsrechnung wird gegen Verbindlichkeiten (3300) ' +
+    'gebucht.</div>' +
+    '<input type="file" id="erDatei" ' +
+    'accept=".xml,.pdf,text/xml,application/xml,application/pdf">' +
     '<div id="erVorschau"></div></div>';
 
   m.innerHTML = html;
@@ -2773,9 +2803,32 @@ function renderBuchhaltung(m) {
     var f = erIn.files && erIn.files[0];
     if (!f) return;
     var rd = new FileReader();
-    rd.onload = function () { eRechnungVorschau(m, a, kontoOpt, Importe.parseERechnung(rd.result)); };
+    /* PDF (ZUGFeRD/Factur-X) am Dateinamen oder MIME-Typ erkennen — der
+     * Stream wird dann binär gelesen, das PDF/A-3-Attachment extrahiert und
+     * die eingebettete XML an parseERechnung weitergereicht. Alles andere
+     * (.xml) wird wie bisher als Text gelesen. */
+    var istPdf = /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
-    rd.readAsText(f);
+    if (istPdf) {
+      rd.onload = function () {
+        var box = m.querySelector('#erVorschau');
+        if (box) box.innerHTML = '<div class="karte-hint" style="margin-top:10px">' +
+          'PDF wird entpackt &hellip;</div>';
+        Importe.parseERechnungPdf(new Uint8Array(rd.result)).then(function (parsed) {
+          eRechnungVorschau(m, a, kontoOpt, parsed);
+        }, function (err) {
+          eRechnungVorschau(m, a, kontoOpt,
+            { fehler: 'PDF-Anhang konnte nicht entpackt werden: ' +
+                      (err && err.message || err) });
+        });
+      };
+      rd.readAsArrayBuffer(f);
+    } else {
+      rd.onload = function () {
+        eRechnungVorschau(m, a, kontoOpt, Importe.parseERechnung(rd.result));
+      };
+      rd.readAsText(f);
+    }
   };
 }
 

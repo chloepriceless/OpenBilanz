@@ -130,7 +130,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Bankimport MT940** — Kontoauszüge im SWIFT-Format MT940 | 🟡 |
 | **UStVA-Sonderfälle** — Soll-/Ist-Versteuerung, Kleinunternehmer § 19, Reverse-Charge § 13b, steuerfreie Umsätze § 4 | 🟡 |
 | **Broker-Import** — Interactive-Brokers-Flex-Berichte (Trades, Dividenden) | 🟡 |
-| **E-Rechnung** — XRechnung / ZUGFeRD einlesen und verbuchen | 🟡 |
+| **E-Rechnung empfangen** — XRechnung-XML und ZUGFeRD-/Factur-X-PDF einlesen (CII + UBL, eingebettete XML aus PDF/A-3 entpacken), Profil erkennen (MINIMUM/BASIC/EN 16931/XRechnung), Positionen und Plausi-Checks (Brutto = Netto + USt, Summe Positionen = Netto, Pflichtfelder), Übernahme als Eingangsrechnung gegen Verbindlichkeiten (3300) | 🟡 |
 | **BWA** — betriebswirtschaftliche Auswertung mit Kennzahlen | 🟡 |
 | **Kapitalertragsteuer-Assistent** — 25 % KapSt + Soli auf Ausschüttungen | 🟡 |
 | **GoBD-Verfahrensdokumentation** — geführter Fragebogen → Dokument | 🟡 |

@@ -687,11 +687,194 @@ test('Bankimport: nutzerdefinierte Kontierungsregel hat Vorrang', function () {
      'Rückfall auf Umsatzerlöse bei einem Eingang');
 });
 
-/* ---- Lauf ------------------------------------------------------------- */
-console.log('OpenBilanz - Test-Suite\n');
-tests.forEach(function (t) {
-  try { t.fn(); pass++; console.log('  OK    ' + t.name); }
-  catch (e) { fail++; console.log('  FAIL  ' + t.name + '\n        -> ' + e.message); }
+/* ---- E-Rechnung (XRechnung / ZUGFeRD) -------------------------------- */
+/* Fixture: UBL-XRechnung 3.x (CIUS EN 16931) mit einer Position. */
+var FIXTURE_UBL = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"',
+  ' xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"',
+  ' xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">',
+  '<cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_3.0</cbc:CustomizationID>',
+  '<cbc:ID>RE-2026-0815</cbc:ID>',
+  '<cbc:IssueDate>2026-05-12</cbc:IssueDate>',
+  '<cac:AccountingSupplierParty><cac:Party>',
+  '<cac:PartyLegalEntity><cbc:RegistrationName>Mustermann Beratung GmbH</cbc:RegistrationName></cac:PartyLegalEntity>',
+  '</cac:Party></cac:AccountingSupplierParty>',
+  '<cac:TaxTotal><cbc:TaxAmount currencyID="EUR">19.00</cbc:TaxAmount></cac:TaxTotal>',
+  '<cac:LegalMonetaryTotal>',
+  '<cbc:TaxExclusiveAmount currencyID="EUR">100.00</cbc:TaxExclusiveAmount>',
+  '<cbc:TaxInclusiveAmount currencyID="EUR">119.00</cbc:TaxInclusiveAmount>',
+  '<cbc:PayableAmount currencyID="EUR">119.00</cbc:PayableAmount>',
+  '</cac:LegalMonetaryTotal>',
+  '<cac:InvoiceLine>',
+  '<cbc:ID>1</cbc:ID>',
+  '<cbc:InvoicedQuantity unitCode="HUR">2</cbc:InvoicedQuantity>',
+  '<cbc:LineExtensionAmount currencyID="EUR">100.00</cbc:LineExtensionAmount>',
+  '<cac:Item><cbc:Name>Beratungsleistung</cbc:Name>',
+  '<cac:ClassifiedTaxCategory><cbc:Percent>19.00</cbc:Percent></cac:ClassifiedTaxCategory></cac:Item>',
+  '<cac:Price><cbc:PriceAmount currencyID="EUR">50.00</cbc:PriceAmount></cac:Price>',
+  '</cac:InvoiceLine>',
+  '</Invoice>'].join('\n');
+
+/* Fixture: CII Factur-X BASIC, eine Position, Verkäufer mit Umlaut. */
+var FIXTURE_CII = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"',
+  ' xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"',
+  ' xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">',
+  '<rsm:ExchangedDocumentContext>',
+  '<ram:GuidelineSpecifiedDocumentContextParameter>',
+  '<ram:ID>urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:basic</ram:ID>',
+  '</ram:GuidelineSpecifiedDocumentContextParameter>',
+  '</rsm:ExchangedDocumentContext>',
+  '<rsm:ExchangedDocument>',
+  '<ram:ID>2026-CII-007</ram:ID>',
+  '<ram:IssueDateTime><udt:DateTimeString format="102">20260512</udt:DateTimeString></ram:IssueDateTime>',
+  '</rsm:ExchangedDocument>',
+  '<rsm:SupplyChainTradeTransaction>',
+  '<ram:IncludedSupplyChainTradeLineItem>',
+  '<ram:SpecifiedTradeProduct><ram:Name>Schraube M6 x 30</ram:Name></ram:SpecifiedTradeProduct>',
+  '<ram:SpecifiedLineTradeAgreement>',
+  '<ram:NetPriceProductTradePrice><ram:ChargeAmount>0.10</ram:ChargeAmount></ram:NetPriceProductTradePrice>',
+  '</ram:SpecifiedLineTradeAgreement>',
+  '<ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="H87">100</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery>',
+  '<ram:SpecifiedLineTradeSettlement>',
+  '<ram:ApplicableTradeTax><ram:RateApplicablePercent>19.00</ram:RateApplicablePercent></ram:ApplicableTradeTax>',
+  '<ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>10.00</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation>',
+  '</ram:SpecifiedLineTradeSettlement>',
+  '</ram:IncludedSupplyChainTradeLineItem>',
+  '<ram:ApplicableHeaderTradeAgreement>',
+  '<ram:SellerTradeParty><ram:Name>Eisenwaren Bäcker GmbH</ram:Name></ram:SellerTradeParty>',
+  '</ram:ApplicableHeaderTradeAgreement>',
+  '<ram:ApplicableHeaderTradeSettlement>',
+  '<ram:SpecifiedTradeSettlementHeaderMonetarySummation>',
+  '<ram:TaxBasisTotalAmount>10.00</ram:TaxBasisTotalAmount>',
+  '<ram:TaxTotalAmount currencyID="EUR">1.90</ram:TaxTotalAmount>',
+  '<ram:GrandTotalAmount>11.90</ram:GrandTotalAmount>',
+  '</ram:SpecifiedTradeSettlementHeaderMonetarySummation>',
+  '</ram:ApplicableHeaderTradeSettlement>',
+  '</rsm:SupplyChainTradeTransaction>',
+  '</rsm:CrossIndustryInvoice>'].join('\n');
+
+test('E-Rechnung: UBL-XRechnung 3.x — Header, Profil, Position', function () {
+  var r = Importe.parseERechnung(FIXTURE_UBL).rechnung;
+  eq(r.nummer, 'RE-2026-0815', 'Rechnungsnummer');
+  eq(r.datum, '2026-05-12', 'Rechnungsdatum');
+  eq(r.verkaeufer, 'Mustermann Beratung GmbH', 'Verkäufer (Legal Entity)');
+  eq(r.netto, 100, 'Netto');
+  eq(r.ust, 19, 'USt');
+  eq(r.brutto, 119, 'Brutto');
+  ok(/XRechnung 3/.test(r.profil), 'Profil als XRechnung 3.x erkannt');
+  eq(r.positionen.length, 1, 'eine Position');
+  eq(r.positionen[0].bezeichnung, 'Beratungsleistung', 'Positions-Bezeichnung');
+  eq(r.positionen[0].menge, 2, 'Menge');
+  eq(r.positionen[0].einheit, 'HUR', 'Einheit (Stunden)');
+  eq(r.positionen[0].einzelpreis, 50, 'Einzelpreis');
+  eq(r.positionen[0].netto, 100, 'Positions-Netto');
+  eq(r.positionen[0].ustSatz, 19, 'Steuersatz');
+  eq(r.warnungen.length, 0, 'keine Plausi-Warnungen');
 });
-console.log('\n' + pass + ' bestanden, ' + fail + ' fehlgeschlagen.');
-process.exit(fail ? 1 : 0);
+
+test('E-Rechnung: CII Factur-X BASIC — Header, Profil, Position, Umlaut', function () {
+  var r = Importe.parseERechnung(FIXTURE_CII).rechnung;
+  eq(r.nummer, '2026-CII-007', 'Rechnungsnummer');
+  eq(r.datum, '2026-05-12', 'Rechnungsdatum');
+  eq(r.verkaeufer, 'Eisenwaren Bäcker GmbH', 'Verkäufer mit Umlaut');
+  eq(r.netto, 10, 'Netto');
+  eq(r.ust, 1.9, 'USt');
+  eq(r.brutto, 11.9, 'Brutto');
+  ok(/BASIC/.test(r.profil), 'Profil als Factur-X BASIC erkannt');
+  eq(r.positionen.length, 1, 'eine Position');
+  eq(r.positionen[0].bezeichnung, 'Schraube M6 x 30', 'Positions-Bezeichnung');
+  eq(r.positionen[0].menge, 100, 'Menge');
+  eq(r.positionen[0].einheit, 'H87', 'Einheit (Stück)');
+  eq(r.positionen[0].einzelpreis, 0.1, 'Einzelpreis');
+  eq(r.warnungen.length, 0, 'keine Plausi-Warnungen');
+});
+
+test('E-Rechnung: Plausi schlägt an, wenn Brutto ≠ Netto + USt', function () {
+  /* Brutto absichtlich falsch: 120 statt 119. */
+  var xml = FIXTURE_UBL
+    .replace('<cbc:TaxInclusiveAmount currencyID="EUR">119.00</cbc:TaxInclusiveAmount>',
+             '<cbc:TaxInclusiveAmount currencyID="EUR">120.00</cbc:TaxInclusiveAmount>')
+    .replace('<cbc:PayableAmount currencyID="EUR">119.00</cbc:PayableAmount>',
+             '<cbc:PayableAmount currencyID="EUR">120.00</cbc:PayableAmount>');
+  var r = Importe.parseERechnung(xml).rechnung;
+  ok(r.warnungen.some(function (w) { return /Brutto/.test(w); }),
+     'Brutto-Mismatch-Warnung gesetzt');
+});
+
+test('E-Rechnung: kein XML → klare Fehlermeldung', function () {
+  var r = Importe.parseERechnung('Das ist kein XML');
+  ok(r.fehler && /XML/.test(r.fehler), 'Fehler ausgewiesen');
+});
+
+test('E-Rechnung: XML ohne Rechnungsbeträge → Fehlermeldung', function () {
+  var r = Importe.parseERechnung('<root><foo>bar</foo></root>');
+  ok(r.fehler && /Rechnungsbeträge/.test(r.fehler), 'Fehler wegen fehlender Summen');
+});
+
+test('E-Rechnung: ZUGFeRD-PDF (deflate-komprimierte CII-XML) wird extrahiert', function () {
+  var zlib = require('zlib');
+  var compressed = zlib.deflateSync(Buffer.from(FIXTURE_CII, 'utf8'));
+  var pre = Buffer.from(
+    '%PDF-1.7\n' +
+    '1 0 obj\n' +
+    '<< /Type /Filespec /F (factur-x.xml) /UF (factur-x.xml) ' +
+    '/EF << /F 2 0 R /UF 2 0 R >> /AFRelationship /Source >>\n' +
+    'endobj\n' +
+    '2 0 obj\n' +
+    '<< /Type /EmbeddedFile /Subtype /text#2Fxml /Length ' + compressed.length +
+    ' /Filter /FlateDecode >>\nstream\n', 'latin1');
+  var post = Buffer.from('\nendstream\nendobj\n%%EOF\n', 'latin1');
+  var pdf = Buffer.concat([pre, compressed, post]);
+  return Importe.parseERechnungPdf(pdf).then(function (r) {
+    ok(!r.fehler, 'kein Fehler: ' + (r.fehler || ''));
+    eq(r.rechnung.nummer, '2026-CII-007', 'Rechnungsnummer aus eingebetteter XML');
+    eq(r.rechnung.verkaeufer, 'Eisenwaren Bäcker GmbH', 'Umlaut nach Inflate korrekt');
+    ok(/BASIC/.test(r.rechnung.profil), 'Profil aus PDF-Anhang erkannt');
+  });
+});
+
+test('E-Rechnung: PDF ohne EmbeddedFile → Fehlermeldung', function () {
+  var pdf = Buffer.from(
+    '%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n', 'latin1');
+  return Importe.parseERechnungPdf(pdf).then(function (r) {
+    ok(r.fehler && /EmbeddedFile|XML/.test(r.fehler), 'Fehler ohne Anhang');
+  });
+});
+
+test('E-Rechnung: Bytes ohne PDF-Magic → klare Fehlermeldung', function () {
+  return Importe.parseERechnungPdf(Buffer.from('Hello, world', 'latin1')).then(function (r) {
+    ok(r.fehler && /PDF/.test(r.fehler), 'Fehler wegen fehlender Magic-Bytes');
+  });
+});
+
+/* ---- Lauf ------------------------------------------------------------- */
+/* Sequenziell laufen lassen, async-Tests (Promise-Rückgabewert) werden
+ * abgewartet, ohne dass synchrone Tests darauf umgeschrieben werden müssen. */
+console.log('OpenBilanz - Test-Suite\n');
+(function run() {
+  var idx = 0;
+  function step() {
+    if (idx >= tests.length) {
+      console.log('\n' + pass + ' bestanden, ' + fail + ' fehlgeschlagen.');
+      process.exit(fail ? 1 : 0);
+    }
+    var t = tests[idx++];
+    var r;
+    try { r = t.fn(); }
+    catch (e) {
+      fail++; console.log('  FAIL  ' + t.name + '\n        -> ' + e.message);
+      return step();
+    }
+    if (r && typeof r.then === 'function') {
+      r.then(function () { pass++; console.log('  OK    ' + t.name); step(); },
+             function (e) { fail++; console.log('  FAIL  ' + t.name +
+               '\n        -> ' + (e && e.message || e)); step(); });
+    } else {
+      pass++; console.log('  OK    ' + t.name); step();
+    }
+  }
+  step();
+})();
