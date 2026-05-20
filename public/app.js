@@ -3996,7 +3996,7 @@ function renderHilfe(m) {
      ['6400', '1800', 'Versicherungsbeitrag gezahlt'],
      ['6825', '1800', 'Rechts- und Beratungskosten (Anwalt, Steuerberater)'],
      ['6650', '1800', 'Reisekosten gezahlt'],
-     ['6300', '1800', 'Bankgebühren / Kontoführung'],
+     ['6855', '1800', 'Bankgebühren, Kontoführung, Depotgebühren (Nebenkosten Geldverkehr)'],
      ['6300', '3300', 'Lieferantenrechnung erhalten (noch offen)'],
      ['3300', '1800', 'Lieferantenrechnung bezahlt'],
      ['1800', '7100', 'Zinsen von der Bank erhalten'],
@@ -4029,7 +4029,7 @@ function renderHilfe(m) {
      ['7210', '1510', 'Abwertung zum Stichtag — Kurswert unter Anschaffungskosten (§ 253 Abs. 4 HGB)'],
      ['1800', '7000', 'Dividende / Beteiligungsertrag gutgeschrieben'],
      ['1800', '7100', 'Zinserträge (Anleihen, Tages- oder Festgeld)'],
-     ['6300', '1800', 'Depot-, Order- oder sonstige Bankgebühren']]);
+     ['6855', '1800', 'Depot-, Order- oder sonstige Bankgebühren (Nebenkosten Geldverkehr)']]);
 
   html += fall('6a. Stillhaltergeschäfte und Optionsprämien',
     'Beim Stillhaltergeschäft (Verkauf einer Option) vereinnahmt die GmbH die Prämie ' +

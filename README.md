@@ -154,6 +154,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Stillhaltergeschäfte & Optionsprämien** — Buchungshilfe inkl. Drohverlustrückstellung (§ 249 Abs. 1 HGB) | 🟡 |
 | **Fremdwährung & Stichtagsbewertung (§ 256a HGB)** — Helper für kurzfristig/langfristig, Buchungshilfe-Abschnitt | 🟡 |
 | **Termingeschäfte (Futures/CFD)** — Buchungshilfe Variation-Margin-Workflow + § 15 Abs. 4 EStG-Hinweis | 🟡 |
+| **Nebenkosten des Geldverkehrs** — eigenes Konto SKR04 6855 (Bank-, Depot-, Ordergebühren) statt Sammelposten 6300 | 🟡 |
 
 ### Zwei Erfassungswege
 

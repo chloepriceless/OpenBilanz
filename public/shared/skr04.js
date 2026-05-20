@@ -156,6 +156,7 @@
     { nr: '6825', name: 'Rechts- und Beratungskosten', seite: 'AUFWAND', kat: 'sonstaufwand' },
     { nr: '6827', name: 'Abschluss- und Prüfungskosten', seite: 'AUFWAND', kat: 'sonstaufwand' },
     { nr: '6830', name: 'Buchführungskosten', seite: 'AUFWAND', kat: 'sonstaufwand' },
+    { nr: '6855', name: 'Nebenkosten des Geldverkehrs (Bank-/Depotgebühren, Spesen)', seite: 'AUFWAND', kat: 'sonstaufwand', vv: true },
     { nr: '6900', name: 'Verluste aus dem Abgang von Anlagevermögen', seite: 'AUFWAND', kat: 'sonstaufwand', vv: true },
     { nr: '6905', name: 'Verluste aus dem Abgang von Umlaufvermögen', seite: 'AUFWAND', kat: 'sonstaufwand', vv: true },
 

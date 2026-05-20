@@ -191,6 +191,12 @@ test('Prüfung: Vorjahresabweichung über 20 % nur mit Vorjahr', function () {
 });
 
 /* ---- SKR04-Kontenmapping (Integritaet) ------------------------------- */
+test('SKR04: 6855 (Nebenkosten Geldverkehr) ist vorhanden', function () {
+  var k = SKR04.kontoFinden('6855');
+  ok(k, 'Konto 6855 fehlt');
+  eq(k.seite, 'AUFWAND', 'seite');
+  eq(k.kat, 'sonstaufwand', 'kat');
+});
 test('SKR04: jedes Konto-pos ist eine gueltige HGB-Position', function () {
   var alle = Positionen.AKTIVA.concat(Positionen.PASSIVA);
   SKR04.KONTEN.forEach(function (k) {
