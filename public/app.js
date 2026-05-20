@@ -1142,6 +1142,16 @@ function renderEditor(m) {
       '<div id="guvBox">' + guvTabelle(a) + '</div></div>';
   }
 
+  /* Vorjahresvergleich (Diff-View) */
+  if (!istEB) {
+    html += '<div class="karte" id="vergleichKarte"><h2>Vorjahresvergleich ' +
+      '<span class="reg">&middot; § 265 Abs. 2 HGB</span></h2>' +
+      '<div class="karte-hint">Δ-Übersicht zwischen Vorjahr und aktuellem Abschluss. ' +
+      'Wesentliche Abweichungen sind im Anhang zu erläutern.</div>' +
+      '<div id="vergleichBox"><i>Verknüpfen Sie unter „Eckdaten" einen Vorjahres-' +
+      'Abschluss, dann erscheint hier die Δ-Tabelle.</i></div></div>';
+  }
+
   /* Anhang */
   html += anhangKarte(a);
 
@@ -1369,7 +1379,102 @@ function aktualisiereStatus() {
       : '';
   }
   renderStatusbox(pr);
+  aktualisiereVergleichBox();
 }
+
+/* Befüllt die Vorjahresvergleichs-Karte. Funktioniert nur, wenn ein
+ * Vorjahres-Abschluss verknüpft und nachgeladen wurde. */
+function aktualisiereVergleichBox() {
+  var box = document.getElementById('vergleichBox');
+  if (!box) return;
+  var a = S.aktiv, vj = (S.vorjahr && S.vorjahr.id === a.vorjahrId) ? S.vorjahr : null;
+  if (!a.vorjahrId) {
+    box.innerHTML = '<i>Verknüpfen Sie unter „Eckdaten" einen Vorjahres-Abschluss, ' +
+      'dann erscheint hier die Δ-Tabelle.</i>';
+    return;
+  }
+  if (!vj) {
+    box.innerHTML = '<i>Vorjahres-Abschluss wird geladen …</i>';
+    return;
+  }
+  var r  = Berechnung.berechne(a);
+  var rv = Berechnung.berechne(vj);
+
+  function pfeil(d) {
+    if (Math.abs(d) < 0.005) return '<span style="color:var(--ink-mut)">—</span>';
+    return d > 0
+      ? '<span style="color:#5dc98f">▲</span>'
+      : '<span style="color:#c14545">▼</span>';
+  }
+  function prozent(neu, alt) {
+    if (Math.abs(alt) < 0.005) return alt === 0 && neu === 0 ? '—' : 'neu';
+    var p = ((neu - alt) / Math.abs(alt)) * 100;
+    return (p > 0 ? '+' : '') + (Math.round(p * 10) / 10) + ' %';
+  }
+  function row(label, alt, neu) {
+    var d = neu - alt;
+    if (Math.abs(alt) < 0.005 && Math.abs(neu) < 0.005) return '';
+    return '<tr><td>' + esc(label) + '</td>' +
+      '<td class="rechts mono">' + geld(alt) + '</td>' +
+      '<td class="rechts mono">' + geld(neu) + '</td>' +
+      '<td class="rechts mono">' + geld(d) + '</td>' +
+      '<td class="rechts mono">' + prozent(neu, alt) + '</td>' +
+      '<td class="rechts">' + pfeil(d) + '</td></tr>';
+  }
+  function tabelle(titel, eintraege) {
+    if (!eintraege.length) return '';
+    return '<h3 style="margin-top:14px">' + esc(titel) + '</h3>' +
+      '<table class="liste"><thead><tr><th>Position</th>' +
+      '<th class="rechts">Vorjahr</th><th class="rechts">Aktuell</th>' +
+      '<th class="rechts">Δ EUR</th><th class="rechts">Δ %</th><th></th>' +
+      '</tr></thead><tbody>' + eintraege.join('') + '</tbody></table>';
+  }
+
+  // Bilanz-Aktiva
+  var aktiva = [], passiva = [], guv = [];
+  function durchlaufe(baum, ergebnis, pruefer) {
+    baum.forEach(function (p) {
+      if (p.id) {
+        var v = pruefer(p.id);
+        ergebnis.push(row(p.label || p.id, v.alt, v.neu));
+      }
+      if (p.kinder) durchlaufe(p.kinder, ergebnis, pruefer);
+    });
+  }
+  durchlaufe(Positionen.AKTIVA, aktiva, function (id) {
+    return { alt: rv.bilanz.aktiva[id] || 0, neu: r.bilanz.aktiva[id] || 0 };
+  });
+  durchlaufe(Positionen.PASSIVA, passiva, function (id) {
+    return { alt: rv.bilanz.passiva[id] || 0, neu: r.bilanz.passiva[id] || 0 };
+  });
+  // GuV-Positionen je Verfahren
+  var verf = r.guv.verfahren;
+  var guvBaum = { GKV: Positionen.GUV_GKV, UKV: Positionen.GUV_UKV,
+                  KLEINST: Positionen.GUV_KLEINST }[verf] || [];
+  if (rv.guv.verfahren === verf) {
+    guvBaum.forEach(function (p) {
+      if (!p.id) return;
+      var alt = rv.guv.werte[p.id] || 0, neu = r.guv.werte[p.id] || 0;
+      var z = row(p.label || p.id, alt, neu);
+      if (z) guv.push(z);
+    });
+  } else {
+    guv.push('<tr><td colspan="6"><i>Vorjahr-GuV verwendet ein anderes Verfahren (' +
+      esc(rv.guv.verfahren) + ' vs. ' + esc(verf) + ') — kein Direktvergleich.</i></td></tr>');
+  }
+
+  // Summen oben
+  var kopf = tabelle('Bilanzsummen', [
+    row('Aktiva gesamt', rv.bilanz.summeAktiva, r.bilanz.summeAktiva),
+    row('Eigenkapital',  rv.bilanz.eigenkapital, r.bilanz.eigenkapital),
+    row('Jahresergebnis', rv.guv.jahresergebnis || 0, r.guv.jahresergebnis || 0)
+  ].filter(Boolean));
+  var t1 = tabelle('Aktiva', aktiva.filter(Boolean));
+  var t2 = tabelle('Passiva', passiva.filter(Boolean));
+  var t3 = tabelle('Gewinn- und Verlustrechnung (' + verf + ')', guv);
+  box.innerHTML = kopf + t1 + t2 + t3;
+}
+
 function renderStatusbox(pr) {
   var r = pr.berechnung, a = S.aktiv;
   var h = '<div class="karte"><h2>Bilanz-Status</h2>';
