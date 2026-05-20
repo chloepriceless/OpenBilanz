@@ -2517,6 +2517,19 @@ function eRechnungVorschau(m, a, kontoOpt, parsed) {
     return;
   }
   var r = parsed.rechnung;
+  // Duplikatserkennung: dieselbe XML-/PDF-Datei darf nicht zweimal eingelesen werden
+  var dup = parsed.dateiHash && (a.buchungen || []).filter(function (b) {
+    return b.eRechnungHash === parsed.dateiHash;
+  });
+  var dupBox = '';
+  if (dup && dup.length) {
+    dupBox = '<div class="box box-warn" style="margin-top:10px">' +
+      '<b>Diese E-Rechnung wurde bereits eingelesen.</b> ' +
+      'Erste Erfassung am ' + esc(datumDe((dup[0].datum || '').slice(0, 10))) +
+      ' (Buchungs-ID ' + esc(dup[0].id || '') + '). Eine zweite Übernahme würde ' +
+      'doppelte Aufwand- und Vorsteuer-Buchungen erzeugen — bitte stattdessen die ' +
+      'vorhandene Buchung prüfen.</div>';
+  }
   var aufwOpt = kontoOpt.replace('value="6300"', 'value="6300" selected');
   var profilZeile = r.profil
     ? '<tr><td>Profil</td><td>' + esc(r.profil) + '</td></tr>' : '';
@@ -2544,7 +2557,7 @@ function eRechnungVorschau(m, a, kontoOpt, parsed) {
           '<td class="rechts mono">' + (p.ustSatz || 0) + '</td></tr>';
       }).join('') + '</tbody></table></details>';
   }
-  box.innerHTML = '<table class="liste" style="margin-top:10px"><tbody>' +
+  box.innerHTML = dupBox + '<table class="liste" style="margin-top:10px"><tbody>' +
     '<tr><td>Rechnungsnummer</td><td class="mono">' + esc(r.nummer || '—') + '</td></tr>' +
     '<tr><td>Rechnungsdatum</td><td class="mono">' + datumDe(r.datum) + '</td></tr>' +
     '<tr><td>Rechnungssteller</td><td>' + esc(r.verkaeufer || '—') + '</td></tr>' +
@@ -2559,16 +2572,21 @@ function eRechnungVorschau(m, a, kontoOpt, parsed) {
     '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" ' +
     'id="erUebernehmen">Als Eingangsrechnung buchen</button></div></div>';
   box.querySelector('#erUebernehmen').onclick = function () {
+    if (dup && dup.length) {
+      if (!confirm('Diese E-Rechnung ist bereits als Buchung erfasst. Trotzdem ' +
+        'erneut übernehmen? (Erzeugt doppelte Buchungen.)')) return;
+    }
     var konto = box.querySelector('#erKonto').value, stamp = Date.now();
     var basis = 'Eingangsrechnung ' + (r.verkaeufer ? r.verkaeufer + ' ' : '') + (r.nummer || '');
+    var hash = parsed.dateiHash || null;
     a.buchungen.push({ id: 'B-ER-' + stamp + '-0', datum: r.datum,
       betrag: Berechnung.cent(r.netto), text: basis.slice(0, 90),
-      soll: konto, haben: '3300' });
+      soll: konto, haben: '3300', eRechnungHash: hash });
     var n = 1;
     if (r.ust > 0.005) {
       a.buchungen.push({ id: 'B-ER-' + stamp + '-1', datum: r.datum,
         betrag: Berechnung.cent(r.ust), text: ('Vorsteuer ' + (r.nummer || '')).slice(0, 90),
-        soll: '1406', haben: '3300' });
+        soll: '1406', haben: '3300', eRechnungHash: hash });
       n = 2;
     }
     speichereStill().then(function () {
@@ -3424,7 +3442,9 @@ function renderBuchhaltung(m) {
     /* PDF (ZUGFeRD/Factur-X) am Dateinamen oder MIME-Typ erkennen — der
      * Stream wird dann binär gelesen, das PDF/A-3-Attachment extrahiert und
      * die eingebettete XML an parseERechnung weitergereicht. Alles andere
-     * (.xml) wird wie bisher als Text gelesen. */
+     * (.xml) wird wie bisher als Text gelesen. Zusätzlich wird der SHA-256
+     * der Quelldatei in parsed.dateiHash gesetzt — Grundlage für die
+     * Duplikatserkennung in eRechnungVorschau. */
     var istPdf = /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
     if (istPdf) {
@@ -3432,18 +3452,27 @@ function renderBuchhaltung(m) {
         var box = m.querySelector('#erVorschau');
         if (box) box.innerHTML = '<div class="karte-hint" style="margin-top:10px">' +
           'PDF wird entpackt &hellip;</div>';
-        Importe.parseERechnungPdf(new Uint8Array(rd.result)).then(function (parsed) {
+        var bytes = new Uint8Array(rd.result);
+        Promise.all([
+          Importe.parseERechnungPdf(bytes).catch(function (err) {
+            return { fehler: 'PDF-Anhang konnte nicht entpackt werden: ' +
+                     (err && err.message || err) };
+          }),
+          Belege.sha256Hex(bytes)
+        ]).then(function (res) {
+          var parsed = res[0] || {};
+          parsed.dateiHash = res[1];
           eRechnungVorschau(m, a, kontoOpt, parsed);
-        }, function (err) {
-          eRechnungVorschau(m, a, kontoOpt,
-            { fehler: 'PDF-Anhang konnte nicht entpackt werden: ' +
-                      (err && err.message || err) });
         });
       };
       rd.readAsArrayBuffer(f);
     } else {
       rd.onload = function () {
-        eRechnungVorschau(m, a, kontoOpt, Importe.parseERechnung(rd.result));
+        var parsed = Importe.parseERechnung(rd.result) || {};
+        Belege.sha256Hex(rd.result).then(function (h) {
+          parsed.dateiHash = h;
+          eRechnungVorschau(m, a, kontoOpt, parsed);
+        });
       };
       rd.readAsText(f);
     }
