@@ -2507,6 +2507,8 @@ function renderBuchhaltung(m) {
       }).join('') + '</select>'
     : '';
   html += '<div class="karte"><h2>Buchung erfassen</h2>' +
+    '<div class="karte-hint">Tastatur: <b>Enter</b> springt zum nächsten Feld, ' +
+    '<b>Shift+Enter</b> bucht sofort, <b>Esc</b> leert Betrag und Text.</div>' +
     '<div class="gitter g3">' +
     feldWrap('Datum', '', '<input type="date" id="buDatum" value="' +
       esc(a.stichtag || '') + '">') +
@@ -2778,6 +2780,38 @@ function renderBuchhaltung(m) {
 
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
+
+  // Tastatur-Workflow in der Buchungs-Maske:
+  //   Enter         -> zum nächsten Feld der Eingabe-Kette
+  //   Shift+Enter   -> Buchung sofort hinzufügen (überspringt die Kette)
+  //   Esc          -> Formularfelder leeren (Datum bleibt)
+  (function () {
+    var kette = ['buDatum', 'buBetrag', 'buText', 'buSoll', 'buHaben'];
+    kette.forEach(function (id, idx) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.onkeydown = function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (e.shiftKey) { document.getElementById('buAdd').click(); return; }
+          var n = kette[idx + 1];
+          if (n) {
+            var nx = document.getElementById(n);
+            if (nx) { try { nx.focus(); if (nx.select) nx.select(); } catch (ex) {} }
+          } else {
+            document.getElementById('buAdd').click();
+          }
+        } else if (e.key === 'Escape') {
+          // Esc im Formular leert die Eingaben (Datum bleibt erhalten)
+          ['buBetrag', 'buText'].forEach(function (k) {
+            var x = document.getElementById(k); if (x) x.value = '';
+          });
+          var fokus = document.getElementById('buBetrag');
+          if (fokus) fokus.focus();
+        }
+      };
+    });
+  })();
 
   // Autocomplete: Vorschläge aus dem eigenen Journal beim Tippen des Buchungstexts.
   var buText = m.querySelector('#buText');

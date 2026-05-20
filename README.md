@@ -160,6 +160,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Wiederkehrende Buchungen** — Vorlagen mit Takt (monatlich/quartalsweise/jährlich), Fälligkeits-Hinweisbox in der Buchhaltung | 🟡 |
 | **Autocomplete für Buchungstext** — lernt aus dem eigenen Journal, schlägt Soll- und Haben-Konto beim Tippen vor | 🟡 |
 | **Buchungs-Plausi pro Zeile** — vor dem Aufnehmen ins Journal: Pflichtfelder, Soll≠Haben, Aufwand/Aufwand, Datum im GJ, EBK 9000 nur in Eröffnungsbuchungen | 🟡 |
+| **Tastatur-Workflow Buchungsmaske** — Enter springt zum nächsten Feld, Shift+Enter bucht sofort, Esc leert Betrag und Text | 🟡 |
 
 ### Zwei Erfassungswege
 
