@@ -2698,7 +2698,10 @@ function renderBuchhaltung(m) {
 
   html += '<div class="box box-info"><b>Hinweis</b>Dieser Modus ist die Grundlage für die ' +
     'laufende Buchhaltung. Mit &bdquo;Salden übernehmen&ldquo; werden die Kontensalden in ' +
-    'die Positionen der Bilanz/GuV dieses Abschlusses übertragen.</div>';
+    'die Positionen der Bilanz/GuV dieses Abschlusses übertragen.<br><br>' +
+    '<b>Belege:</b> Wer beim Buchen eine Beleg-Datei mitgibt, dem speichert OpenBilanz nur ' +
+    'den <i>SHA-256-Hash</i> und Metadaten — die Datei selbst bleibt im eigenen Dateisystem ' +
+    'beim Nutzer. Bei einer späteren Prüfung weist man die Zugehörigkeit über den Hash nach.</div>';
 
   // Faellige wiederkehrende Vorlagen (unaufdringliche Hinweisbox)
   var faelligeListe = Vorlagen.faellige(
@@ -2742,6 +2745,8 @@ function renderBuchhaltung(m) {
     feldWrap('Soll-Konto', '', '<select id="buSoll">' + kontoOpt + '</select>') +
     feldWrap('Haben-Konto', '', '<select id="buHaben">' + kontoOpt + '</select>') +
     (vorlageOpts ? feldWrap('Vorlage', vorlagen.length + ' vorhanden', vorlageOpts) : '') +
+    feldWrap('Beleg', 'optional, nur Hash & Name werden gespeichert',
+      '<input type="file" id="buBeleg">') +
     '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" id="buAdd">' +
     'Buchung hinzufügen</button></div>' +
     '</div>' +
@@ -2765,7 +2770,7 @@ function renderBuchhaltung(m) {
     html += '<div class="karte-hint">Noch keine Buchungen erfasst.</div>';
   } else {
     html += '<table class="liste"><thead><tr><th>Datum</th><th>Text</th><th>Soll</th>' +
-      '<th>Haben</th><th class="rechts">Betrag</th><th></th></tr></thead><tbody>';
+      '<th>Haben</th><th class="rechts">Betrag</th><th>Beleg</th><th></th></tr></thead><tbody>';
     a.buchungen.forEach(function (b, i) {
       var aktion;
       if (b.fest) {
@@ -2775,10 +2780,15 @@ function renderBuchhaltung(m) {
       } else {
         aktion = '<span class="btn btn-sm btn-gefahr" data-del="' + i + '">löschen</span>';
       }
+      var belegZelle = b.beleg
+        ? '<span class="bu-tag" title="' + esc(b.beleg.sha256 || '') + '">📎 ' +
+          esc(b.beleg.name || '—') + '</span>'
+        : '<span class="bu-tag" style="opacity:0.5">—</span>';
       html += '<tr><td class="mono">' + (b.fest ? '🔒 ' : '') + datumDe(b.datum) + '</td>' +
         '<td>' + esc(b.text || '') + '</td>' +
         '<td class="mono">' + esc(b.soll) + '</td><td class="mono">' + esc(b.haben) + '</td>' +
         '<td class="rechts mono">' + geld(b.betrag) + '</td>' +
+        '<td>' + belegZelle + '</td>' +
         '<td class="rechts">' + aktion + '</td></tr>';
     });
     html += '</tbody></table>';
@@ -3076,16 +3086,38 @@ function renderBuchhaltung(m) {
       soll: document.getElementById('buSoll').value,
       haben: document.getElementById('buHaben').value
     };
-    var pr = BuchungsPruefung.pruefe(b, {
-      beginn: a.geschaeftsjahrVon, stichtag: a.stichtag, erlaubeEbk: false
-    });
-    if (!pr.ok) { alert('Buchung nicht plausibel:\n• ' + pr.fehler.join('\n• ')); return; }
-    if (pr.warnungen.length) {
-      if (!confirm('Hinweise zur Buchung:\n• ' + pr.warnungen.join('\n• ') +
-        '\n\nTrotzdem buchen?')) return;
-    }
-    a.buchungen.push(b);
-    speichereStill().then(function () { renderBuchhaltung(m); });
+    var weiter = function () {
+      var pr = BuchungsPruefung.pruefe(b, {
+        beginn: a.geschaeftsjahrVon, stichtag: a.stichtag, erlaubeEbk: false
+      });
+      if (!pr.ok) { alert('Buchung nicht plausibel:\n• ' + pr.fehler.join('\n• ')); return; }
+      if (pr.warnungen.length) {
+        if (!confirm('Hinweise zur Buchung:\n• ' + pr.warnungen.join('\n• ') +
+          '\n\nTrotzdem buchen?')) return;
+      }
+      a.buchungen.push(b);
+      speichereStill().then(function () { renderBuchhaltung(m); });
+    };
+    var belegInput = document.getElementById('buBeleg');
+    var belegFile = belegInput && belegInput.files && belegInput.files[0];
+    if (!belegFile) { weiter(); return; }
+    var rd = new FileReader();
+    rd.onload = function () {
+      var bytes = new Uint8Array(rd.result);
+      Belege.sha256Hex(bytes).then(function (hash) {
+        b.beleg = {
+          name: belegFile.name,
+          sha256: hash,
+          groesseBytes: belegFile.size,
+          eingelesenAm: new Date().toISOString()
+        };
+        weiter();
+      }).catch(function (e) {
+        alert('Beleg-Hash konnte nicht berechnet werden: ' + e.message);
+      });
+    };
+    rd.onerror = function () { alert('Belegdatei konnte nicht gelesen werden.'); };
+    rd.readAsArrayBuffer(belegFile);
   };
   m.querySelectorAll('[data-del]').forEach(function (el) {
     el.onclick = function () {

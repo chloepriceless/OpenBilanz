@@ -35,6 +35,7 @@ var Autocomplete = require('../public/shared/autocomplete.js');
 var BuchungsPruefung = require('../public/shared/buchungspruefung.js');
 var Fristen = require('../public/shared/fristen.js');
 var StbPaket = require('../public/shared/stbpaket.js');
+var Belege = require('../public/shared/belege.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1494,6 +1495,28 @@ test('StbPaket: mehrere Dateien werden korrekt aneinandergereiht', function () {
 test('StbPaket: leere Liste liefert leeres Uint8Array', function () {
   var zip = StbPaket.baueZip([]);
   eq(zip.length, 0, '');
+});
+
+/* ---- Belege (SHA-256-Hash) ------------------------------------------- */
+test('Belege: sha256HexSync liefert RFC-Referenzwerte', function () {
+  // SHA-256 von "abc" = ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+  eq(Belege.sha256HexSync('abc'),
+     'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad', '');
+  // SHA-256 von "" = e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  eq(Belege.sha256HexSync(''),
+     'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', '');
+});
+test('Belege: sha256Hex (Promise) gleiches Ergebnis', function () {
+  return Belege.sha256Hex('abc').then(function (h) {
+    eq(h, 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad', '');
+  });
+});
+test('Belege: formatiereBeleg gibt kompakte Anzeige', function () {
+  var s = Belege.formatiereBeleg({ name: 'rechnung.pdf', sha256: '0123456789abcdef0123',
+    groesseBytes: 2048 });
+  ok(/rechnung\.pdf/.test(s), 'Name');
+  ok(/2 KB/.test(s), 'Größe');
+  ok(/sha256 012345678/.test(s), 'Hash-Auszug');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

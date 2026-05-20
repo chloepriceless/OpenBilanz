@@ -166,6 +166,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **BWA-Kommentar** — Freitext zur Erläuterung der BWA pro Jahresabschluss | 🟡 |
 | **Saldenliste mit Trend-Sparkline** — pro Konto SVG-Polyline der Monatssalden über das Geschäftsjahr | 🟡 |
 | **Steuerberater-Paket (One-Click-ZIP)** — Bilanz/GuV/Anhang als HTML, Saldenliste, Journal CSV/JSON, DATEV-EXTF und Manifest in einer Store-Only-ZIP (zero-dep) | 🟡 |
+| **Beleg-Hash an Buchungen** — optionales Datei-Input speichert SHA-256, Name und Größe; die Datei bleibt beim Nutzer, der Hash dient als Verifikation bei späterer Prüfung | 🟡 |
 
 ### Zwei Erfassungswege
 
