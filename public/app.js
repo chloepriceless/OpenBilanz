@@ -4312,19 +4312,75 @@ function saldenliste(a) {
   var s = kontenSalden(a);
   var keys = Object.keys(s).sort();
   if (!keys.length) return '<div class="karte-hint">Noch keine Buchungen.</div>';
+  var trends = monatsTrend(a);
   var h = '<table class="liste"><thead><tr><th>Konto</th><th>Bezeichnung</th>' +
     '<th class="rechts">Soll</th><th class="rechts">Haben</th><th class="rechts">Saldo</th>' +
-    '</tr></thead><tbody>';
+    '<th>Trend</th></tr></thead><tbody>';
   keys.forEach(function (nr) {
     var k = SKR04.kontoFinden(nr) || { name: 'unbekannt' };
     var saldo = s[nr].soll - s[nr].haben;
     h += '<tr><td class="mono">' + esc(nr) + '</td><td>' + esc(k.name) + '</td>' +
       '<td class="rechts mono">' + geld(s[nr].soll) + '</td>' +
       '<td class="rechts mono">' + geld(s[nr].haben) + '</td>' +
-      '<td class="rechts mono">' + geld(saldo) + '</td></tr>';
+      '<td class="rechts mono">' + geld(saldo) + '</td>' +
+      '<td>' + sparkline(trends[nr] || []) + '</td></tr>';
   });
   h += '</tbody></table>';
   return h;
+}
+
+/* Berechnet je Konto die kumulierten Monatsende-Salden ueber die Monate des
+ * Geschaeftsjahres. Rueckgabe: { kontoNr: [salde_jan, salde_feb, ...] }.
+ * Buchungen werden nach dem Soll-/Haben-Saldo (Soll-Haben) je Periode summiert. */
+function monatsTrend(a) {
+  if (!a || !a.buchungen || !a.buchungen.length) return {};
+  var beginn = a.gjVon || a.stichtag;
+  if (!beginn) return {};
+  var von = new Date(beginn);
+  if (isNaN(von.getTime())) return {};
+  // 12 Monate ab Geschaeftsjahresbeginn (Rumpfgeschaeftsjahre haben dann ggf. Lücken — egal)
+  var monatsKeys = [];
+  for (var i = 0; i < 12; i++) {
+    var d = new Date(von.getFullYear(), von.getMonth() + i, 1);
+    monatsKeys.push(d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2));
+  }
+  var perKonto = {};   // { konto: { 'YYYY-MM': saldo } }
+  function add(konto, key, betrag) {
+    perKonto[konto] = perKonto[konto] || {};
+    perKonto[konto][key] = (perKonto[konto][key] || 0) + betrag;
+  }
+  a.buchungen.forEach(function (b) {
+    if (!b.datum || b.storniert) return;
+    var key = String(b.datum).slice(0, 7);
+    add(b.soll, key, +b.betrag || 0);   // Soll-Seite: +
+    add(b.haben, key, -(+b.betrag || 0)); // Haben-Seite: -
+  });
+  var trends = {};
+  Object.keys(perKonto).forEach(function (nr) {
+    var lauf = 0, arr = [];
+    monatsKeys.forEach(function (k) { lauf += perKonto[nr][k] || 0; arr.push(lauf); });
+    trends[nr] = arr;
+  });
+  return trends;
+}
+
+/* Inline-SVG-Sparkline. werte = Array von Zahlen. */
+function sparkline(werte) {
+  if (!werte || werte.length < 2) return '<span class="bu-tag">—</span>';
+  var w = 80, h = 18, n = werte.length;
+  var min = Math.min.apply(null, werte), max = Math.max.apply(null, werte);
+  var range = max - min;
+  if (range === 0) range = 1;  // alle Punkte gleich -> flache Linie zentriert
+  var pkt = werte.map(function (v, i) {
+    var x = (i / (n - 1)) * w;
+    var y = h - ((v - min) / range) * h;
+    return Math.round(x * 100) / 100 + ',' + Math.round(y * 100) / 100;
+  }).join(' ');
+  var last = werte[werte.length - 1], first = werte[0];
+  var farbe = last > first ? '#5dc98f' : last < first ? '#c14545' : '#7c91a0';
+  return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h +
+    '" style="vertical-align:middle"><polyline points="' + pkt +
+    '" fill="none" stroke="' + farbe + '" stroke-width="1.5" /></svg>';
 }
 function uebernehmeSalden(a) {
   var s = kontenSalden(a);

@@ -164,6 +164,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Fristen-Dashboard mit Ampel** — Aufstellung, Offenlegung, Aufbewahrung pro Abschluss + UStVA-10.; rot/gelb/grün im Fristen-Reiter und Drohende-Fristen-Box auf der Startseite | 🟡 |
 | **Vorjahresvergleich (Δ-Diff-Tabelle)** — Aktiva/Passiva/GuV-Positionen mit Vorjahr, Aktuell, Δ in EUR und %, Trend-Pfeil; live im JA-Editor | 🟡 |
 | **BWA-Kommentar** — Freitext zur Erläuterung der BWA pro Jahresabschluss | 🟡 |
+| **Saldenliste mit Trend-Sparkline** — pro Konto SVG-Polyline der Monatssalden über das Geschäftsjahr | 🟡 |
 
 ### Zwei Erfassungswege
 
