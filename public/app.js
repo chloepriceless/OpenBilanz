@@ -86,6 +86,26 @@ function barrierefrei() {
     if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
   }
 }
+/* Einmalig: Mausrad in .zahl-Inputs erhöht/verringert den Betrag.
+ * Default ±1, Shift ±10, Alt ±0,1, Ctrl/Meta ±100. */
+function installMausrad() {
+  document.addEventListener('wheel', function (e) {
+    var el = e.target;
+    if (!el || el.tagName !== 'INPUT' || !el.classList || !el.classList.contains('zahl')) return;
+    if (document.activeElement !== el) return;  // nur im fokussierten Feld
+    e.preventDefault();
+    var schritt = 1;
+    if (e.shiftKey) schritt = 10;
+    if (e.altKey) schritt = 0.1;
+    if (e.ctrlKey || e.metaKey) schritt = 100;
+    var richtung = e.deltaY < 0 ? 1 : -1;
+    var akt = Berechnung.num(el.value);
+    var neu = akt + richtung * schritt;
+    el.value = String(Math.round(neu * 100) / 100).replace('.', ',');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }, { passive: false });
+}
+
 /* Einmalig: Enter/Leertaste aktiviert fokussierte Span-Buttons, Escape
  * schließt einen offenen Dialog, Cmd/Ctrl+K öffnet die Befehlssuche. */
 function installTastatur() {
@@ -245,6 +265,7 @@ function oeffneCommandPalette() {
 /* ---- Start ------------------------------------------------------------- */
 function boot() {
   installTastatur();
+  installMausrad();
   Store.ladeState().then(function (st) {
     S.unternehmen = st.unternehmen;
     S.abschluesse = st.abschluesse || [];
