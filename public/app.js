@@ -4031,6 +4031,23 @@ function renderHilfe(m) {
      ['1800', '7100', 'Zinserträge (Anleihen, Tages- oder Festgeld)'],
      ['6300', '1800', 'Depot-, Order- oder sonstige Bankgebühren']]);
 
+  html += fall('6a. Stillhaltergeschäfte und Optionsprämien',
+    'Beim Stillhaltergeschäft (Verkauf einer Option) vereinnahmt die GmbH die Prämie ' +
+    'sofort. Realisiert wird das Ergebnis erst bei Ausübung, Glattstellung oder Verfall ' +
+    '— bis dahin ist ein <b>schwebendes Geschäft</b> entstanden. Droht am Bilanzstichtag ' +
+    'ein Verlust (innerer Wert der Option übersteigt die vereinnahmte Prämie), ist eine ' +
+    '<b>Drohverlustrückstellung</b> nach § 249 Abs. 1 HGB zu bilden (Standardkonto ' +
+    'SKR04: 3070 Sonstige Rückstellungen). Steuerlich relevant: § 15 Abs. 4 Satz 3 EStG ' +
+    'beschränkt Verluste aus Stillhaltergeschäften nur auf Termingeschäfte — für ' +
+    'Optionsprämien gilt die volle Verrechnung. Praxis-Tipp: Vereinnahmte Prämien und ' +
+    'Glattstellungsverluste in eigenen Unterkonten zu 4830/6300 führen (Eigene-Konten-' +
+    'Verwaltung in den Stammdaten), damit der Steuerberater sie sofort findet.',
+    [['1800', '4830', 'Optionsprämie als Stillhalter vereinnahmt (per Bank, Sonst. betr. Erträge)'],
+     ['6300', '1800', 'Glattstellung mit Verlust — Differenz Prämie ./. Rückkaufpreis'],
+     ['1800', '6300', 'Verfall der Option zugunsten des Stillhalters — Storno der Aufwandsbuchung entfällt; die Prämie bleibt Ertrag'],
+     ['6300', '3070', 'Drohverlustrückstellung am Stichtag (§ 249 Abs. 1 HGB, sonstige Rückstellungen)'],
+     ['3070', '6300', 'Auflösung der Drohverlustrückstellung im Folgejahr bei Glattstellung']]);
+
   html += fall('7. Jahresabschluss abschließen',
     'Sind alle Buchungen erfasst, in der Buchhaltung „Salden in Bilanz/GuV übernehmen“ ' +
     'klicken — die Kontensalden füllen Bilanz und GuV. Anschließend „Buchungen ' +
