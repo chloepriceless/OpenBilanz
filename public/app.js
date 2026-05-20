@@ -4072,6 +4072,24 @@ function renderHilfe(m) {
     'Bedarf in <b>Stammdaten → Eigene Konten</b> ein passendes Unterkonto anlegen ' +
     'und in den Buchungen verwenden.</div>';
 
+  html += fall('6c. Termingeschäfte (Futures, CFDs)',
+    'Termingeschäfte werden über die laufende Variation Margin abgerechnet — der ' +
+    'Broker bucht Tag für Tag Gewinne und Verluste gegen das Margin-Konto. Bilanz' +
+    'wirksam wird das Ergebnis erst bei <b>Glattstellung</b>; bis dahin entsteht ' +
+    'ein schwebendes Geschäft. Bei einer Trading-GmbH läuft die laufende Variation ' +
+    'Margin über ein eigenes <b>Verrechnungskonto</b> (Vorschlag: 1361 als ' +
+    'Sonstige Vermögensgegenstände); beim Stichtag wird der offene Saldo ' +
+    'analysiert und ggf. eine Drohverlustrückstellung (3070, vgl. 6a) gebildet.<br>' +
+    '<b>Steuerlich wichtig:</b> § 15 Abs. 4 Satz 3 EStG beschränkt Verluste aus ' +
+    'Termingeschäften — sie sind nur mit gleichartigen Gewinnen verrechenbar. Die ' +
+    'Steuerschätzung in OpenBilanz bildet diese Beschränkung nicht automatisch ab; ' +
+    'ein Hinweis im Anhang ist empfehlenswert.',
+    [['1361', '1800', 'Margin-Einzahlung an den Broker'],
+     ['1361', '4906', 'tägliche Variation Margin: realisierter Gewinn'],
+     ['6905', '1361', 'tägliche Variation Margin: realisierter Verlust'],
+     ['1800', '1361', 'Margin-Rückzahlung bei Glattstellung der Position'],
+     ['6300', '3070', 'Drohverlustrückstellung am Stichtag (offener Verlust droht)']]);
+
   html += fall('7. Jahresabschluss abschließen',
     'Sind alle Buchungen erfasst, in der Buchhaltung „Salden in Bilanz/GuV übernehmen“ ' +
     'klicken — die Kontensalden füllen Bilanz und GuV. Anschließend „Buchungen ' +

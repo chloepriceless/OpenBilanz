@@ -153,6 +153,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Strenges Niederstwertprinzip (§ 253 Abs. 4 HGB)** — Plausi-Erinnerung bei Wertpapieren des Umlaufvermögens am Stichtag | 🟡 |
 | **Stillhaltergeschäfte & Optionsprämien** — Buchungshilfe inkl. Drohverlustrückstellung (§ 249 Abs. 1 HGB) | 🟡 |
 | **Fremdwährung & Stichtagsbewertung (§ 256a HGB)** — Helper für kurzfristig/langfristig, Buchungshilfe-Abschnitt | 🟡 |
+| **Termingeschäfte (Futures/CFD)** — Buchungshilfe Variation-Margin-Workflow + § 15 Abs. 4 EStG-Hinweis | 🟡 |
 
 ### Zwei Erfassungswege
 
