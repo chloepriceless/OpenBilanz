@@ -165,3 +165,68 @@ beschreibt. Folgende Anwendungsfälle deckt OpenBilanz noch nicht ab:
 
 > Hinweis: Fonds-Spezialthemen (Vorabpauschale, Teilfreistellung nach InvStG)
 > behandelt das Handbuch nicht — sie sind hier bewusst nicht aufgenommen.
+
+---
+
+## 8. Quality-of-Life-Updates
+
+Sammlung kleinerer und mittlerer Verbesserungen am bestehenden Funktionsumfang.
+Stand der Recherche: Mai 2026, Gegenüberstellung mit `laroche/trading-gmbh`,
+`tgw013/HGB-accounting-plugin`, `BadRix90/datev-mcp`, `RechnungsFee` und
+`ZUGFeRD/mustangproject`. Bewertungslegende wie oben (Nutzen H/M/N · Aufwand
+S/M/L).
+
+### 8.1 Erfassung & Buchen schneller
+
+| Idee | Skizze | Nutzen | Aufwand |
+|---|---|---|---|
+| **Command-Palette (Cmd/Ctrl+K)** | Suchleiste, die zu jedem Reiter/Konto/Buchung/Glossarbegriff springt. Zero-Dep: Fuzzy-Match in JS. | H | S |
+| **Buchungsvorlagen / Favoriten** | Häufige Geschäftsvorfälle (Bürobedarf, GF-Gehalt, KSt-VZ) als Templates mit Default-Konten und USt-Schlüssel. Persistiert pro Mandant. | H | S |
+| **Wiederkehrende Buchungen** | Buchung als monatlich/quartalsweise markieren → im Folgemonat als Entwurf vorgeschlagen, nach Sichtung festschreibbar. | H | M |
+| **Autocomplete Buchungstext + Gegenkonto** | Aus dem eigenen Journal lernen: wenn „Adobe" 3× auf 6855 gebucht wurde, beim nächsten Mal vorschlagen. Frequency-Count, keine KI. | H | S |
+| **Buchungs-Validator pro Zeile** | Schon beim Erfassen prüfen, ob Konto + USt-Schlüssel zusammenpassen; § 13b-Konten brauchen Reverse-Charge-Markierung. | M | S |
+| **Tastatur-Workflow konsolidiert** | Enter = nächste Spalte, Shift+Enter = neue Buchung, Esc = Stornoassistent. Teils umgesetzt, lohnt sich konsolidiert. | M | S |
+
+### 8.2 Übersicht & Termine
+
+| Idee | Skizze | Nutzen | Aufwand |
+|---|---|---|---|
+| **Fristen-Dashboard mit Ampel** | Kachel-Startseite: UStVA-10., Jahresabschluss-Frist § 264 HGB, Offenlegung 12 Monate, Aufbewahrung § 257 AO. Aus statischer „Fristen & Pflichten"-Liste eine lebende Übersicht. | H | M |
+| **Diff-View Vorjahr/Aktuell** | Bilanz und GuV nebeneinander, Δ in € und % je Position. Die Vorjahresspalte ist da — eine Detail-Diff-Ansicht macht Plausibilität sofort sichtbar. | H | S |
+| **BWA-Kommentar-Felder** | Pro Monat/Quartal ein Textfeld zur Kommentierung der BWA, Print-Layout enthält die Kommentare. | M | S |
+| **Saldenliste mit Trend-Sparkline** | Pro Konto eine SVG-Polyline aus den Monatssalden — keine Library. | M | S |
+| **Steuerberater-Paket (One-Click-ZIP)** | DATEV-EXTF + PDF Bilanz/GuV/Anhang + Saldenliste + Buchungsjournal CSV + Manifest in einer ZIP-Datei. Bausteine existieren. | H | S |
+
+### 8.3 Belege & Nachvollziehbarkeit
+
+| Idee | Skizze | Nutzen | Aufwand |
+|---|---|---|---|
+| **Belegarchiv pro Buchung** | Optional PDF/Bild als Anhang an die Buchung, SHA-256 in die Prüfkette aufgenommen. JSON speichert Hash + Pfad/Blob, Datei selbst in `data/belege/` bzw. IndexedDB-Blob. | H | M |
+| **E-Rechnungs-Dedup** | Hash der eingelesenen XRechnung-/ZUGFeRD-XML speichern → Wiedereinlesen warnt automatisch. | H | S |
+| **Importprotokoll** | Pro CAMT/MT940/DATEV-Import ein Protokolleintrag (Datei, Zeitpunkt, Anzahl Buchungen, übersprungene Zeilen, Hash). | M | S |
+| **Lückenanalyse Belegnummern** | Sequenz-Check für laufende Eingangsbelegnummern. | M | S |
+
+### 8.4 Plausibilität vor der Abgabe (Closing-Checklisten)
+
+| Idee | Skizze | Nutzen | Aufwand |
+|---|---|---|---|
+| **Closing-Checkliste Jahresabschluss** | Bank/Kasse abgestimmt? Anlagenspiegel gebucht? Steuerrückstellung gestellt? Periodenabgrenzung geprüft? Offenlegung vorbereitet? — OK/offen-Marker mit Sprung in die Ansicht. | H | M |
+| **Closing-Checkliste UStVA** | Vor Übergabe an ELSTER: 1576/1776/3801/3806 ausgeglichen? Kz 81/86/66/83 plausibel? Keine offenen Buchungen im Monat? | M | S |
+| **„Warum kommt diese Zahl?"** | In Bilanz/GuV jede Position aufklappbar → zugrunde liegende SKR04-Konten und Salden. | H | M |
+| **§-Tooltip in Buchungsmaske** | `gtip`-Glossar in der Buchungsmaske bei USt-Schlüsseln und Spezialkonten (4336, 6905). | M | S |
+
+### 8.5 Datenhygiene & Pflege
+
+| Idee | Skizze | Nutzen | Aufwand |
+|---|---|---|---|
+| **Health-Check beim Start** | Beim Öffnen prüfen: Stammdaten vollständig? Anlagen aktuell? letzte Buchung wann? — kleine Status-Banner. | M | S |
+| **Mandanten-Pinning** | Bei Mehrmandanten: Hotkey 1–9 für schnellen Wechsel. | M | S |
+| **Backup-Erinnerung** | Im Website-Modus: nach n festschreibenden Aktionen oder x Tagen Hinweis „letzte `.obz` ist X Tage alt". | M | S |
+| **Export-Diff DATEV** | Beim erneuten DATEV-Export Differenz zur letzten Ausgabe zeigen (nur neue Buchungen markieren). | M | M |
+
+### 8.6 Kleine Schmankerl
+
+- **Druckvorschau direkt in der App** statt Browser-Dialog — vereinheitlicht das Layout zwischen den Modi.
+- **Mausrad-Multiplikator in Beträgen** (Shift = ×10, Alt = ÷10) — hilft beim Tippen großer Anlagenwerte.
+- **„Heute"-Knopf** in jedem Datumsfeld.
+- **Onboarding-Tour** beim ersten Start (3 Schritte, „nicht mehr zeigen"-Option).

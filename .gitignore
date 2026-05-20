@@ -28,4 +28,5 @@ node_modules/
 .DS_Store
 __pycache__/
 HANDOFF.md
+PLAN.md
 test-backup/
