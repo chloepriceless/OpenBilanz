@@ -28,6 +28,7 @@ var XRechnungUBL = require('../public/shared/xrechnung-ubl.js');
 var XRechnungCII = require('../public/shared/xrechnung-cii.js');
 var Ausgangsrechnung = require('../public/shared/ausgangsrechnung.js');
 var UstId = require('../public/shared/ustid.js');
+var Fx    = require('../public/shared/fx.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1156,6 +1157,48 @@ test('UstId: unbekannter Länderpräfix → klarer Fehler', function () {
 test('UstId: leerer Eingabewert → Fehler', function () {
   eq(UstId.pruefe('').ok, false, '');
   eq(UstId.pruefe(null).ok, false, '');
+});
+
+/* ---- Fremdwährung § 256a HGB ---------------------------------------- */
+test('Fx: kurzfristige Forderung folgt zwingend dem Stichtagskurs', function () {
+  // 10.000 USD-Forderung, Anschaffung zu Kurs 1,10 = 11.000 EUR Buchwert,
+  // Stichtagskurs 1,15 (USD stärker geworden, EUR-Forderung steigt).
+  var r = Fx.stichtagsbewertung({ art: 'vermoegen', buchwertEur: 11000,
+    fwBetrag: 10000, kursStichtag: 1.15, restlaufzeitMonate: 6 });
+  eq(r.stichtagswertEur, 11500, 'Stichtagswert');
+  eq(r.delta, 500, 'Ertrag aus Aufwertung kurzfristiger Forderung');
+  eq(r.regel, 'kurzfristig', 'Regel');
+});
+test('Fx: kurzfristige Forderung wird auch abgewertet (Realisations- aufgehoben)', function () {
+  var r = Fx.stichtagsbewertung({ art: 'vermoegen', buchwertEur: 11000,
+    fwBetrag: 10000, kursStichtag: 1.05, restlaufzeitMonate: 6 });
+  eq(r.stichtagswertEur, 10500, 'Stichtagswert kurzfristig zwingend');
+  eq(r.delta, -500, 'Aufwand bei kurzfristiger Abwertung');
+});
+test('Fx: langfristige Forderung folgt Niederstwertprinzip', function () {
+  // Aufwertung wird NICHT vorgenommen (Realisations-/Niederstwert)
+  var auf = Fx.stichtagsbewertung({ art: 'vermoegen', buchwertEur: 11000,
+    fwBetrag: 10000, kursStichtag: 1.15, restlaufzeitMonate: 36 });
+  eq(auf.delta, 0, 'keine Aufwertung über Buchwert');
+  eq(auf.regel, 'unveraendert', '');
+  // Abwertung wird zwingend vorgenommen
+  var ab = Fx.stichtagsbewertung({ art: 'vermoegen', buchwertEur: 11000,
+    fwBetrag: 10000, kursStichtag: 1.05, restlaufzeitMonate: 36 });
+  eq(ab.delta, -500, 'Abwertung bei Niederstwert');
+  eq(ab.regel, 'langfristig-niederstwert', '');
+});
+test('Fx: langfristige Verbindlichkeit folgt Höchstwertprinzip', function () {
+  // Schuld 10.000 USD, Buchwert 11.000, Stichtagskurs 1,15 -> Schuld steigt
+  var hoch = Fx.stichtagsbewertung({ art: 'schulden', buchwertEur: 11000,
+    fwBetrag: 10000, kursStichtag: 1.15, restlaufzeitMonate: 36 });
+  eq(hoch.stichtagswertEur, 11500, 'Schuld zum höheren Stichtagswert');
+  eq(hoch.delta, 500, 'Anstieg der Schuld');
+  eq(hoch.guvWirkung, -500, 'GuV-Wirkung Aufwand bei Schulden-Aufwertung');
+  // Schuld fällt -> Buchwert bleibt, kein Ertrag
+  var stab = Fx.stichtagsbewertung({ art: 'schulden', buchwertEur: 11000,
+    fwBetrag: 10000, kursStichtag: 1.05, restlaufzeitMonate: 36 });
+  eq(stab.delta, 0, 'keine Abwertung der Schuld');
+  eq(stab.regel, 'unveraendert', '');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

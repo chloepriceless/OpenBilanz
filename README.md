@@ -152,6 +152,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Kontierungsregeln (Bankimport)** — nutzerpflegbare Regeln Suchbegriff → Gegenkonto | ✅ |
 | **Strenges Niederstwertprinzip (§ 253 Abs. 4 HGB)** — Plausi-Erinnerung bei Wertpapieren des Umlaufvermögens am Stichtag | 🟡 |
 | **Stillhaltergeschäfte & Optionsprämien** — Buchungshilfe inkl. Drohverlustrückstellung (§ 249 Abs. 1 HGB) | 🟡 |
+| **Fremdwährung & Stichtagsbewertung (§ 256a HGB)** — Helper für kurzfristig/langfristig, Buchungshilfe-Abschnitt | 🟡 |
 
 ### Zwei Erfassungswege
 

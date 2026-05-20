@@ -4048,6 +4048,30 @@ function renderHilfe(m) {
      ['6300', '3070', 'Drohverlustrückstellung am Stichtag (§ 249 Abs. 1 HGB, sonstige Rückstellungen)'],
      ['3070', '6300', 'Auflösung der Drohverlustrückstellung im Folgejahr bei Glattstellung']]);
 
+  html += fall('6b. Fremdwährung und Stichtagsbewertung (§ 256a HGB)',
+    'Fremdwährungsbestände (USD-Depot, GBP-Forderung, CHF-Darlehen) werden am ' +
+    'Bilanzstichtag bewertet — und zwar abhängig von der <b>Restlaufzeit</b>:<br>' +
+    '<b>≤ 1 Jahr (§ 256a Satz 2 HGB):</b> zwingend zum Devisenkassamittelkurs am ' +
+    'Stichtag — auch nach oben. Realisations- und Imparitätsprinzip sind hier ' +
+    'ausser Kraft.<br>' +
+    '<b>> 1 Jahr:</b> es gelten die allgemeinen Bewertungsprinzipien — Vermögen ' +
+    'nach Niederstwertprinzip (nur abwerten), Schulden nach Höchstwertprinzip ' +
+    '(nur aufwerten).<br>' +
+    'Der eingebaute Helper rechnet das korrekt vor; die Buchung erfolgt manuell ' +
+    'als Sammelbuchung am Stichtag. Optionsprämien aus Fremdwährungsdepots ' +
+    'durchlaufen separat den Stillhalter-Workflow (Abschnitt 6a).',
+    [['1800', '4830', 'kurzfristige Forderung: Aufwertung am Stichtag (Sonst. betr. Ertrag)'],
+     ['6300', '1800', 'kurzfristige Forderung: Abwertung am Stichtag (Sonst. betr. Aufwand)'],
+     ['6300', '1510', 'langfristige Wertpapiere: Abwertung Niederstwert (§ 253 HGB)'],
+     ['6300', '3150', 'langfristige Verbindlichkeit: Aufwertung Höchstwert (§ 252 HGB)']]);
+
+  html += '<div class="box box-info"><b>Praxis</b>Für Erträge und Aufwendungen ' +
+    'aus Währungsumrechnung sind im DATEV-SKR04 üblicherweise eigene Unterkonten ' +
+    'angelegt (z. B. „4838 Erträge aus Währungsumrechnung" und „6886 Aufwendungen ' +
+    'aus Währungsumrechnung"). OpenBilanz nutzt die Sammelposten 4830 / 6300 — bei ' +
+    'Bedarf in <b>Stammdaten → Eigene Konten</b> ein passendes Unterkonto anlegen ' +
+    'und in den Buchungen verwenden.</div>';
+
   html += fall('7. Jahresabschluss abschließen',
     'Sind alle Buchungen erfasst, in der Buchhaltung „Salden in Bilanz/GuV übernehmen“ ' +
     'klicken — die Kontensalden füllen Bilanz und GuV. Anschließend „Buchungen ' +
