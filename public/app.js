@@ -1516,14 +1516,18 @@ function renderDruck(m) {
   var a = S.aktiv, u = S.unternehmen || {};
   if (!a) { setView('start'); return; }
   var r = Berechnung.berechne(a);
+  var istJA = a.art === 'JAHRESABSCHLUSS';
   var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>' +
     '<div class="btn-reihe no-print" style="margin-bottom:14px">' +
     '<button class="btn btn-pri" id="btnDrucken">Drucken / als PDF speichern</button>' +
+    (istJA ? '<button class="btn" id="btnStbPaket">Steuerberater-Paket als ZIP</button>' : '') +
     '</div>';
   html += '<div class="dok" id="dok">' + dokInhalt(a, u, r, null) + '</div>';
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
   m.querySelector('#btnDrucken').onclick = function () { window.print(); };
+  var btnPaket = m.querySelector('#btnStbPaket');
+  if (btnPaket) btnPaket.onclick = function () { erzeugeSteuerberaterPaket(a, u, r); };
 
   if (a.vorjahrId) {
     Store.ladeAbschluss(a.vorjahrId).then(function (vja) {
@@ -1534,6 +1538,74 @@ function renderDruck(m) {
     });
   }
 }
+
+/* Steuerberater-Paket: Bilanz/GuV/Anhang als HTML, Saldenliste/Journal als
+ * CSV/JSON, DATEV-EXTF-Buchungsstapel und ein Manifest in einer ZIP. */
+function erzeugeSteuerberaterPaket(a, u, r) {
+  var basis = (a.bezeichnung || 'Abschluss').replace(/[^\w]+/g, '_');
+  // Bilanz/GuV/Anhang als eigenständiges HTML (mit unseren Druck-Styles ge-inlined ginge auch,
+  // aber das HTML-Snippet kann jeder Browser direkt öffnen).
+  var dokHtml = '<!doctype html><html lang="de"><head><meta charset="utf-8">' +
+    '<title>' + esc(u.name || '') + ' — ' + esc(a.bezeichnung || '') + '</title>' +
+    '<style>body{font-family:Georgia,serif;max-width:800px;margin:30px auto;color:#222}' +
+    'h1{font-size:18px;margin:14px 0 4px}h2{font-size:14px;margin:18px 0 6px;border-bottom:1px solid #ccc;padding-bottom:2px}' +
+    'table{border-collapse:collapse;width:100%}td,th{padding:3px 6px;border-bottom:1px dotted #ddd;vertical-align:top}' +
+    '.rechts{text-align:right}.mono{font-family:"Courier New",monospace}' +
+    '.dok-bilanz{display:grid;grid-template-columns:1fr 1fr;gap:24px}' +
+    '.dok-sub{color:#666;font-size:12px;margin-top:2px}.dok-fussnote{font-size:11px;color:#555;margin-top:6px}' +
+    '</style></head><body>' + dokInhalt(a, u, r, null) + '</body></html>';
+
+  // Saldenliste als CSV
+  var saldenCsv = 'Konto;Bezeichnung;Soll;Haben;Saldo\r\n';
+  var s = kontenSalden(a);
+  Object.keys(s).sort().forEach(function (nr) {
+    var k = SKR04.kontoFinden(nr) || { name: '' };
+    var saldo = s[nr].soll - s[nr].haben;
+    saldenCsv += nr + ';"' + (k.name || '').replace(/"/g, '""') + '";' +
+      saldo2(s[nr].soll) + ';' + saldo2(s[nr].haben) + ';' + saldo2(saldo) + '\r\n';
+  });
+  function saldo2(n) {
+    return (Math.round((+n || 0) * 100) / 100).toFixed(2).replace('.', ',');
+  }
+
+  // Manifest
+  var manifest = {
+    erzeugt: new Date().toISOString(),
+    openbilanz: { version: (typeof Version !== 'undefined' && Version.bezeichnung) || 'unbekannt' },
+    mandant: {
+      name: u.name || '',
+      steuernummer: u.steuernummer || '',
+      hrNummer: u.hrNummer || ''
+    },
+    abschluss: {
+      id: a.id,
+      art: a.art,
+      bezeichnung: a.bezeichnung,
+      stichtag: a.stichtag,
+      gjVon: a.gjVon,
+      gjBis: a.gjBis,
+      guvVerfahren: a.guvVerfahren,
+      groessenklasse: a.groessenklasse
+    },
+    dateien: ['bilanz.html', 'saldenliste.csv', 'journal.csv', 'journal.json', 'datev-extf.csv']
+  };
+
+  var dateien = [
+    { name: 'bilanz.html', content: dokHtml },
+    { name: 'saldenliste.csv', content: saldenCsv },
+    { name: 'manifest.json', content: JSON.stringify(manifest, null, 2) }
+  ];
+  if (a.buchungen && a.buchungen.length) {
+    dateien.push({ name: 'journal.csv', content: JournalExport.csv(a) });
+    dateien.push({ name: 'journal.json', content: JournalExport.json(a) });
+    dateien.push({ name: 'datev-extf.csv', content: Datev.erzeuge(a, {}) });
+  }
+
+  var zip = StbPaket.baueZip(dateien);
+  ladeDatei(zip, 'Steuerberater-Paket_' + basis + '.zip', 'application/zip');
+  hinweisToast('Steuerberater-Paket erstellt (' + dateien.length + ' Dateien).');
+}
+
 function dokInhalt(a, u, r, rv) {
   var istEB = a.art === 'EROEFFNUNGSBILANZ';
   var titel = istEB ? 'Eröffnungsbilanz' : 'Jahresabschluss';

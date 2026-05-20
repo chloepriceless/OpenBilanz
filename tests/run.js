@@ -34,6 +34,7 @@ var Vorlagen = require('../public/shared/vorlagen.js');
 var Autocomplete = require('../public/shared/autocomplete.js');
 var BuchungsPruefung = require('../public/shared/buchungspruefung.js');
 var Fristen = require('../public/shared/fristen.js');
+var StbPaket = require('../public/shared/stbpaket.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1458,6 +1459,41 @@ test('Fristen: Sortierung rot > gelb > gruen', function () {
   eq(r[0].ampel, 'rot', 'erstes rot');
   // letzter Eintrag muss grün sein
   eq(r[r.length - 1].ampel, 'gruen', 'letzter gruen');
+});
+
+/* ---- Steuerberater-Paket (Store-Only-ZIP) --------------------------- */
+test('StbPaket: CRC32 von "Hello" stimmt mit dem Referenzwert überein', function () {
+  var bytes = Buffer.from('Hello', 'utf8');
+  var arr = new Uint8Array(bytes.length);
+  for (var i = 0; i < bytes.length; i++) arr[i] = bytes[i];
+  eq(StbPaket.crc32(arr), 0xF7D18982, 'CRC32 Hello = 0xF7D18982');
+});
+test('StbPaket: ZIP hat Local-Header, Central-Directory und End-Of-Central-Directory', function () {
+  var zip = StbPaket.baueZip([{ name: 'hello.txt', content: 'Hello' }]);
+  ok(zip.length > 60, 'ZIP nicht leer');
+  // Local file header signature PK\x03\x04
+  eq(zip[0], 0x50, ''); eq(zip[1], 0x4B, ''); eq(zip[2], 0x03, ''); eq(zip[3], 0x04, '');
+  // End of central directory signature am Ende: zip[total-22..total-19] = PK\x05\x06
+  var off = zip.length - 22;
+  eq(zip[off], 0x50, ''); eq(zip[off + 1], 0x4B, '');
+  eq(zip[off + 2], 0x05, ''); eq(zip[off + 3], 0x06, '');
+});
+test('StbPaket: mehrere Dateien werden korrekt aneinandergereiht', function () {
+  var zip = StbPaket.baueZip([
+    { name: 'a.txt', content: 'A' },
+    { name: 'b.txt', content: 'BBB' },
+    { name: 'c.json', content: '{"x":1}' }
+  ]);
+  ok(zip.length > 150, 'ZIP enthält drei Dateien');
+  // EOCD hat 3 Entries
+  var off = zip.length - 22;
+  var dv = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+  eq(dv.getUint16(off + 8, true), 3, 'three entries on disk');
+  eq(dv.getUint16(off + 10, true), 3, 'three entries total');
+});
+test('StbPaket: leere Liste liefert leeres Uint8Array', function () {
+  var zip = StbPaket.baueZip([]);
+  eq(zip.length, 0, '');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */
