@@ -158,6 +158,23 @@ test('Prüfung: Beteiligungserträge ohne Finanzanlagen werden gemeldet', functi
   ok(p.meldungen.some(function (m) { return m.text.indexOf('Finanzanlagen (A.III)') >= 0; }),
      'Hinweis auf fehlende Finanzanlagen erwartet');
 });
+test('Prüfung: Wertpapier-UV (B.III) erinnert an Niederstwertprinzip', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.III': 50000, 'B.IV': 30000 },
+      passiva: { 'P.B.2': 5000 }, guv: { 'gkv.1': 80000, 'gkv.8': 25000 } } };
+  var p = Berechnung.pruefe(ja);
+  ok(p.meldungen.some(function (m) { return m.stufe === 'info' &&
+     m.text.indexOf('Niederstwertprinzip') >= 0; }),
+     'Niederstwert-Hinweis bei Wertpapier-UV erwartet');
+  // Kein Hinweis, wenn keine WP-UV-Bestände
+  var leer = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.IV': 30000 }, passiva: { 'P.B.2': 5000 }, guv: {} } };
+  ok(!Berechnung.pruefe(leer).meldungen.some(function (m) {
+     return m.text.indexOf('Niederstwertprinzip') >= 0; }),
+     'kein Niederstwert-Hinweis ohne WP-UV');
+});
 test('Prüfung: Vorjahresabweichung über 20 % nur mit Vorjahr', function () {
   var vorjahr = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
     kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },

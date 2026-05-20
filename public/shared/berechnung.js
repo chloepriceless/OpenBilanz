@@ -308,6 +308,16 @@
                 'aber weder Finanzanlagen (A.III) noch Wertpapiere (B.III) in der Bilanz. ' +
                 'Sind die Bestände am Stichtag noch vorhanden? (Bei unterjährigem Verkauf ok.)' });
       }
+      // Wertpapiere des Umlaufvermögens am Stichtag -> Niederstwert-Erinnerung.
+      // Konnten wir den Stichtagskurs hier nicht selbst prüfen, daher Hinweis.
+      var wpUv = r.bilanz.aktiva['B.III'] || 0;
+      if (wpUv > 0) {
+        meldungen.push({ stufe: 'info',
+          text: 'Wertpapiere des Umlaufvermögens (B.III) zum Stichtag ' + kap0(wpUv) + ' EUR. ' +
+                'Strenges Niederstwertprinzip beachten (§ 253 Abs. 4 HGB): Liegt der ' +
+                'Kurswert am Bilanzstichtag unter den Anschaffungskosten, ist zwingend auf ' +
+                'den niedrigeren Wert abzuschreiben (Konto 7210 an 1500/1510).' });
+      }
     }
 
     // Vorjahresvergleich (§ 265 Abs. 2, § 284 HGB): nur wenn ein Vorjahres-

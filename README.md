@@ -150,6 +150,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Anrechenbare ausländische Quellensteuer** — Anrechnung auf die Körperschaftsteuer (§ 26 KStG) | ✅ |
 | **Änderungsprotokoll der Unternehmensdaten** — Audit-Trail mit Zeitstempel für die Stammdaten | ✅ |
 | **Kontierungsregeln (Bankimport)** — nutzerpflegbare Regeln Suchbegriff → Gegenkonto | ✅ |
+| **Strenges Niederstwertprinzip (§ 253 Abs. 4 HGB)** — Plausi-Erinnerung bei Wertpapieren des Umlaufvermögens am Stichtag | 🟡 |
 
 ### Zwei Erfassungswege
 
