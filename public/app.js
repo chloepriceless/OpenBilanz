@@ -2406,8 +2406,31 @@ function renderBwa(m) {
   }
   html += kz('Eigenkapitalquote (Eigenkapital / Bilanzsumme)',
     proz(r.bilanz.eigenkapital, r.bilanz.summeAktiva)) + '</table></div>';
+
+  // Kommentar / Notizen zur BWA (z. B. fuer Bank, Gesellschafter, Steuerberater)
+  html += '<div class="karte"><h2>Kommentar / Notizen</h2>' +
+    '<div class="karte-hint">Freitext zur Erläuterung der BWA. Wird auf der ' +
+    'Druckansicht (BWA-Block) mit ausgegeben — gut für Vorlage bei Bank oder ' +
+    'Gesellschafterversammlung.</div>' +
+    '<textarea id="bwaKommentar" rows="5" style="width:100%;font-family:inherit">' +
+    esc(a.bwaKommentar || '') + '</textarea>' +
+    '<div class="btn-reihe" style="margin-top:8px">' +
+    '<button class="btn" id="bwaKomSpeichern">Kommentar speichern</button>' +
+    '<span id="bwaKomStatus" class="bu-tag" style="margin-left:10px"></span></div></div>';
+
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
+  var btn = m.querySelector('#bwaKomSpeichern');
+  if (btn) btn.onclick = function () {
+    a.bwaKommentar = document.getElementById('bwaKommentar').value;
+    speichereStill().then(function () {
+      var st = document.getElementById('bwaKomStatus');
+      if (st) {
+        st.textContent = 'gespeichert';
+        setTimeout(function () { if (st) st.textContent = ''; }, 2500);
+      }
+    });
+  };
 }
 
 /* parseERechnung (XRechnung / ZUGFeRD): siehe Importe.parseERechnung in

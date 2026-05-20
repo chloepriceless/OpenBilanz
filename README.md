@@ -163,6 +163,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Tastatur-Workflow Buchungsmaske** — Enter springt zum nächsten Feld, Shift+Enter bucht sofort, Esc leert Betrag und Text | 🟡 |
 | **Fristen-Dashboard mit Ampel** — Aufstellung, Offenlegung, Aufbewahrung pro Abschluss + UStVA-10.; rot/gelb/grün im Fristen-Reiter und Drohende-Fristen-Box auf der Startseite | 🟡 |
 | **Vorjahresvergleich (Δ-Diff-Tabelle)** — Aktiva/Passiva/GuV-Positionen mit Vorjahr, Aktuell, Δ in EUR und %, Trend-Pfeil; live im JA-Editor | 🟡 |
+| **BWA-Kommentar** — Freitext zur Erläuterung der BWA pro Jahresabschluss | 🟡 |
 
 ### Zwei Erfassungswege
 
