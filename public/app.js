@@ -86,6 +86,74 @@ function barrierefrei() {
     if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
   }
 }
+/* ---- Onboarding-Tour (3 Schritte beim ersten Start) ------------------- */
+function zeigeOnboardingGesucht() {
+  try { return !localStorage.getItem('ob.onboarding'); }
+  catch (e) { return true; }
+}
+function markiereOnboardingGesehen() {
+  try { localStorage.setItem('ob.onboarding', '1'); } catch (e) {}
+}
+function zeigeOnboarding(fertig) {
+  var schritte = [
+    {
+      titel: 'Willkommen bei OpenBilanz',
+      text: 'Selbstmach-Tool für die Buchhaltung einer GmbH — Eröffnungsbilanz, ' +
+        'Jahresabschluss, E-Bilanz. Drei kurze Hinweise zur Bedienung, dann geht es los.'
+    },
+    {
+      titel: '1. Direkteingabe oder Buchhaltung',
+      text: 'Zwei Erfassungswege: <b>Direkteingabe</b> der Bilanzposten (gut für die ' +
+        'Eröffnungsbilanz und feste Zahlen) oder die laufende <b>Buchhaltung</b> nach ' +
+        'SKR04 mit automatischer Salden-Übernahme in Bilanz/GuV.'
+    },
+    {
+      titel: '2. Festschreiben + Prüfkette',
+      text: 'Buchungen lassen sich <b>festschreiben</b> (§ 146 AO) — danach unveränderlich, ' +
+        'Korrektur nur per Stornobuchung. Die <b>Prüfkette</b> (SHA-256) erkennt jede ' +
+        'nachträgliche Manipulation.'
+    },
+    {
+      titel: '3. Befehlssuche Cmd/Ctrl+K',
+      text: 'Mit <b>Cmd/Ctrl+K</b> öffnet sich jederzeit eine Befehlssuche: Reiter, ' +
+        'SKR04-Konten und Glossarbegriffe direkt anspringen — schneller als die Navigation.'
+    }
+  ];
+  var idx = 0;
+  function rendere() {
+    var s = schritte[idx];
+    var letzter = idx === schritte.length - 1;
+    dialog(
+      '<h2 style="margin-top:0">' + esc(s.titel) + '</h2>' +
+      '<div style="margin-bottom:12px">' + s.text + '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">' +
+      '<span class="bu-tag" style="margin-right:auto">' + (idx + 1) + ' / ' + schritte.length + '</span>' +
+      (idx > 0 ? '<button class="btn" id="obZurueck">Zurück</button>' : '') +
+      '<button class="btn btn-pri" id="obWeiter">' +
+      (letzter ? 'Loslegen' : 'Weiter') + '</button>' +
+      '<button class="btn" id="obSkip">Überspringen</button>' +
+      '</div>'
+    );
+    document.getElementById('obWeiter').onclick = function () {
+      if (letzter) {
+        markiereOnboardingGesehen();
+        dialogZu();
+        if (fertig) fertig();
+      } else {
+        idx++; rendere();
+      }
+    };
+    var z = document.getElementById('obZurueck');
+    if (z) z.onclick = function () { idx--; rendere(); };
+    document.getElementById('obSkip').onclick = function () {
+      markiereOnboardingGesehen();
+      dialogZu();
+      if (fertig) fertig();
+    };
+  }
+  rendere();
+}
+
 /* Einmalig: Mausrad in .zahl-Inputs erhöht/verringert den Betrag.
  * Default ±1, Shift ±10, Alt ±0,1, Ctrl/Meta ±100. */
 function installMausrad() {
@@ -272,8 +340,16 @@ function boot() {
     renderNav();
     initBackupUI();
     if (pruefeDemoLink()) return;          // Deep-Link ?demo öffnet das Demo-Portal
-    if (!S.unternehmen) setView('stammdaten');
-    else setView('start');
+    if (!S.unternehmen) {
+      // Erster Start ohne Daten -> Onboarding-Tour, dann Stammdaten
+      if (zeigeOnboardingGesucht()) {
+        zeigeOnboarding(function () { setView('stammdaten'); });
+      } else {
+        setView('stammdaten');
+      }
+    } else {
+      setView('start');
+    }
   });
   if (Store.modus === 'website' && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function () {});

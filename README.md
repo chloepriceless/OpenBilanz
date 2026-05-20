@@ -172,6 +172,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Health-Check Startseite** — Stammdaten-Vollständigkeit, Abschluss-Stand und Backup-Alter (Website-Modus) als Status-Banner | 🟡 |
 | **DATEV-Export-Diff** — Hash der letzten Ausgabe gemerkt, beim erneuten Export Hinweis „identisch" oder Anzahl-Differenz | 🟡 |
 | **Mausrad in Betragsfeldern** — Scroll = ±1, Shift = ±10, Alt = ±0,1, Ctrl/Cmd = ±100 (nur im fokussierten Feld) | 🟡 |
+| **Onboarding-Tour** — 4-Schritt-Walkthrough beim Erststart (Erfassungswege, Festschreiben, Command-Palette) mit „nicht mehr zeigen" via localStorage | 🟡 |
 
 ### Zwei Erfassungswege
 
