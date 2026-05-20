@@ -3436,8 +3436,37 @@ function renderBuchhaltung(m) {
       datevBeraterNr: (m.querySelector('#dtvBerater') || {}).value,
       datevMandantNr: (m.querySelector('#dtvMandant') || {}).value
     });
-    ladeDatei(txt, 'EXTF_Buchungsstapel_' + (a.bezeichnung || 'Abschluss')
-      .replace(/[^\w]+/g, '_') + '.csv', 'text/csv;charset=utf-8');
+    var anzahl = (a.buchungen || []).filter(function (b) {
+      return !b.storniert;
+    }).length;
+    Belege.sha256Hex(txt).then(function (hash) {
+      var letzter = a.letzterDatevExport;
+      var diffText = '';
+      if (letzter && letzter.hash) {
+        if (letzter.hash === hash) {
+          diffText = 'Inhalt identisch zur letzten Ausgabe (' +
+            datumDe((letzter.zeit || '').slice(0, 10)) + ').';
+        } else {
+          var dn = anzahl - (letzter.anzahl || 0);
+          diffText = 'Geändert seit letztem Export (' +
+            datumDe((letzter.zeit || '').slice(0, 10)) + '): ' +
+            (dn === 0 ? 'gleiche Anzahl, andere Buchungen'
+              : (dn > 0 ? '+' + dn : dn) + ' Buchung(en) Differenz') + '.';
+        }
+      } else {
+        diffText = 'Erster DATEV-Export für diesen Abschluss (' + anzahl + ' Buchungen).';
+      }
+      a.letzterDatevExport = { hash: hash, anzahl: anzahl, zeit: new Date().toISOString() };
+      speichereStill().then(function () {
+        ladeDatei(txt, 'EXTF_Buchungsstapel_' + (a.bezeichnung || 'Abschluss')
+          .replace(/[^\w]+/g, '_') + '.csv', 'text/csv;charset=utf-8');
+        hinweisToast(diffText);
+      });
+    }).catch(function () {
+      // Hash nicht verfuegbar -> Export trotzdem ausliefern
+      ladeDatei(txt, 'EXTF_Buchungsstapel_' + (a.bezeichnung || 'Abschluss')
+        .replace(/[^\w]+/g, '_') + '.csv', 'text/csv;charset=utf-8');
+    });
   };
   var datevImpIn = m.querySelector('#datevImpDatei');
   if (datevImpIn) datevImpIn.onchange = function () {

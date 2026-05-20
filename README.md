@@ -170,6 +170,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **E-Rechnungs-Dedup** — SHA-256 jeder eingelesenen XRechnung/ZUGFeRD-Datei; bei Wiedereinlesen Warnung mit Verweis auf die ursprüngliche Buchung | 🟡 |
 | **Abschluss-Checkliste** — Anfangsbestände, AfA, Steuerrückstellung, RAP, Festschreibung, Bilanz ausgeglichen mit OK/offen/info-Ampel im JA-Editor | 🟡 |
 | **Health-Check Startseite** — Stammdaten-Vollständigkeit, Abschluss-Stand und Backup-Alter (Website-Modus) als Status-Banner | 🟡 |
+| **DATEV-Export-Diff** — Hash der letzten Ausgabe gemerkt, beim erneuten Export Hinweis „identisch" oder Anzahl-Differenz | 🟡 |
 
 ### Zwei Erfassungswege
 
