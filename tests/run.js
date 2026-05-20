@@ -37,6 +37,7 @@ var Fristen = require('../public/shared/fristen.js');
 var StbPaket = require('../public/shared/stbpaket.js');
 var Belege = require('../public/shared/belege.js');
 var Closing = require('../public/shared/closing.js');
+var HealthCheck = require('../public/shared/healthcheck.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1555,6 +1556,29 @@ test('Closing: Festschreibung erkennt offene Buchungen', function () {
   var p = l.find(function (x) { return /festgeschrieben/.test(x.titel); });
   eq(p.status, 'offen', '');
   ok(/1 von 2/.test(p.detail), '');
+});
+
+/* ---- HealthCheck Startseite ----------------------------------------- */
+test('HealthCheck: leere Stammdaten geben Achtung', function () {
+  var l = HealthCheck.pruefe({}, []);
+  eq(l[0].titel, 'Stammdaten', '');
+  eq(l[0].status, 'achtung', '');
+});
+test('HealthCheck: vollständige Stammdaten = ok', function () {
+  var u = { name: 'Demo', steuernummer: '1', gruendungsdatum: '2024-01-01', stammkapital: 25000 };
+  var l = HealthCheck.pruefe(u, []);
+  eq(l[0].status, 'ok', '');
+});
+test('HealthCheck: alter Backup-Stand wird gemeldet (Website-Modus)', function () {
+  var l = HealthCheck.pruefe({ name: 'X', steuernummer: '1', gruendungsdatum: '2024-01-01', stammkapital: 25000 }, [],
+    { modus: 'website', letzteSicherung: '2025-01-01', heute: '2026-05-20' });
+  var b = l.find(function (x) { return /Backup/.test(x.titel); });
+  ok(b, '');
+  eq(b.status, 'achtung', 'altes Backup');
+});
+test('HealthCheck: Selbst-Hosting-Modus zeigt keinen Backup-Eintrag', function () {
+  var l = HealthCheck.pruefe({ name: 'X', steuernummer: '1', gruendungsdatum: '2024-01-01', stammkapital: 25000 }, []);
+  ok(!l.find(function (x) { return /Backup/.test(x.titel); }), 'kein Backup-Eintrag im Selbst-Hosting');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

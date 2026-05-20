@@ -169,6 +169,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Beleg-Hash an Buchungen** — optionales Datei-Input speichert SHA-256, Name und Größe; die Datei bleibt beim Nutzer, der Hash dient als Verifikation bei späterer Prüfung | 🟡 |
 | **E-Rechnungs-Dedup** — SHA-256 jeder eingelesenen XRechnung/ZUGFeRD-Datei; bei Wiedereinlesen Warnung mit Verweis auf die ursprüngliche Buchung | 🟡 |
 | **Abschluss-Checkliste** — Anfangsbestände, AfA, Steuerrückstellung, RAP, Festschreibung, Bilanz ausgeglichen mit OK/offen/info-Ampel im JA-Editor | 🟡 |
+| **Health-Check Startseite** — Stammdaten-Vollständigkeit, Abschluss-Stand und Backup-Alter (Website-Modus) als Status-Banner | 🟡 |
 
 ### Zwei Erfassungswege
 

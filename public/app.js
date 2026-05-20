@@ -443,6 +443,16 @@ function renderStart(m) {
   html += kachel('Fristen', 'Aufstellung &amp; Offenlegung', '⚠', 'fristen');
   html += '</div>';
 
+  // Health-Check-Banner: Stammdaten, Abschlüsse, letztes Backup
+  var letzteBuchung = null;
+  S.abschluesse.forEach(function (x) {
+    var max = (x.buchungenStichproben && x.buchungenStichproben.letzteBuchung) || null;
+    if (max && (!letzteBuchung || max > letzteBuchung)) letzteBuchung = max;
+  });
+  // Health-Banner sofort mit synchronen Infos rendern; Backup-Stand asynchron nachladen.
+  html += '<div id="healthBanner" class="karte" style="margin-top:14px"><h2>Status</h2>' +
+    '<div id="healthListe" class="karte-hint">wird ermittelt …</div></div>';
+
   // Drohende Fristen-Box (rot + gelb), wenn vorhanden
   if (S.abschluesse.length) {
     var akut = Fristen.naechsteFristen(S.unternehmen, S.abschluesse).filter(function (f) {
@@ -511,6 +521,33 @@ function renderStart(m) {
   m.querySelectorAll('[data-fristenlink]').forEach(function (el) {
     el.onclick = function () { setView('fristen'); };
   });
+
+  // Health-Banner asynchron befüllen (Backup-Stand aus Store).
+  (function () {
+    function rendere(opts) {
+      var box = m.querySelector('#healthListe');
+      if (!box) return;
+      var liste = HealthCheck.pruefe(S.unternehmen, S.abschluesse, opts);
+      var farbe = { ok: '#5dc98f', achtung: '#e3b341', info: '#7c91a0' };
+      box.innerHTML = '<ul style="margin:0;padding-left:6px;list-style:none">' +
+        liste.map(function (p) {
+          var c = farbe[p.status] || '#7c91a0';
+          var dot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;' +
+            'background:' + c + ';margin-right:7px;vertical-align:middle"></span>';
+          return '<li style="margin:4px 0">' + dot + '<b>' + esc(p.titel) + ':</b> ' +
+            esc(p.detail) + '</li>';
+        }).join('') + '</ul>';
+    }
+    var opts = { modus: Store.modus };
+    if (Store.modus === 'website' && Store.backupStatus) {
+      Store.backupStatus().then(function (b) {
+        opts.letzteSicherung = b && b.exportiertAm;
+        rendere(opts);
+      }, function () { rendere(opts); });
+    } else {
+      rendere(opts);
+    }
+  })();
   m.querySelectorAll('.kachel').forEach(function (el) {
     el.onclick = function () {
       if (el.dataset.k === 'neu-eb') dialogNeuerAbschluss('EROEFFNUNGSBILANZ');
