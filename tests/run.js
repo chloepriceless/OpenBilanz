@@ -33,6 +33,7 @@ var Palette = require('../public/shared/palette.js');
 var Vorlagen = require('../public/shared/vorlagen.js');
 var Autocomplete = require('../public/shared/autocomplete.js');
 var BuchungsPruefung = require('../public/shared/buchungspruefung.js');
+var Fristen = require('../public/shared/fristen.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1400,6 +1401,63 @@ test('BuchungsPruefung: EBK 9000 ohne Erlaubnis warnt', function () {
     { datum: '2026-03-15', betrag: 100, soll: '1800', haben: '9000' },
     { erlaubeEbk: true });
   ok(!r2.warnungen.some(function (w) { return /9000/.test(w); }), 'mit Erlaubnis kein Hinweis');
+});
+
+/* ---- Fristen-Dashboard ----------------------------------------------- */
+test('Fristen: JA-Aufstellung 6 Monate nach Stichtag', function () {
+  var u = {}, abs = [{ id: 'A', art: 'JAHRESABSCHLUSS', stichtag: '2025-12-31',
+    bezeichnung: 'Jahresabschluss 2025' }];
+  var r = Fristen.naechsteFristen(u, abs, '2026-05-20');
+  var auf = r.find(function (x) { return x.art === 'aufstellung'; });
+  ok(auf, 'Aufstellungs-Frist gelistet');
+  eq(auf.frist, '2026-06-30', 'frist');
+  ok(auf.restTage > 0 && auf.restTage <= 45, 'Frist noch knapp da');
+  // 41 Tage Rest -> ampel = gruen (Schwelle ist 30)
+  eq(auf.ampel, 'gruen', '41 Tage > 30 -> gruen');
+  // Direkt am Vortag des 30-Tage-Limits sollte aber gelb sein:
+  var r2 = Fristen.naechsteFristen(u, abs, '2026-06-01');
+  var auf2 = r2.find(function (x) { return x.art === 'aufstellung'; });
+  eq(auf2.ampel, 'gelb', 'innerhalb 30 Tage = gelb');
+});
+test('Fristen: Offenlegung 12 Monate, verstrichen = rot', function () {
+  var u = {}, abs = [{ id: 'A', art: 'JAHRESABSCHLUSS', stichtag: '2024-12-31',
+    bezeichnung: 'Jahresabschluss 2024' }];
+  var r = Fristen.naechsteFristen(u, abs, '2026-05-20');
+  var off = r.find(function (x) { return x.art === 'offenlegung'; });
+  eq(off.frist, '2025-12-31', 'frist');
+  eq(off.ampel, 'rot', 'Frist verstrichen');
+});
+test('Fristen: Aufbewahrung 10 Jahre nach Stichtag', function () {
+  var u = {}, abs = [{ id: 'A', art: 'JAHRESABSCHLUSS', stichtag: '2024-12-31' }];
+  var r = Fristen.naechsteFristen(u, abs, '2026-05-20');
+  var auf = r.find(function (x) { return x.art === 'aufbewahrung'; });
+  ok(auf, 'Aufbewahrung gelistet');
+  eq(auf.frist, '2034-12-31', '');
+  eq(auf.ampel, 'gruen', 'noch weit hin');
+});
+test('Fristen: Eröffnungsbilanz hat nur Aufbewahrung', function () {
+  var u = {}, abs = [{ id: 'A', art: 'EROEFFNUNGSBILANZ', stichtag: '2020-01-01' }];
+  var r = Fristen.naechsteFristen(u, abs, '2026-05-20');
+  ok(r.some(function (x) { return x.art === 'aufbewahrung'; }), 'Aufbewahrung da');
+  ok(!r.some(function (x) { return x.art === 'aufstellung'; }), 'keine Aufstellung');
+  ok(!r.some(function (x) { return x.art === 'offenlegung'; }), 'keine Offenlegung');
+});
+test('Fristen: UStVA wird gelistet, Kleinunternehmer skip', function () {
+  var r = Fristen.naechsteFristen({}, [], '2026-05-20');
+  ok(r.some(function (x) { return x.art === 'ustva'; }), 'UStVA gelistet');
+  var rk = Fristen.naechsteFristen({ kleinunternehmer: true }, [], '2026-05-20');
+  ok(!rk.some(function (x) { return x.art === 'ustva'; }), 'Kleinunternehmer: keine UStVA');
+});
+test('Fristen: Sortierung rot > gelb > gruen', function () {
+  var u = {};
+  var abs = [
+    { id: 'A', art: 'JAHRESABSCHLUSS', stichtag: '2024-12-31' }, // off=rot
+    { id: 'B', art: 'JAHRESABSCHLUSS', stichtag: '2025-12-31' }  // off=gruen, aufstellung=gelb
+  ];
+  var r = Fristen.naechsteFristen(u, abs, '2026-05-20');
+  eq(r[0].ampel, 'rot', 'erstes rot');
+  // letzter Eintrag muss grün sein
+  eq(r[r.length - 1].ampel, 'gruen', 'letzter gruen');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

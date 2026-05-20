@@ -443,6 +443,28 @@ function renderStart(m) {
   html += kachel('Fristen', 'Aufstellung &amp; Offenlegung', '⚠', 'fristen');
   html += '</div>';
 
+  // Drohende Fristen-Box (rot + gelb), wenn vorhanden
+  if (S.abschluesse.length) {
+    var akut = Fristen.naechsteFristen(S.unternehmen, S.abschluesse).filter(function (f) {
+      return f.ampel === 'rot' || f.ampel === 'gelb';
+    }).slice(0, 4);
+    if (akut.length) {
+      html += '<div class="box box-warn" style="margin-top:14px"><b>Drohende Fristen</b>';
+      akut.forEach(function (f) {
+        var farbe = f.ampel === 'rot' ? '#c14545' : '#e3b341';
+        var dot = '<span style="display:inline-block;width:9px;height:9px;' +
+          'border-radius:50%;background:' + farbe + ';margin-right:6px"></span>';
+        var rest = f.restTage < 0
+          ? '<b>' + (-f.restTage) + ' Tage überfällig</b>'
+          : 'in ' + f.restTage + ' Tagen';
+        html += '<div style="margin-top:4px">' + dot + esc(f.titel) +
+          ' &middot; ' + rest + ' &middot; ' + esc(f.frist) + '</div>';
+      });
+      html += '<div style="margin-top:8px"><span class="btn btn-sm" data-fristenlink="1">' +
+        'Alle Fristen ansehen</span></div></div>';
+    }
+  }
+
   if (S.abschluesse.length) {
     html += '<div class="karte" style="margin-top:18px"><h2>Ihre Abschlüsse</h2>' +
             '<div class="karte-hint">Klicken Sie einen Eintrag zum Bearbeiten an.</div>' +
@@ -485,6 +507,9 @@ function renderStart(m) {
         setView('start');
       });
     };
+  });
+  m.querySelectorAll('[data-fristenlink]').forEach(function (el) {
+    el.onclick = function () { setView('fristen'); };
   });
   m.querySelectorAll('.kachel').forEach(function (el) {
     el.onclick = function () {
@@ -4212,6 +4237,37 @@ function renderFristen(m) {
     '<p>Die wichtigsten gesetzlichen Pflichten rund um den Jahresabschluss einer ' +
     'kleinen GmbH.</p></div>';
 
+  // Lebende Fristen-Uebersicht aus dem aktuellen Datenbestand
+  var liveFristen = Fristen.naechsteFristen(S.unternehmen, S.abschluesse);
+  if (liveFristen.length) {
+    html += '<div class="karte"><h2>Aktuelle Fristen (aus Ihren Daten)</h2>' +
+      '<div class="karte-hint">Berechnet aus den Stichtagen Ihrer angelegten ' +
+      'Abschlüsse — rot = verstrichen, gelb = innerhalb 30 Tagen, grün = > 30 Tage.</div>' +
+      '<table class="liste"><thead><tr><th>Frist</th><th>Datum</th>' +
+      '<th class="rechts">Resttage</th><th>Grundlage</th><th>Pflicht</th>' +
+      '</tr></thead><tbody>';
+    liveFristen.forEach(function (f) {
+      var farbe = f.ampel === 'rot'  ? '#c14545'
+                : f.ampel === 'gelb' ? '#e3b341'
+                : '#5dc98f';
+      var dot = '<span style="display:inline-block;width:10px;height:10px;' +
+        'border-radius:50%;background:' + farbe + ';margin-right:6px"></span>';
+      var rest = f.restTage < 0
+        ? (-f.restTage) + ' Tage überfällig'
+        : f.restTage + ' Tage';
+      var sprung = f.sprung
+        ? ' <span class="btn btn-sm" data-fsprung="' + esc(JSON.stringify(f.sprung)) +
+          '">öffnen</span>'
+        : '';
+      html += '<tr><td>' + dot + esc(f.titel) + '</td>' +
+        '<td class="mono">' + esc(f.frist) + '</td>' +
+        '<td class="rechts mono">' + esc(rest) + '</td>' +
+        '<td>' + esc(f.paragraph) + '</td>' +
+        '<td>' + sprung + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
   html += '<div class="karte"><h2>Was ist abzugeben?</h2><table class="frist-tab"><tbody>' +
     fr('Eröffnungsbilanz', 'Zu Beginn des Handelsgewerbes (§ 242 Abs. 1 HGB). ' +
        'Elektronisch ans Finanzamt nach § 5b EStG.') +
@@ -4247,6 +4303,14 @@ function renderFristen(m) {
     'Sie im Zweifel fachlichen Rat hinzu.</div>';
 
   m.innerHTML = html;
+  m.querySelectorAll('[data-fsprung]').forEach(function (el) {
+    el.onclick = function () {
+      var s;
+      try { s = JSON.parse(el.dataset.fsprung); } catch (e) { return; }
+      if (s.abschlussId) mitSpeichern(function () { oeffneAbschluss(s.abschlussId); });
+      else if (s.view) setView(s.view);
+    };
+  });
 }
 function fr(d, t) {
   return '<tr><td class="f-d">' + d + '</td><td>' + t + '</td></tr>';
