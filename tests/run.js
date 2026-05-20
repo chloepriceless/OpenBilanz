@@ -31,6 +31,7 @@ var UstId = require('../public/shared/ustid.js');
 var Fx    = require('../public/shared/fx.js');
 var Palette = require('../public/shared/palette.js');
 var Vorlagen = require('../public/shared/vorlagen.js');
+var Autocomplete = require('../public/shared/autocomplete.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1316,6 +1317,53 @@ test('Vorlagen: markiereAusgefuehrt setzt letzteAusfuehrung', function () {
   var v = { name: 'X', wiederkehrend: { takt: 'monatlich' } };
   Vorlagen.markiereAusgefuehrt(v, '2026-05-20');
   eq(v.wiederkehrend.letzteAusfuehrung, '2026-05-20', '');
+});
+
+/* ---- Autocomplete: Konto-Vorschlaege aus Journal -------------------- */
+test('Autocomplete: lernt das passende Konto aus drei früheren Buchungen', function () {
+  var j = [
+    { text: 'Adobe CC',     soll: '6805', haben: '1800' },
+    { text: 'Adobe Lizenz', soll: '6805', haben: '1800' },
+    { text: 'Adobe Photo',  soll: '6805', haben: '1800' }
+  ];
+  var v = Autocomplete.vorschlaege('Adobe Cloud', j);
+  ok(v.length >= 1, 'mindestens ein Vorschlag');
+  eq(v[0].konto, '6805', 'Top-Vorschlag 6805');
+});
+test('Autocomplete: häufigstes Konto zuerst, alternatives danach', function () {
+  var j = [
+    { text: 'Telekom DSL', soll: '6805', haben: '1800' },
+    { text: 'Telekom DSL', soll: '6805', haben: '1800' },
+    { text: 'Telekom Mobilfunk', soll: '6300', haben: '1800' }
+  ];
+  var v = Autocomplete.vorschlaege('Telekom', j);
+  eq(v[0].konto, '6805', '2x 6805 zuerst');
+  eq(v[1].konto, '6300', '1x 6300 danach');
+});
+test('Autocomplete: leerer Text liefert keine Vorschläge', function () {
+  var j = [{ text: 'Adobe', soll: '6805', haben: '1800' }];
+  eq(Autocomplete.vorschlaege('', j).length, 0, '');
+  eq(Autocomplete.vorschlaege('  ', j).length, 0, '');
+});
+test('Autocomplete: ohne passendes Token kein Vorschlag', function () {
+  var j = [{ text: 'Adobe', soll: '6805', haben: '1800' }];
+  eq(Autocomplete.vorschlaege('Lufthansa', j).length, 0, '');
+});
+test('Autocomplete: stornierte Buchungen werden ignoriert', function () {
+  var j = [
+    { text: 'Adobe', soll: '6805', haben: '1800', storniert: true },
+    { text: 'Adobe', soll: '6300', haben: '1800' }
+  ];
+  var v = Autocomplete.vorschlaege('Adobe', j);
+  eq(v.length, 1, 'nur die nicht-stornierte zählt');
+  eq(v[0].konto, '6300', '');
+});
+test('Autocomplete: Haben-Feld separat abfragbar', function () {
+  var j = [{ text: 'Lufthansa', soll: '6650', haben: '1800' }];
+  var s = Autocomplete.vorschlaege('Lufthansa', j, { feld: 'soll' });
+  var h = Autocomplete.vorschlaege('Lufthansa', j, { feld: 'haben' });
+  eq(s[0].konto, '6650', '');
+  eq(h[0].konto, '1800', '');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

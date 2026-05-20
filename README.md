@@ -158,6 +158,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Befehlssuche (Cmd/Ctrl+K)** — Fuzzy-Sprungleiste zu Reitern, Abschlüssen, SKR04-Konten und Glossarbegriffen | 🟡 |
 | **Buchungsvorlagen** — häufige Geschäftsvorfälle als Template (Name, Text, Soll, Haben, optionaler Default-Betrag) | 🟡 |
 | **Wiederkehrende Buchungen** — Vorlagen mit Takt (monatlich/quartalsweise/jährlich), Fälligkeits-Hinweisbox in der Buchhaltung | 🟡 |
+| **Autocomplete für Buchungstext** — lernt aus dem eigenen Journal, schlägt Soll- und Haben-Konto beim Tippen vor | 🟡 |
 
 ### Zwei Erfassungswege
 

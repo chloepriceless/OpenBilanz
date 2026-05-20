@@ -2517,7 +2517,9 @@ function renderBuchhaltung(m) {
     (vorlageOpts ? feldWrap('Vorlage', vorlagen.length + ' vorhanden', vorlageOpts) : '') +
     '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" id="buAdd">' +
     'Buchung hinzufügen</button></div>' +
-    '</div></div>';
+    '</div>' +
+    '<div id="buAutoHint" class="karte-hint" style="margin-top:8px;display:none"></div>' +
+    '</div>';
 
   /* Anfangsbestände / Eröffnungsbuchungen */
   html += eroeffnungsBox(a);
@@ -2776,6 +2778,36 @@ function renderBuchhaltung(m) {
 
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
+
+  // Autocomplete: Vorschläge aus dem eigenen Journal beim Tippen des Buchungstexts.
+  var buText = m.querySelector('#buText');
+  var buHint = m.querySelector('#buAutoHint');
+  function renderAutoHint() {
+    if (!buText || !buHint) return;
+    var t = buText.value;
+    var sV = Autocomplete.vorschlaege(t, a.buchungen, { feld: 'soll', k: 3 });
+    var hV = Autocomplete.vorschlaege(t, a.buchungen, { feld: 'haben', k: 3 });
+    if (!sV.length && !hV.length) { buHint.style.display = 'none'; buHint.innerHTML = ''; return; }
+    function chip(v, feld) {
+      var k = SKR04.kontoFinden(v.konto);
+      return '<span class="btn btn-sm" data-acfeld="' + feld + '" data-ackonto="' + esc(v.konto) +
+        '">' + esc(v.konto) + (k ? ' &middot; ' + esc(k.name) : '') +
+        ' &middot; ' + v.score + '&times;</span> ';
+    }
+    var h = '<b>Aus dem Journal:</b> ';
+    if (sV.length) h += 'Soll → ' + sV.map(function (v) { return chip(v, 'buSoll'); }).join('');
+    if (hV.length) h += ' &nbsp; Haben → ' + hV.map(function (v) { return chip(v, 'buHaben'); }).join('');
+    buHint.innerHTML = h;
+    buHint.style.display = '';
+    buHint.querySelectorAll('[data-ackonto]').forEach(function (el) {
+      el.onclick = function () {
+        var sel = document.getElementById(el.dataset.acfeld);
+        if (sel) sel.value = el.dataset.ackonto;
+      };
+    });
+  }
+  if (buText) buText.oninput = renderAutoHint;
+
   m.querySelector('#buAdd').onclick = function () {
     var b = {
       id: 'B-' + Date.now(),
