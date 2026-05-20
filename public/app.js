@@ -87,12 +87,17 @@ function barrierefrei() {
   }
 }
 /* Einmalig: Enter/Leertaste aktiviert fokussierte Span-Buttons, Escape
- * schließt einen offenen Dialog. */
+ * schließt einen offenen Dialog, Cmd/Ctrl+K öffnet die Befehlssuche. */
 function installTastatur() {
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       var dlg = document.getElementById('dialog');
       if (dlg && !dlg.hidden) { dialogZu(); return; }
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      oeffneCommandPalette();
+      return;
     }
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       var el = e.target, t = el && el.tagName;
@@ -106,6 +111,135 @@ function installTastatur() {
       }
     }
   });
+}
+
+/* ---- Command-Palette (Cmd/Ctrl+K) ------------------------------------- */
+/* Sammelt alle erreichbaren Aktionen (Reiter, Abschlüsse, Konten,
+ * Glossar-Begriffe) als Eintrag-Liste und filtert per Fuzzy-Match. */
+function commandPaletteEintraege() {
+  var ein = [];
+  function add(label, sub, aktion, kat) {
+    ein.push({ label: label, sub: sub, kategorie: kat || '', aktion: aktion });
+  }
+  add('Startseite', 'Übersicht', function () { setView('start'); }, 'Reiter');
+  add('Unternehmensdaten', 'Stammdaten', function () { setView('stammdaten'); }, 'Reiter');
+  add('Kunden', 'Stammdaten', function () { setView('kunden'); }, 'Reiter');
+  add('Anlagenverzeichnis', 'Stammdaten · AfA', function () { setView('anlagen'); }, 'Reiter');
+  add('Verfahrensdokumentation', 'GoBD', function () { setView('verfahrensdoku'); }, 'Reiter');
+  add('Fristen und Pflichten', '§ 264, § 325 HGB', function () { setView('fristen'); }, 'Hilfe');
+  add('Buchungshilfe', 'SKR04-Beispiele', function () { setView('hilfe'); }, 'Hilfe');
+  add('Glossar', 'HGB, Steuer, E-Bilanz', function () { setView('glossar'); }, 'Hilfe');
+  add('Gesellschafterbeschlüsse', 'GmbHG', function () { setView('beschluesse'); }, 'Hilfe');
+
+  if (S.aktiv) {
+    var bez = S.aktiv.bezeichnung || S.aktiv.stichtag || '';
+    var istEB = S.aktiv.art === 'EROEFFNUNGSBILANZ';
+    add('Bilanz & GuV bearbeiten', bez, function () { setView('editor'); }, 'Aktiver Abschluss');
+    if (!istEB) {
+      add('Buchhaltung', bez, function () { setView('buchhaltung'); }, 'Aktiver Abschluss');
+      add('Ausgangsrechnungen', bez, function () { setView('rechnungen'); }, 'Aktiver Abschluss');
+      add('Steuern (KSt, Soli, GewSt)', bez, function () { setView('steuer'); }, 'Aktiver Abschluss');
+      add('Umsatzsteuer (UStVA)', bez, function () { setView('ustva'); }, 'Aktiver Abschluss');
+      add('BWA', bez, function () { setView('bwa'); }, 'Aktiver Abschluss');
+      add('Kapitalertragsteuer', bez, function () { setView('kapst'); }, 'Aktiver Abschluss');
+      add('Offenlegung', bez, function () { setView('offenlegung'); }, 'Aktiver Abschluss');
+    }
+    add('E-Bilanz', bez, function () { setView('ebilanz'); }, 'Aktiver Abschluss');
+    add('Druckansicht', bez, function () { setView('druck'); }, 'Aktiver Abschluss');
+  }
+
+  S.abschluesse.forEach(function (a) {
+    if (S.aktiv && S.aktiv.id === a.id) return;
+    var t = a.art === 'EROEFFNUNGSBILANZ' ? 'Eröffnungsbilanz öffnen' : 'Jahresabschluss öffnen';
+    add(a.bezeichnung || a.stichtag || a.id, t,
+        function () { mitSpeichern(function () { oeffneAbschluss(a.id); }); },
+        'Abschluss');
+  });
+  add('Neuer Abschluss', 'Eröffnungsbilanz oder Jahresabschluss anlegen',
+      function () { dialogNeuerAbschluss(); }, 'Aktion');
+
+  if (typeof SKR04 !== 'undefined') {
+    SKR04.alleKonten().forEach(function (k) {
+      if (!k || !k.nr) return;
+      add(k.nr + ' ' + (k.name || ''), 'SKR04 · ' + (k.seite || ''),
+          function () { setView('hilfe'); }, 'Konto');
+    });
+  }
+  if (typeof GLOSSAR !== 'undefined' && GLOSSAR.length) {
+    GLOSSAR.forEach(function (b) {
+      add(b.t, 'Glossar · ' + b.g, function () {
+        setView('glossar');
+        setTimeout(function () {
+          var inp = document.getElementById('glossarSuche');
+          if (inp) { inp.value = b.t; inp.dispatchEvent(new Event('input')); }
+        }, 30);
+      }, 'Glossar');
+    });
+  }
+  return ein;
+}
+
+function oeffneCommandPalette() {
+  var eintraege = commandPaletteEintraege();
+  var aktiverIndex = 0;
+  var lastTreffer = [];
+
+  function renderListe(q) {
+    lastTreffer = Palette.suche(eintraege, q, 40);
+    aktiverIndex = 0;
+    var lines = '';
+    lastTreffer.forEach(function (e, i) {
+      lines += '<div class="pal-item' + (i === 0 ? ' aktiv' : '') +
+        '" data-idx="' + i + '">' +
+        '<div class="pal-label">' + esc(e.label) + '</div>' +
+        (e.sub ? '<div class="pal-sub">' + esc(e.sub) + '</div>' : '') +
+        '</div>';
+    });
+    var meta = '<div class="pal-meta">' + lastTreffer.length + ' Treffer' +
+      (eintraege.length > lastTreffer.length ? ' von ' + eintraege.length : '') + '</div>';
+    document.getElementById('palErgebnisse').innerHTML = meta +
+      '<div id="palListe" class="pal-liste">' + lines + '</div>';
+    document.querySelectorAll('.pal-item').forEach(function (el, i) {
+      el.onmouseenter = function () { setzeAktiv(i); };
+      el.onclick = function () { waehleAktuellen(); };
+    });
+  }
+  function setzeAktiv(i) {
+    aktiverIndex = i;
+    var items = document.querySelectorAll('.pal-item');
+    items.forEach(function (el, k) {
+      if (k === i) el.classList.add('aktiv'); else el.classList.remove('aktiv');
+    });
+    if (items[i]) items[i].scrollIntoView({ block: 'nearest' });
+  }
+  function waehleAktuellen() {
+    var sel = lastTreffer[aktiverIndex];
+    if (!sel) return;
+    dialogZu();
+    try { sel.aktion(); } catch (e) {}
+  }
+
+  dialog(
+    '<h2 style="margin-top:0">Befehlssuche</h2>' +
+    '<div class="pal-hint">Pfeil &uarr;&darr; navigieren · Enter wählen · Esc schließt</div>' +
+    '<input id="palQuery" type="search" placeholder="Tippe Reiter, Konto, Begriff …" ' +
+    'autocomplete="off" spellcheck="false" />' +
+    '<div id="palErgebnisse"></div>'
+  );
+  var inp = document.getElementById('palQuery');
+  inp.oninput = function () { renderListe(inp.value); };
+  inp.onkeydown = function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); waehleAktuellen(); }
+    else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (lastTreffer.length) setzeAktiv((aktiverIndex + 1) % lastTreffer.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (lastTreffer.length) setzeAktiv((aktiverIndex - 1 + lastTreffer.length) % lastTreffer.length);
+    }
+  };
+  renderListe('');
+  inp.focus();
 }
 
 /* ---- Start ------------------------------------------------------------- */

@@ -155,6 +155,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Fremdwährung & Stichtagsbewertung (§ 256a HGB)** — Helper für kurzfristig/langfristig, Buchungshilfe-Abschnitt | 🟡 |
 | **Termingeschäfte (Futures/CFD)** — Buchungshilfe Variation-Margin-Workflow + § 15 Abs. 4 EStG-Hinweis | 🟡 |
 | **Nebenkosten des Geldverkehrs** — eigenes Konto SKR04 6855 (Bank-, Depot-, Ordergebühren) statt Sammelposten 6300 | 🟡 |
+| **Befehlssuche (Cmd/Ctrl+K)** — Fuzzy-Sprungleiste zu Reitern, Abschlüssen, SKR04-Konten und Glossarbegriffen | 🟡 |
 
 ### Zwei Erfassungswege
 

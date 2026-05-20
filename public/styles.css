@@ -256,6 +256,21 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 .btn-mini:hover{background:#2f4759}
 @media print{ #backupLeiste{display:none !important} }
 
+/* ---- Command-Palette (Cmd/Ctrl+K) -------------------------- */
+.pal-hint{font-size:11px;color:var(--ink-mut);margin-bottom:8px}
+#palQuery{width:100%;padding:9px 12px;font-size:15px;border:1px solid var(--line);
+  border-radius:6px;background:var(--bg);color:var(--ink);font-family:inherit}
+#palQuery:focus{outline:2px solid var(--akzent);outline-offset:1px}
+.pal-meta{font-size:11px;color:var(--ink-mut);margin:10px 0 4px}
+.pal-liste{max-height:50vh;overflow-y:auto;border:1px solid var(--line);
+  border-radius:6px;background:var(--bg)}
+.pal-item{padding:7px 11px;cursor:pointer;border-bottom:1px solid var(--line)}
+.pal-item:last-child{border-bottom:none}
+.pal-item.aktiv{background:var(--akzent);color:#fff}
+.pal-item.aktiv .pal-sub{color:#dde6ef}
+.pal-label{font-weight:600;font-size:13px}
+.pal-sub{font-size:11px;color:var(--ink-mut);margin-top:1px}
+
 /* ---- Arelle-Log (experimentelle Taxonomie-Pruefung) ---- */
 .bu-tag{font-size:11px;color:var(--ink-mut)}
 .arelle-log{font-family:monospace;font-size:11px;white-space:pre-wrap;

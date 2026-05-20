@@ -29,6 +29,7 @@ var XRechnungCII = require('../public/shared/xrechnung-cii.js');
 var Ausgangsrechnung = require('../public/shared/ausgangsrechnung.js');
 var UstId = require('../public/shared/ustid.js');
 var Fx    = require('../public/shared/fx.js');
+var Palette = require('../public/shared/palette.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1205,6 +1206,47 @@ test('Fx: langfristige Verbindlichkeit folgt Höchstwertprinzip', function () {
     fwBetrag: 10000, kursStichtag: 1.05, restlaufzeitMonate: 36 });
   eq(stab.delta, 0, 'keine Abwertung der Schuld');
   eq(stab.regel, 'unveraendert', '');
+});
+
+/* ---- Command-Palette: Fuzzy-Suche ----------------------------------- */
+test('Palette: fuzzy findet Subsequence', function () {
+  ok(Palette.fuzzy('ust', 'umsatzsteuer') >= 0, 'ust in umsatzsteuer');
+  ok(Palette.fuzzy('uts', 'umsatzsteuer') >= 0, 'uts findet u-m-saTzSteuer');
+  eq(Palette.fuzzy('xyz', 'umsatzsteuer'), -1, 'xyz hat keinen Match');
+  eq(Palette.fuzzy('', 'egal'), 0, 'leere Query = Score 0');
+});
+test('Palette: kompakter Treffer hat niedrigeren Score als verstreuter', function () {
+  // "ust" lückenlos am Anfang besser als "u_t" weit auseinander
+  var direkt = Palette.fuzzy('ust', 'ustva');
+  var verstreut = Palette.fuzzy('ust', 'umsatzsteuer');
+  ok(direkt < verstreut, 'direkt < verstreut');
+});
+test('Palette: suche filtert und sortiert nach Score', function () {
+  var ein = [
+    { label: 'Glossar' },
+    { label: 'Buchhaltung' },
+    { label: 'Buchungsvorlagen' },
+    { label: 'Anlagenverzeichnis' }
+  ];
+  var r = Palette.suche(ein, 'buch');
+  eq(r.length, 2, 'nur die zwei Buch-Treffer');
+  ok(/Buch/.test(r[0].label), 'erster Treffer beginnt mit Buch');
+});
+test('Palette: leere Query liefert alphabetisch sortierte Liste', function () {
+  var ein = [
+    { label: 'Zentral' }, { label: 'Anlagen' }, { label: 'Mitte' }
+  ];
+  var r = Palette.suche(ein, '');
+  eq(r[0].label, 'Anlagen', 'Anlagen zuerst');
+  eq(r[2].label, 'Zentral', 'Zentral zuletzt');
+});
+test('Palette: Sub-Feld wird ebenfalls durchsucht, Label-Treffer bevorzugt', function () {
+  var ein = [
+    { label: 'Steuer', sub: 'KSt, GewSt' },
+    { label: 'GoBD',   sub: 'Steuerrückstellung Hinweise' }
+  ];
+  var r = Palette.suche(ein, 'steuer');
+  eq(r[0].label, 'Steuer', 'Label-Treffer Steuer zuerst');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */
