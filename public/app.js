@@ -2480,6 +2480,13 @@ function renderBuchhaltung(m) {
   var kontoOpt = SKR04.alleKonten().map(function (k) {
     return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
   }).join('');
+  var vorlagen = Vorlagen.sortiert((S.unternehmen && S.unternehmen.eigeneVorlagen) || []);
+  var vorlageOpts = vorlagen.length
+    ? '<select id="buVorlage"><option value="">— Vorlage anwenden —</option>' +
+      vorlagen.map(function (v, i) {
+        return '<option value="' + i + '">' + esc(v.name) + '</option>';
+      }).join('') + '</select>'
+    : '';
   html += '<div class="karte"><h2>Buchung erfassen</h2>' +
     '<div class="gitter g3">' +
     feldWrap('Datum', '', '<input type="date" id="buDatum" value="' +
@@ -2488,6 +2495,7 @@ function renderBuchhaltung(m) {
     feldWrap('Buchungstext', '', '<input id="buText">') +
     feldWrap('Soll-Konto', '', '<select id="buSoll">' + kontoOpt + '</select>') +
     feldWrap('Haben-Konto', '', '<select id="buHaben">' + kontoOpt + '</select>') +
+    (vorlageOpts ? feldWrap('Vorlage', vorlagen.length + ' vorhanden', vorlageOpts) : '') +
     '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" id="buAdd">' +
     'Buchung hinzufügen</button></div>' +
     '</div></div>';
@@ -2663,6 +2671,41 @@ function renderBuchhaltung(m) {
     '</div><div class="btn-reihe"><button class="btn" id="regelAdd">Regel hinzufügen' +
     '</button></div></div>';
 
+  /* Buchungsvorlagen (haeufige Geschaeftsvorfaelle) */
+  var vorlKontoOpt = SKR04.alleKonten().filter(function (k) { return k.seite !== 'EBK'; })
+    .map(function (k) {
+      return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
+    }).join('');
+  html += '<div class="karte"><h2>Buchungsvorlagen</h2>' +
+    '<div class="karte-hint">Häufige Geschäftsvorfälle als Vorlage speichern — bei der ' +
+    'Buchungserfassung über das Vorlage-Dropdown übernommen. Felder, die nicht in der ' +
+    'Vorlage gesetzt sind, bleiben für die manuelle Eingabe frei.</div>';
+  if (vorlagen.length) {
+    html += '<table class="liste"><thead><tr><th>Name</th><th>Text</th>' +
+      '<th>Soll</th><th>Haben</th><th class="rechts">Betrag</th>' +
+      '<th></th></tr></thead><tbody>';
+    vorlagen.forEach(function (v, i) {
+      html += '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.text || '') + '</td>' +
+        '<td class="mono">' + esc(v.soll) + '</td>' +
+        '<td class="mono">' + esc(v.haben) + '</td>' +
+        '<td class="rechts mono">' + (v.betrag ? geld(v.betrag) : '—') + '</td>' +
+        '<td class="rechts"><span class="btn btn-sm btn-gefahr" data-vorldel="' + i +
+        '">löschen</span></td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div class="karte-hint">Noch keine Vorlagen angelegt.</div>';
+  }
+  html += '<div class="gitter g3" style="margin-top:10px">' +
+    feldWrap('Name', 'z. B. Adobe Creative Cloud', '<input id="vorlName">') +
+    feldWrap('Buchungstext', 'optional', '<input id="vorlText">') +
+    feldWrap('Default-Betrag', 'optional', '<input class="zahl" id="vorlBetrag" inputmode="decimal">') +
+    feldWrap('Soll-Konto', '', '<select id="vorlSoll">' + vorlKontoOpt + '</select>') +
+    feldWrap('Haben-Konto', '', '<select id="vorlHaben">' + vorlKontoOpt + '</select>') +
+    '<div style="display:flex;align-items:flex-end"><button class="btn" id="vorlAdd">' +
+    'Vorlage speichern</button></div>' +
+    '</div></div>';
+
   /* Bankimport CAMT.053 */
   html += '<div class="karte"><h2>Bankimport (CAMT.053)</h2>' +
     '<div class="karte-hint">Kontoauszug im Format CAMT.053 (ISO 20022) einlesen und ' +
@@ -2782,6 +2825,58 @@ function renderBuchhaltung(m) {
     el.onclick = function () {
       if (!S.unternehmen || !S.unternehmen.kontierungsregeln) return;
       S.unternehmen.kontierungsregeln.splice(parseInt(el.dataset.regeldel, 10), 1);
+      Store.speichereUnternehmen(S.unternehmen).then(function (g) {
+        if (g && !g.fehler) S.unternehmen = g;
+        renderBuchhaltung(m);
+      });
+    };
+  });
+  // Vorlage auf das Erfassungsformular anwenden
+  var buVorl = m.querySelector('#buVorlage');
+  if (buVorl) buVorl.onchange = function () {
+    var i = parseInt(buVorl.value, 10);
+    if (!isFinite(i)) return;
+    var v = vorlagen[i];
+    if (!v) return;
+    var b = Vorlagen.anwenden(v, document.getElementById('buDatum').value || a.stichtag || '');
+    document.getElementById('buText').value = b.text || '';
+    document.getElementById('buSoll').value = b.soll || document.getElementById('buSoll').value;
+    document.getElementById('buHaben').value = b.haben || document.getElementById('buHaben').value;
+    if (b.betrag) document.getElementById('buBetrag').value = b.betrag;
+    if (b.datum) document.getElementById('buDatum').value = b.datum;
+    buVorl.selectedIndex = 0;  // zurücksetzen
+    document.getElementById('buBetrag').focus();
+  };
+  var vorlAdd = m.querySelector('#vorlAdd');
+  if (vorlAdd) vorlAdd.onclick = function () {
+    var v = {
+      name: document.getElementById('vorlName').value.trim(),
+      text: document.getElementById('vorlText').value.trim(),
+      betrag: document.getElementById('vorlBetrag').value.trim(),
+      soll: document.getElementById('vorlSoll').value,
+      haben: document.getElementById('vorlHaben').value
+    };
+    if (v.betrag) v.betrag = Berechnung.num(v.betrag);
+    var p = Vorlagen.pruefe(v);
+    if (!p.ok) { alert('Vorlage ungültig:\n• ' + p.fehler.join('\n• ')); return; }
+    if (!S.unternehmen) { alert('Bitte zuerst die Unternehmensdaten anlegen.'); return; }
+    S.unternehmen.eigeneVorlagen = S.unternehmen.eigeneVorlagen || [];
+    S.unternehmen.eigeneVorlagen.push(v);
+    Store.speichereUnternehmen(S.unternehmen).then(function (g) {
+      if (g && !g.fehler) S.unternehmen = g;
+      hinweisToast('Vorlage „' + v.name + '" gespeichert.');
+      renderBuchhaltung(m);
+    });
+  };
+  m.querySelectorAll('[data-vorldel]').forEach(function (el) {
+    el.onclick = function () {
+      if (!S.unternehmen || !S.unternehmen.eigeneVorlagen) return;
+      var sortL = Vorlagen.sortiert(S.unternehmen.eigeneVorlagen);
+      var ziel = sortL[parseInt(el.dataset.vorldel, 10)];
+      if (!ziel) return;
+      if (!confirm('Vorlage „' + (ziel.name || '') + '" löschen?')) return;
+      S.unternehmen.eigeneVorlagen = S.unternehmen.eigeneVorlagen
+        .filter(function (x) { return x !== ziel; });
       Store.speichereUnternehmen(S.unternehmen).then(function (g) {
         if (g && !g.fehler) S.unternehmen = g;
         renderBuchhaltung(m);

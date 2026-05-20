@@ -30,6 +30,7 @@ var Ausgangsrechnung = require('../public/shared/ausgangsrechnung.js');
 var UstId = require('../public/shared/ustid.js');
 var Fx    = require('../public/shared/fx.js');
 var Palette = require('../public/shared/palette.js');
+var Vorlagen = require('../public/shared/vorlagen.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1247,6 +1248,36 @@ test('Palette: Sub-Feld wird ebenfalls durchsucht, Label-Treffer bevorzugt', fun
   ];
   var r = Palette.suche(ein, 'steuer');
   eq(r[0].label, 'Steuer', 'Label-Treffer Steuer zuerst');
+});
+
+/* ---- Buchungsvorlagen ------------------------------------------------ */
+test('Vorlagen: pruefe akzeptiert vollstaendige Vorlage', function () {
+  var v = { name: 'Adobe', text: 'Adobe CC', soll: '6805', haben: '1800', betrag: 71.99 };
+  eq(Vorlagen.pruefe(v).ok, true, 'gueltig');
+});
+test('Vorlagen: pruefe verlangt Name, Soll, Haben', function () {
+  ok(!Vorlagen.pruefe({ soll: '6805', haben: '1800' }).ok, 'ohne Name');
+  ok(!Vorlagen.pruefe({ name: 'X', haben: '1800' }).ok, 'ohne Soll');
+  ok(!Vorlagen.pruefe({ name: 'X', soll: '6805' }).ok, 'ohne Haben');
+});
+test('Vorlagen: gleiches Soll und Haben wird abgelehnt', function () {
+  var r = Vorlagen.pruefe({ name: 'X', soll: '1800', haben: '1800' });
+  eq(r.ok, false, 'soll = haben');
+});
+test('Vorlagen: anwenden uebertraegt Felder mit Datum', function () {
+  var v = { name: 'Adobe', text: 'Adobe CC', soll: '6805', haben: '1800', betrag: 71.99 };
+  var b = Vorlagen.anwenden(v, '2026-05-20');
+  eq(b.datum, '2026-05-20', 'datum');
+  eq(b.soll, '6805', 'soll');
+  eq(b.haben, '1800', 'haben');
+  eq(b.text, 'Adobe CC', 'text');
+  eq(b.betrag, 71.99, 'betrag');
+});
+test('Vorlagen: sortiert alphabetisch nach Name', function () {
+  var l = [{ name: 'Zebra' }, { name: 'Adobe' }, { name: 'Microsoft' }];
+  var s = Vorlagen.sortiert(l);
+  eq(s[0].name, 'Adobe', 'A zuerst');
+  eq(s[2].name, 'Zebra', 'Z zuletzt');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */
