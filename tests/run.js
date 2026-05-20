@@ -24,6 +24,10 @@ var Gdpdu      = require('../public/shared/gdpdu.js');
 var Pruefkette = require('../public/shared/pruefkette.js');
 var XBRL       = require('../public/shared/xbrl.js');
 var Importe    = require('../public/shared/importe.js');
+var XRechnungUBL = require('../public/shared/xrechnung-ubl.js');
+var XRechnungCII = require('../public/shared/xrechnung-cii.js');
+var Ausgangsrechnung = require('../public/shared/ausgangsrechnung.js');
+var UstId = require('../public/shared/ustid.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -848,6 +852,293 @@ test('E-Rechnung: Bytes ohne PDF-Magic → klare Fehlermeldung', function () {
   return Importe.parseERechnungPdf(Buffer.from('Hello, world', 'latin1')).then(function (r) {
     ok(r.fehler && /PDF/.test(r.fehler), 'Fehler wegen fehlender Magic-Bytes');
   });
+});
+
+/* ---- Ausgangsrechnung: XRechnung-UBL-Renderer ------------------------ */
+var EIGENE_TEST = {
+  name: 'Lindgrün Software GmbH', strasse: 'Karl-Heine-Straße 47',
+  plz: '04229', ort: 'Leipzig', land: 'DE',
+  ustId: 'DE298765432', hrNummer: 'HRB 38120',
+  bank: { iban: 'DE89370400440532013000', bic: 'COBADEFFXXX' }
+};
+function basisRechnung(over) {
+  var r = { nummer: 'RE-2026-0001', datum: '2026-05-20', leistungsdatum: '2026-05-19',
+    besonderheit: 'NORMAL', kundeSnapshot: { name: 'Müller & Co. KG',
+      strasse: 'Hauptstraße 12', plz: '10115', ort: 'Berlin', land: 'DE',
+      ustId: 'DE123456789' },
+    positionen: [
+      { bezeichnung: 'Beratungsleistung Mai 2026', menge: 16, einheit: 'HUR', einzelpreis: 120, ustSatz: 19 },
+      { bezeichnung: 'Lizenz CI-Werkzeug',         menge: 1,  einheit: 'C62', einzelpreis: 49.99, ustSatz: 19 }
+    ] };
+  if (over) Object.keys(over).forEach(function (k) { r[k] = over[k]; });
+  return r;
+}
+
+test('XRechnung-UBL: Summen aus Positionen berechnen (19 %)', function () {
+  var s = XRechnungUBL.summen(basisRechnung());
+  eq(s.netto, 1969.99, 'Netto');
+  eq(s.ust, 374.30, 'USt');
+  eq(s.brutto, 2344.29, 'Brutto');
+});
+
+test('XRechnung-UBL: Pflichtcheck — Standardfall ist OK', function () {
+  var p = XRechnungUBL.pruefe(basisRechnung(), EIGENE_TEST);
+  ok(p.ok, 'OK, Fehler: ' + p.fehler.join('; '));
+  eq(p.fehler.length, 0, 'keine Fehler');
+});
+
+test('XRechnung-UBL: Pflichtcheck erkennt fehlende Rechnungsnummer', function () {
+  var r = basisRechnung(); r.nummer = '';
+  var p = XRechnungUBL.pruefe(r, EIGENE_TEST);
+  ok(!p.ok, 'Pflichtcheck schlägt an');
+  ok(p.fehler.some(function (f) { return /Rechnungsnummer/.test(f); }), 'Nummer-Fehler');
+});
+
+test('XRechnung-UBL: Pflichtcheck verlangt USt-ID des Kunden bei §13b', function () {
+  var r = basisRechnung(); r.besonderheit = 'REVERSE_CHARGE_13b';
+  r.kundeSnapshot.ustId = '';
+  var p = XRechnungUBL.pruefe(r, EIGENE_TEST);
+  ok(!p.ok, 'Pflichtcheck schlägt an');
+  ok(p.fehler.some(function (f) { return /USt-IdNr/.test(f) && /Empfänger/.test(f); }),
+     'fordert Empfänger-USt-ID');
+});
+
+test('XRechnung-UBL: Pflichtcheck verlangt eigene St-Nr ODER USt-ID', function () {
+  var e = Object.assign({}, EIGENE_TEST, { ustId: '', stNr: '' });
+  var p = XRechnungUBL.pruefe(basisRechnung(), e);
+  ok(!p.ok, 'Pflichtcheck schlägt an');
+});
+
+test('XRechnung-UBL: Reverse-Charge erzwingt USt = 0 unabhängig von Position', function () {
+  var r = basisRechnung(); r.besonderheit = 'REVERSE_CHARGE_13b';
+  var s = XRechnungUBL.summen(r);
+  eq(s.ust, 0, 'USt = 0');
+  eq(s.brutto, s.netto, 'Brutto = Netto');
+});
+
+test('XRechnung-UBL: §19 Kleinunternehmer erzwingt USt = 0', function () {
+  var r = basisRechnung(); r.besonderheit = 'KLEINUNTERNEHMER_19';
+  var s = XRechnungUBL.summen(r);
+  eq(s.ust, 0, 'USt = 0');
+});
+
+test('XRechnung-UBL: rendert valides UBL und Roundtrip via parseERechnung stimmt', function () {
+  var xml = XRechnungUBL.render(basisRechnung(), EIGENE_TEST);
+  ok(/CustomizationID>urn:cen\.eu:en16931/.test(xml), 'CustomizationID gesetzt');
+  ok(/xrechnung_3\.0/.test(xml), 'XRechnung-3.0-CIUS');
+  ok(/<cbc:InvoiceTypeCode>380<\/cbc:InvoiceTypeCode>/.test(xml), 'TypeCode 380');
+  var rt = Importe.parseERechnung(xml).rechnung;
+  eq(rt.nummer, 'RE-2026-0001', 'Nummer Roundtrip');
+  eq(rt.netto, 1969.99, 'Netto Roundtrip');
+  eq(rt.ust, 374.30, 'USt Roundtrip');
+  eq(rt.brutto, 2344.29, 'Brutto Roundtrip');
+  eq(rt.verkaeufer, 'Lindgrün Software GmbH', 'Verkäufer mit Umlaut');
+  ok(/XRechnung 3/.test(rt.profil), 'Profil erkannt');
+  eq(rt.positionen.length, 2, 'zwei Positionen');
+  eq(rt.warnungen.length, 0, 'keine Plausi-Warnungen');
+});
+
+test('XRechnung-UBL: Reverse-Charge-Hinweis als TaxExemptionReason im XML', function () {
+  var r = basisRechnung(); r.besonderheit = 'REVERSE_CHARGE_13b';
+  var xml = XRechnungUBL.render(r, EIGENE_TEST);
+  ok(/<cbc:ID>AE<\/cbc:ID>/.test(xml), 'TaxCategoryCode AE');
+  ok(/<cbc:TaxExemptionReason>[^<]*§\s*13b[^<]*<\/cbc:TaxExemptionReason>/.test(xml),
+     'Hinweis auf § 13b');
+});
+
+test('XRechnung-UBL: SEPA-PaymentMeans wenn IBAN angegeben', function () {
+  var xml = XRechnungUBL.render(basisRechnung(), EIGENE_TEST);
+  ok(/<cbc:PaymentMeansCode>58<\/cbc:PaymentMeansCode>/.test(xml), 'SEPA-Code 58');
+  ok(/DE89370400440532013000/.test(xml), 'IBAN ohne Leerzeichen im XML');
+});
+
+/* ---- Ausgangsrechnung: Nummernkreis + Buchungsautomat ---------------- */
+test('Ausgangsrechnung: Nummernschema RE-{JAHR}-{NR:04} füllt mit Nullen', function () {
+  eq(Ausgangsrechnung.formatNummer('RE-{JAHR}-{NR:04}', 2026, 7), 'RE-2026-0007', 'NR:04');
+  eq(Ausgangsrechnung.formatNummer('{JAHR}/{NR}', 2026, 100), '2026/100', 'NR ohne Pad');
+  eq(Ausgangsrechnung.formatNummer('R-{NR:06}', 2026, 42), 'R-000042', 'NR:06');
+});
+
+test('Ausgangsrechnung: vergebeNummer ist lückenlos und springt am Jahreswechsel', function () {
+  var u = { rechnungsnummern: { schema: 'RE-{JAHR}-{NR:04}', naechste: 1, jahr: 0 } };
+  eq(Ausgangsrechnung.vergebeNummer(u, '2026-05-20'), 'RE-2026-0001', 'erste 2026');
+  eq(Ausgangsrechnung.vergebeNummer(u, '2026-06-01'), 'RE-2026-0002', 'zweite 2026');
+  eq(Ausgangsrechnung.vergebeNummer(u, '2026-12-31'), 'RE-2026-0003', 'dritte 2026');
+  eq(Ausgangsrechnung.vergebeNummer(u, '2027-01-02'), 'RE-2027-0001', 'reset bei Jahreswechsel');
+  eq(u.rechnungsnummern.naechste, 2, 'Zähler steht auf 2');
+  eq(u.rechnungsnummern.jahr, 2027, 'Jahr aktualisiert');
+});
+
+test('Ausgangsrechnung: naechsteNummer mutiert nicht (Vorschau)', function () {
+  var u = { rechnungsnummern: { schema: 'RE-{JAHR}-{NR:04}', naechste: 5, jahr: 2026 } };
+  eq(Ausgangsrechnung.naechsteNummer(u, '2026-05-20'), 'RE-2026-0005', 'Vorschau 5');
+  eq(Ausgangsrechnung.naechsteNummer(u, '2026-05-20'), 'RE-2026-0005', 'noch immer 5 (keine Mutation)');
+  eq(u.rechnungsnummern.naechste, 5, 'Zähler unverändert');
+});
+
+test('Ausgangsrechnung: eigeneAusUnternehmen — rechnungsAngaben überschreibt Hauptfelder', function () {
+  var u = { name: 'Haupt-GmbH', strasse: 'Haupt 1', plz: '11111', ort: 'X',
+    steuernummer: '111/111/11111',
+    rechnungsAngaben: { name: 'Rechnungs-Name GmbH', ustId: 'DE999999999' } };
+  var e = Ausgangsrechnung.eigeneAusUnternehmen(u);
+  eq(e.name, 'Rechnungs-Name GmbH', 'Override gewinnt');
+  eq(e.strasse, 'Haupt 1', 'Fallback auf Hauptdaten');
+  eq(e.ustId, 'DE999999999', 'USt-ID aus rechnungsAngaben');
+  eq(e.stNr, '111/111/11111', 'Steuernummer-Fallback');
+});
+
+test('Ausgangsrechnung: defaults — kunden und rechnungsnummern werden angelegt', function () {
+  var u = { name: 'X' };
+  var d = Ausgangsrechnung.defaults(u);
+  ok(Array.isArray(d.kunden), 'kunden[] existiert');
+  ok(d.rechnungsnummern && d.rechnungsnummern.schema, 'rechnungsnummern existiert');
+});
+
+test('Ausgangsrechnung: Buchungssatz NORMAL 19% — Forderung an Erlös + USt', function () {
+  var r = { nummer: 'RE-2026-0001', datum: '2026-05-20', besonderheit: 'NORMAL',
+    kundeSnapshot: { name: 'Kunde KG' },
+    positionen: [{ bezeichnung: 'X', menge: 1, einheit: 'C62', einzelpreis: 100, ustSatz: 19 }] };
+  var bu = Ausgangsrechnung.buchungenAusRechnung(r, 'TS');
+  eq(bu.length, 2, 'zwei Buchungen');
+  eq(bu[0].soll, '1200', 'Forderung');
+  eq(bu[0].haben, '4400', 'Erlöse 19%');
+  eq(bu[0].betrag, 100, 'Netto');
+  eq(bu[1].soll, '1200', 'Forderung (USt)');
+  eq(bu[1].haben, '3806', 'USt 19%');
+  eq(bu[1].betrag, 19, 'USt-Betrag');
+});
+
+test('Ausgangsrechnung: Buchungssatz §13b — Forderung an Erlöse §13b, kein USt-Buchungssatz', function () {
+  var r = { nummer: 'RE-2026-0002', datum: '2026-05-20', besonderheit: 'REVERSE_CHARGE_13b',
+    kundeSnapshot: { name: 'Kunde KG' },
+    positionen: [{ bezeichnung: 'X', menge: 1, einheit: 'C62', einzelpreis: 100, ustSatz: 19 }] };
+  var bu = Ausgangsrechnung.buchungenAusRechnung(r, 'TS');
+  eq(bu.length, 1, 'eine Buchung, keine USt');
+  eq(bu[0].soll, '1200', 'Forderung');
+  eq(bu[0].haben, '4336', 'Erlöse §13b');
+  eq(bu[0].betrag, 100, 'Netto = Brutto');
+});
+
+test('Ausgangsrechnung: Buchungssatz §19 Kleinunternehmer — keine USt-Trennung', function () {
+  var r = { nummer: 'RE-2026-0003', datum: '2026-05-20', besonderheit: 'KLEINUNTERNEHMER_19',
+    kundeSnapshot: { name: 'Kunde KG' },
+    positionen: [{ bezeichnung: 'X', menge: 2, einheit: 'C62', einzelpreis: 50, ustSatz: 19 }] };
+  var bu = Ausgangsrechnung.buchungenAusRechnung(r, 'TS');
+  eq(bu.length, 1, 'eine Buchung');
+  eq(bu[0].betrag, 100, 'Volle Summe als Erlös');
+  eq(bu[0].haben, '4400', 'Erlöse-Konto');
+});
+
+test('Ausgangsrechnung: Buchungssatz Mix 19/7 — getrennte Buchungen pro Satz', function () {
+  var r = { nummer: 'RE-2026-0004', datum: '2026-05-20', besonderheit: 'NORMAL',
+    kundeSnapshot: { name: 'Kunde KG' },
+    positionen: [
+      { bezeichnung: 'A', menge: 1, einheit: 'C62', einzelpreis: 100, ustSatz: 19 },
+      { bezeichnung: 'B', menge: 1, einheit: 'C62', einzelpreis: 50,  ustSatz: 7 }
+    ] };
+  var bu = Ausgangsrechnung.buchungenAusRechnung(r, 'TS');
+  eq(bu.length, 4, 'zwei Sätze × (Erlös + USt)');
+  var konten = bu.map(function (b) { return b.haben; }).sort();
+  eq(konten[0], '3801', 'USt 7%');
+  eq(konten[1], '3806', 'USt 19%');
+  eq(konten[2], '4300', 'Erlös 7%');
+  eq(konten[3], '4400', 'Erlös 19%');
+});
+
+/* ---- XRechnung-CII (zweite Syntax: UN/CEFACT) ------------------------ */
+test('XRechnung-CII: rendert CrossIndustryInvoice mit Guideline-ID', function () {
+  var xml = XRechnungCII.render(basisRechnung(), EIGENE_TEST);
+  ok(/<rsm:CrossIndustryInvoice/.test(xml), 'Root-Element');
+  ok(/<ram:ID>urn:cen\.eu:en16931:2017#conformant#urn:xoev-de:kosit:standard:xrechnung_3\.0<\/ram:ID>/.test(xml),
+     'Guideline-ID auf XRechnung 3.0');
+  ok(/<ram:TypeCode>380<\/ram:TypeCode>/.test(xml), 'TypeCode 380');
+});
+
+test('XRechnung-CII: Roundtrip via parseERechnung ergibt identische Werte', function () {
+  var xml = XRechnungCII.render(basisRechnung(), EIGENE_TEST);
+  var rt = Importe.parseERechnung(xml).rechnung;
+  eq(rt.nummer, 'RE-2026-0001', 'Nummer');
+  eq(rt.netto, 1969.99, 'Netto');
+  eq(rt.ust, 374.30, 'USt');
+  eq(rt.brutto, 2344.29, 'Brutto');
+  eq(rt.verkaeufer, 'Lindgrün Software GmbH', 'Verkäufer mit Umlaut');
+  ok(/XRechnung 3/.test(rt.profil), 'Profil erkannt');
+  eq(rt.positionen.length, 2, 'zwei Positionen');
+  eq(rt.warnungen.length, 0, 'keine Plausi-Warnungen');
+});
+
+test('XRechnung-CII: Reverse-Charge — CategoryCode AE und ExemptionReason', function () {
+  var r = basisRechnung(); r.besonderheit = 'REVERSE_CHARGE_13b';
+  var xml = XRechnungCII.render(r, EIGENE_TEST);
+  ok(/<ram:CategoryCode>AE<\/ram:CategoryCode>/.test(xml), 'CategoryCode AE');
+  ok(/<ram:ExemptionReason>[^<]*§\s*13b[^<]*<\/ram:ExemptionReason>/.test(xml),
+     'ExemptionReason mit §13b');
+  var rt = Importe.parseERechnung(xml).rechnung;
+  eq(rt.ust, 0, 'USt 0 im Roundtrip');
+});
+
+test('XRechnung-CII: SEPA-PaymentMeans + IBAN ohne Leerzeichen', function () {
+  var xml = XRechnungCII.render(basisRechnung(), EIGENE_TEST);
+  ok(/<ram:TypeCode>58<\/ram:TypeCode>/.test(xml), 'SEPA-PaymentMeans Code 58');
+  ok(/<ram:IBANID>DE89370400440532013000<\/ram:IBANID>/.test(xml), 'IBAN inline');
+});
+
+test('XRechnung-CII: USt-IdNr. des Verkäufers als TaxRegistration schemeID=VA', function () {
+  var xml = XRechnungCII.render(basisRechnung(), EIGENE_TEST);
+  ok(/schemeID="VA">DE298765432</.test(xml), 'Eigene USt-ID mit schemeID');
+});
+
+test('XRechnung-CII: Datum ISO → CII-102-Format YYYYMMDD', function () {
+  var xml = XRechnungCII.render(basisRechnung(), EIGENE_TEST);
+  ok(/format="102">20260520</.test(xml), 'IssueDateTime im 102-Format');
+  ok(/format="102">20260519</.test(xml), 'Leistungsdatum im 102-Format');
+});
+
+/* ---- USt-ID-Strukturprüfung ------------------------------------------ */
+test('UstId: DE — ISO 7064 MOD 11-10 erkennt valide Nummer', function () {
+  eq(UstId.pruefe('DE123456788').ok, true, 'konstruiertes valides Beispiel');
+  eq(UstId.pruefe('DE811569869').ok, true, 'echte USt-IdNr. Telekom DE');
+  eq(UstId.pruefe('DE123456789').ok, false, 'Prüfziffer falsch');
+  eq(UstId.pruefe('DE12345678').ok, false, 'zu kurz');
+});
+
+test('UstId: AT — Luhn-Variante erkennt ATU13585627', function () {
+  eq(UstId.pruefe('ATU13585627').ok, true, 'ATU13585627 valide');
+  eq(UstId.pruefe('ATU13585621').ok, false, 'Prüfziffer falsch');
+});
+
+test('UstId: NL — Mod-11 erkennt 9-Ziffern-Form mit B + 2-stelligem Suffix', function () {
+  eq(UstId.pruefe('NL100000009B01').ok, true, 'konstruiertes valides Beispiel');
+  eq(UstId.pruefe('NL100000008B01').ok, false, 'Prüfziffer falsch');
+  eq(UstId.pruefe('NL100000009').ok, false, 'fehlendes B-Suffix');
+});
+
+test('UstId: IT — Luhn-Algorithmus auf 11 Ziffern', function () {
+  eq(UstId.pruefe('IT12345678903').ok, true, '11-stellig, Luhn-konform');
+  eq(UstId.pruefe('IT12345678904').ok, false, 'Luhn-falsch');
+});
+
+test('UstId: nicht implementierte Länder bestehen Format-Check mit Hinweis', function () {
+  var r = UstId.pruefe('FR12345678901');
+  eq(r.ok, true, 'Format ok');
+  ok(/nicht implementiert/.test(r.hinweis), 'Hinweis auf fehlende Prüfziffer');
+});
+
+test('UstId: normalisiert Leerzeichen und Großschreibung', function () {
+  var r = UstId.pruefe('  de 123 456 788  ');
+  eq(r.normalisiert, 'DE123456788', 'Whitespace entfernt + upcase');
+  eq(r.ok, true, 'valide nach Normalisierung');
+});
+
+test('UstId: unbekannter Länderpräfix → klarer Fehler', function () {
+  var r = UstId.pruefe('XYZ123');
+  eq(r.ok, false, 'nicht ok');
+  ok(/Unbekannter Länderpräfix/.test(r.fehler), 'klare Meldung');
+});
+
+test('UstId: leerer Eingabewert → Fehler', function () {
+  eq(UstId.pruefe('').ok, false, '');
+  eq(UstId.pruefe(null).ok, false, '');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

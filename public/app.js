@@ -200,6 +200,7 @@ function renderNav() {
       var istEB = a.art === 'EROEFFNUNGSBILANZ';
       n.push(navUnter('editor', istEB ? 'Bilanz' : 'Bilanz &amp; GuV'));
       if (!istEB) n.push(navUnter('buchhaltung', 'Buchhaltung'));
+      if (!istEB) n.push(navUnter('rechnungen', 'Ausgangsrechnungen'));
       if (!istEB) n.push(navUnter('steuer', 'Steuern'));
       if (!istEB) n.push(navUnter('ustva', 'Umsatzsteuer'));
       if (!istEB) n.push(navUnter('bwa', 'BWA'));
@@ -212,6 +213,7 @@ function renderNav() {
   n.push('<div class="nav-item" data-akt="neu"><span class="ic">+</span><span>Neuer Abschluss</span></div>');
   n.push('<div class="nav-grp">Stammdaten</div>');
   n.push(navItem('stammdaten', '⌂', 'Unternehmensdaten'));
+  n.push(navItem('kunden', '☺', 'Kunden'));
   n.push(navItem('anlagen', '▦', 'Anlagenverzeichnis'));
   n.push(navItem('verfahrensdoku', '✎', 'Verfahrensdokumentation'));
   n.push('<div class="nav-grp">Hilfe</div>');
@@ -263,6 +265,8 @@ function setView(view) {
   else if (view === 'offenlegung')renderOffenlegung(m);
   else if (view === 'steuer')     renderSteuer(m);
   else if (view === 'buchhaltung')renderBuchhaltung(m);
+  else if (view === 'kunden')     renderKunden(m);
+  else if (view === 'rechnungen') renderRechnungen(m);
   else if (view === 'ustva')      renderUstva(m);
   else if (view === 'bwa')        renderBwa(m);
   else if (view === 'kapst')      renderKapst(m);
@@ -2830,6 +2834,773 @@ function renderBuchhaltung(m) {
       rd.readAsText(f);
     }
   };
+}
+
+/* ===========================================================================
+ * Kunden-Stammdaten + eigene Rechnungs-Angaben
+ * ---------------------------------------------------------------------------
+ * View 'kunden': pflegt die Liste der Rechnungs-Adressaten sowie die eigenen
+ * Angaben, die in Ausgangsrechnungen erscheinen (Bank, USt-IdNr., HR-Nr.,
+ * Ansprechpartner). Beide werden in S.unternehmen mitgepflegt.
+ * ========================================================================= */
+
+/* Hängt an USt-ID-Inputs (data-ra="ustId", data-k="ustId") einen kleinen
+ * Status-Span an, der nach jeder Eingabe rot/orange/grün die Strukturprüfung
+ * anzeigt. Online-Abgleich beim BZSt/VIES findet hier ausdrücklich nicht
+ * statt — nur Format und (für DE/AT/NL/IT) Prüfziffer. */
+function bindeUstIdChecks(container) {
+  if (typeof UstId === 'undefined') return;
+  var inputs = container.querySelectorAll('input[data-ra="ustId"], input[data-k="ustId"]');
+  inputs.forEach(function (el) {
+    if (el.dataset.ustidBound) return;
+    el.dataset.ustidBound = '1';
+    var span = document.createElement('span');
+    span.style.cssText = 'margin-left:8px;font-size:12px;display:inline-block';
+    el.insertAdjacentElement('afterend', span);
+    function check() {
+      var v = el.value.trim();
+      if (!v) { span.textContent = ''; return; }
+      var r = UstId.pruefe(v);
+      if (!r.ok) {
+        span.textContent = '✗ ' + (r.fehler || 'ungültig');
+        span.style.color = '#a4262c';
+      } else if (r.hinweis) {
+        span.textContent = '✓ Format ok (' + r.land + ', Prüfziffer nicht implementiert)';
+        span.style.color = '#8a6700';
+      } else {
+        span.textContent = '✓ ' + r.land + ' — Format + Prüfziffer ok';
+        span.style.color = '#1a8a31';
+      }
+    }
+    el.addEventListener('input', check);
+    el.addEventListener('blur', check);
+    check();
+  });
+}
+
+function renderKunden(m) {
+  if (!S.unternehmen) {
+    alert('Bitte zuerst die Unternehmensdaten anlegen.'); setView('stammdaten'); return;
+  }
+  var u = Ausgangsrechnung.defaults(S.unternehmen);
+  var eigene = u.rechnungsAngaben || {};
+  if (!eigene.bank) eigene.bank = {};
+  function ev(pfad, label, sub, typ) {
+    var v = getNested(eigene, pfad);
+    return feldWrap(label, sub, '<input data-ra="' + pfad + '" type="' + (typ || 'text') +
+      '" value="' + esc(v == null ? '' : v) + '">');
+  }
+  function fv(pfad, label, sub, typ) {
+    var v = getNested(u, pfad);
+    return feldWrap(label, sub, '<input data-u="' + pfad + '" type="' + (typ || 'text') +
+      '" value="' + esc(v == null ? '' : v) + '">');
+  }
+  var html = '';
+  html += '<div class="kopf"><h1>Kunden &amp; Rechnungs-Angaben</h1>' +
+          '<p>Diese Angaben erscheinen auf Ihren Ausgangsrechnungen ' +
+          'und in den erzeugten XRechnungs-Dateien.</p></div>';
+
+  /* --- Eigene Rechnungs-Angaben ------------------------------------------ */
+  html += '<div class="karte"><h2>Eigene Rechnungs-Angaben</h2>' +
+          '<div class="karte-hint">Was leer bleibt, wird aus den ' +
+          '<a href="#" data-z-stammdaten>Unternehmensdaten</a> ' +
+          'übernommen. Wenn Sie hier explizit etwas eintragen, hat das auf der ' +
+          'Rechnung Vorrang.</div>';
+  html += '<div class="gitter g2">';
+  html += ev('name',            'Name auf der Rechnung',  'optional, sonst Firmenname');
+  html += ev('strasse',         'Straße + Hausnr.',       'optional');
+  html += '<div class="gitter g2" style="gap:13px">' +
+          ev('plz',             'PLZ') +
+          ev('ort',             'Ort') + '</div>';
+  html += ev('stNr',            'Steuernummer',           'wird ausgewiesen, wenn keine USt-IdNr. vorhanden');
+  html += ev('ustId',           'USt-IdNr.',              'z. B. DE298765432 — Pflicht bei §13b/innergem.');
+  html += ev('registergericht', 'Registergericht');
+  html += ev('hrNummer',        'HR-Nummer',              'z. B. HRB 38120');
+  html += ev('ansprechpartner', 'Ansprechpartner',        'erscheint im Kontaktblock');
+  html += ev('telefon',         'Telefon');
+  html += ev('email',           'E-Mail');
+  html += '</div>';
+  html += '<h3 style="margin-top:14px">Bankverbindung (für SEPA-PaymentMeans)</h3>';
+  html += '<div class="gitter g2">';
+  html += ev('bank.iban',       'IBAN');
+  html += ev('bank.bic',        'BIC',                    'optional');
+  html += ev('bank.institut',   'Kreditinstitut',         'optional');
+  html += '</div>';
+  html += '<div class="btn-reihe"><button class="btn btn-pri" id="raSpeichern">' +
+          'Rechnungs-Angaben speichern</button></div>';
+  html += '</div>';
+
+  /* --- Rechnungsnummernkreis -------------------------------------------- */
+  html += '<div class="karte"><h2>Rechnungsnummernkreis</h2>' +
+          '<div class="karte-hint">§ 14 Abs. 4 Nr. 4 UStG verlangt eine ' +
+          'einmalig vergebene Rechnungsnummer. Platzhalter: ' +
+          '<code>{JAHR}</code> für das Rechnungsjahr, <code>{NR:04}</code> für ' +
+          'die nächste Nummer mit vier Stellen führender Null. Beim Jahreswechsel ' +
+          'wird der Zähler automatisch zurückgesetzt.</div>' +
+          '<div class="gitter g2">' +
+          fv('rechnungsnummern.schema',    'Nummernschema', 'z. B. RE-{JAHR}-{NR:04}') +
+          fv('rechnungsnummern.naechste',  'Nächste Nummer', 'einmalig manuell anpassbar, z. B. nach Migration', 'number') +
+          '</div>' +
+          '<div class="btn-reihe"><button class="btn" id="nrSpeichern">' +
+          'Nummernkreis speichern</button></div>' +
+          '</div>';
+
+  /* --- Kundenliste ------------------------------------------------------- */
+  html += '<div class="karte"><h2>Kunden</h2>' +
+          '<div class="karte-hint">Liste der Rechnungs-Adressaten. Neue Kunden ' +
+          'werden direkt im Rechnungs-Editor anlegbar; hier können Sie sie ' +
+          'pflegen oder löschen. Beim Versenden einer Rechnung wird der ' +
+          'aktuelle Kundendatensatz als Snapshot mit der Rechnung eingefroren.</div>';
+  if (!u.kunden.length) {
+    html += '<div class="karte-hint" style="margin-top:8px">— noch keine Kunden angelegt —</div>';
+  } else {
+    html += '<table class="liste"><thead><tr><th>Name</th><th>Anschrift</th>' +
+            '<th>USt-IdNr.</th><th></th></tr></thead><tbody>';
+    u.kunden.forEach(function (k, i) {
+      html += '<tr><td><b>' + esc(k.name || '—') + '</b>' +
+              (k.email ? '<br><span class="sub mono">' + esc(k.email) + '</span>' : '') +
+              '</td>' +
+              '<td>' + esc(k.strasse || '') + (k.strasse ? ', ' : '') +
+              esc(k.plz || '') + ' ' + esc(k.ort || '') +
+              (k.land && k.land !== 'DE' ? ' (' + esc(k.land) + ')' : '') + '</td>' +
+              '<td class="mono">' + esc(k.ustId || '') + '</td>' +
+              '<td class="rechts"><button class="btn-mini" data-kund-edit="' + i + '">bearbeiten</button> ' +
+              '<button class="btn-mini btn-warn" data-kund-del="' + i + '">löschen</button></td>' +
+              '</tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '<div class="btn-reihe"><button class="btn btn-pri" id="kundNeu">+ Neuer Kunde</button></div>';
+  html += '<div id="kundEditor"></div>';
+  html += '</div>';
+
+  m.innerHTML = html;
+
+  /* Link zu Stammdaten */
+  var zLink = m.querySelector('[data-z-stammdaten]');
+  if (zLink) zLink.onclick = function (e) { e.preventDefault(); setView('stammdaten'); };
+
+  /* Eigene Rechnungs-Angaben speichern */
+  m.querySelector('#raSpeichern').onclick = function () {
+    var neu = {};
+    m.querySelectorAll('[data-ra]').forEach(function (el) {
+      setNested(neu, el.dataset.ra, el.value.trim());
+    });
+    var un = JSON.parse(JSON.stringify(u));
+    un.rechnungsAngaben = neu;
+    Store.speichereUnternehmen(un).then(function (g) {
+      if (g && !g.fehler) { S.unternehmen = g; hinweisToast('Rechnungs-Angaben gespeichert.'); }
+    });
+  };
+
+  /* Nummernkreis speichern */
+  m.querySelector('#nrSpeichern').onclick = function () {
+    var un = JSON.parse(JSON.stringify(u));
+    un.rechnungsnummern = un.rechnungsnummern || {};
+    un.rechnungsnummern.schema = m.querySelector('[data-u="rechnungsnummern.schema"]').value.trim()
+      || 'RE-{JAHR}-{NR:04}';
+    var n = parseInt(m.querySelector('[data-u="rechnungsnummern.naechste"]').value, 10);
+    if (!(n > 0)) n = 1;
+    un.rechnungsnummern.naechste = n;
+    Store.speichereUnternehmen(un).then(function (g) {
+      if (g && !g.fehler) { S.unternehmen = g; hinweisToast('Nummernkreis gespeichert.'); }
+    });
+  };
+
+  /* Kunden-Aktionen */
+  m.querySelectorAll('[data-kund-edit]').forEach(function (b) {
+    b.onclick = function () { renderKundeBearbeiten(m, parseInt(b.dataset.kundEdit, 10)); };
+  });
+  m.querySelectorAll('[data-kund-del]').forEach(function (b) {
+    b.onclick = function () {
+      var i = parseInt(b.dataset.kundDel, 10);
+      var k = u.kunden[i];
+      if (!confirm('Kunde „' + (k && k.name || '') + '" wirklich löschen?')) return;
+      var un = JSON.parse(JSON.stringify(u));
+      un.kunden.splice(i, 1);
+      Store.speichereUnternehmen(un).then(function (g) {
+        if (g && !g.fehler) { S.unternehmen = g; hinweisToast('Kunde gelöscht.'); renderKunden(m); }
+      });
+    };
+  });
+  m.querySelector('#kundNeu').onclick = function () { renderKundeBearbeiten(m, -1); };
+
+  bindeUstIdChecks(m);
+}
+
+/* Inline-Editor für einen Kunden. idx === -1 → neuer Kunde. */
+function renderKundeBearbeiten(m, idx) {
+  var u = Ausgangsrechnung.defaults(S.unternehmen);
+  var bestehend = idx >= 0 ? u.kunden[idx] : null;
+  var k = bestehend ? JSON.parse(JSON.stringify(bestehend))
+                    : { id: 'K-' + Date.now(), name: '', strasse: '', plz: '', ort: '',
+                        land: 'DE', ustId: '', email: '' };
+  var box = m.querySelector('#kundEditor');
+  function f(name, label, sub, typ) {
+    return feldWrap(label, sub, '<input data-k="' + name + '" type="' + (typ || 'text') +
+      '" value="' + esc(k[name] || '') + '">');
+  }
+  /* VIES-Online-Check nur im Selbst-Hosting-Modus anbieten — Browser-Modus
+   * würde an CORS scheitern, und wir wollen keinen Drittanbieter-Proxy. */
+  var serverModus = (typeof Store !== 'undefined' && Store.modus !== 'website');
+  var letzterCheck = k.ustIdPruefung;
+  var checkInfo = '';
+  if (letzterCheck) {
+    var dat = (letzterCheck.antwortAm || '').slice(0, 10);
+    checkInfo = '<div class="karte-hint" style="margin-top:6px">' +
+      (letzterCheck.gueltig
+        ? '<span style="color:#1a8a31">✓ VIES bestätigte am ' + esc(dat) + '</span>'
+        : '<span style="color:#a4262c">✗ VIES am ' + esc(dat) +
+          ': ' + esc(letzterCheck.fehler || 'als ungültig zurückgemeldet') + '</span>') +
+      (letzterCheck.name ? '<br>Name lt. VIES: ' + esc(letzterCheck.name) : '') +
+      (letzterCheck.adresse ? '<br>Adresse: ' + esc(letzterCheck.adresse) : '') +
+      '</div>';
+  }
+  box.innerHTML = '<div class="karte" style="margin-top:10px"><h3>' +
+    (idx >= 0 ? 'Kunde bearbeiten' : 'Neuer Kunde') + '</h3>' +
+    '<div class="gitter g2">' +
+    f('name',    'Name / Firma') +
+    f('strasse', 'Straße + Hausnr.') +
+    '<div class="gitter g2" style="gap:13px">' + f('plz', 'PLZ') + f('ort', 'Ort') + '</div>' +
+    f('land',    'Land',        'ISO-2 (DE, AT, FR, …)') +
+    f('ustId',   'USt-IdNr.',   'z. B. DE123456789 — Pflicht bei §13b / innergem.') +
+    f('email',   'E-Mail') +
+    '</div>' +
+    checkInfo +
+    (serverModus ?
+      '<div class="btn-reihe" style="margin-top:6px">' +
+      '<button class="btn" id="kundVies">USt-IdNr. online bei VIES prüfen</button>' +
+      '<span id="kundViesMsg" class="sub" style="margin-left:10px"></span>' +
+      '</div>' : '') +
+    '<div class="btn-reihe">' +
+    '<button class="btn btn-pri" id="kundSave">Speichern</button> ' +
+    '<button class="btn" id="kundAbort">Abbrechen</button>' +
+    '</div></div>';
+  bindeUstIdChecks(box);
+  var viesBtn = box.querySelector('#kundVies');
+  if (viesBtn) viesBtn.onclick = function () {
+    var ust = box.querySelector('[data-k="ustId"]').value.trim();
+    if (!ust) { alert('Bitte eine USt-IdNr. eingeben.'); return; }
+    var hin = 'OpenBilanz fragt jetzt die EU-Datenbank VIES nach ' + ust +
+              '. Dabei wird die Nummer (und nichts sonst) an ' +
+              'ec.europa.eu/taxation_customs/vies übertragen. Fortfahren?';
+    if (!confirm(hin)) return;
+    var msg = box.querySelector('#kundViesMsg');
+    msg.textContent = 'Frage VIES …';
+    msg.style.color = '';
+    fetch('/api/ustid/check?ustid=' + encodeURIComponent(ust))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.fehler) {
+          msg.textContent = '✗ ' + d.fehler;
+          msg.style.color = '#a4262c';
+          k.ustIdPruefung = { antwortAm: d.antwortAm || new Date().toISOString(),
+            gueltig: false, fehler: d.fehler, quelle: 'VIES' };
+          return;
+        }
+        k.ustIdPruefung = d;
+        msg.textContent = d.gueltig
+          ? '✓ VIES bestätigt: ' + (d.name || ust)
+          : '✗ VIES: USt-IdNr. ist nicht gültig.';
+        msg.style.color = d.gueltig ? '#1a8a31' : '#a4262c';
+        renderKundeBearbeiten(m, idx);
+      }, function (err) {
+        msg.textContent = '✗ Anfrage fehlgeschlagen: ' + (err && err.message || err);
+        msg.style.color = '#a4262c';
+      });
+  };
+  box.querySelector('#kundAbort').onclick = function () { box.innerHTML = ''; };
+  box.querySelector('#kundSave').onclick = function () {
+    box.querySelectorAll('[data-k]').forEach(function (el) {
+      k[el.dataset.k] = el.value.trim();
+    });
+    if (!k.name) { alert('Bitte einen Namen eingeben.'); return; }
+    if (!k.land) k.land = 'DE';
+    var nun = new Date().toISOString().slice(0, 10);
+    if (!k.angelegtAm) k.angelegtAm = nun;
+    k.geaendertAm = nun;
+    var un = JSON.parse(JSON.stringify(u));
+    if (idx >= 0) un.kunden[idx] = k; else un.kunden.push(k);
+    Store.speichereUnternehmen(un).then(function (g) {
+      if (g && !g.fehler) {
+        S.unternehmen = g;
+        hinweisToast(idx >= 0 ? 'Kunde gespeichert.' : 'Kunde angelegt.');
+        renderKunden(m);
+      }
+    });
+  };
+}
+
+/* ===========================================================================
+ * Ausgangsrechnungen — Liste, Editor, Vorschau, Versand, XML-Download
+ * ---------------------------------------------------------------------------
+ * View 'rechnungen' (Sub-View eines Abschlusses): pflegt die ausgehenden
+ * Rechnungen eines Jahres. Entwürfe lassen sich frei bearbeiten; beim
+ * „Versenden" wird die Rechnung mit einer lückenlosen Nummer aus dem
+ * Nummernkreis versehen, der Buchungssatz (Forderung an Erlöse + USt) in
+ * a.buchungen eingefügt und beides GoBD-konform festgeschrieben (fest=true).
+ * Die XRechnung-UBL-XML kann jederzeit als Download abgerufen werden.
+ * ========================================================================= */
+
+/* Steuerlogik-Auswahl für das UI. Reihenfolge bewusst: häufigster Fall zuerst. */
+var AR_STEUERFAELLE = [
+  ['NORMAL',              'Inland mit USt-Ausweis (Regelfall)'],
+  ['REVERSE_CHARGE_13b',  '§ 13b UStG — Steuerschuldnerschaft des Empfängers'],
+  ['INNERGEM_LIEFERUNG',  'Innergemeinschaftliche Lieferung steuerfrei (§ 4 Nr. 1 b)'],
+  ['INNERGEM_LEISTUNG',   'EU-Sonstige Leistung — Reverse-Charge (§ 3a Abs. 2)'],
+  ['KLEINUNTERNEHMER_19', '§ 19 UStG — Kleinunternehmer ohne USt-Ausweis'],
+  ['STEUERFREI_§4',       'Steuerfrei nach § 4 UStG']
+];
+/* Gebräuchliche UN/ECE-Recommendation-20-Einheiten für die Schnellauswahl. */
+var AR_EINHEITEN = [
+  ['C62', 'Stück'], ['HUR', 'Stunde'], ['DAY', 'Tag'], ['MTR', 'Meter'],
+  ['MTQ', 'm²'], ['MTK', 'm³'], ['KGM', 'kg'], ['LTR', 'Liter'],
+  ['EA',  'Einheit'], ['MIN', 'Minute'], ['MON', 'Monat']
+];
+
+function renderRechnungen(m) {
+  var a = S.aktiv;
+  if (!a) { setView('start'); return; }
+  if (!a.ausgangsrechnungen) a.ausgangsrechnungen = [];
+  /* Sub-Routing: ?id=... rendert direkt den Editor für diese Rechnung. */
+  var html = '';
+  html += '<div class="kopf"><h1>Ausgangsrechnungen</h1>' +
+          '<p>Rechnungen dieses Geschäftsjahres. Entwürfe bleiben editierbar; ' +
+          'beim Versenden wird die Nummer aus dem Nummernkreis vergeben und der ' +
+          'Buchungssatz automatisch in die Buchhaltung übernommen.</p></div>';
+
+  /* Status-Zähler */
+  var entw = 0, vers = 0, stor = 0;
+  a.ausgangsrechnungen.forEach(function (r) {
+    if (r.status === 'VERSENDET') vers++;
+    else if (r.status === 'STORNIERT') stor++;
+    else entw++;
+  });
+  html += '<div class="karte"><h2>Übersicht</h2>' +
+    '<table class="liste" style="max-width:380px"><tbody>' +
+    '<tr><td>Entwürfe</td><td class="rechts mono">' + entw + '</td></tr>' +
+    '<tr><td>Versendet</td><td class="rechts mono">' + vers + '</td></tr>' +
+    '<tr><td>Storniert</td><td class="rechts mono">' + stor + '</td></tr>' +
+    '</tbody></table></div>';
+
+  /* Liste */
+  html += '<div class="karte"><h2>Rechnungen</h2>';
+  if (!a.ausgangsrechnungen.length) {
+    html += '<div class="karte-hint">— noch keine Rechnungen erstellt —</div>';
+  } else {
+    html += '<table class="liste"><thead><tr><th>Nummer</th><th>Datum</th>' +
+            '<th>Kunde</th><th class="rechts">Brutto</th><th>Status</th>' +
+            '<th></th></tr></thead><tbody>';
+    /* neueste zuerst */
+    a.ausgangsrechnungen.slice().reverse().forEach(function (r) {
+      var idx = a.ausgangsrechnungen.indexOf(r);
+      var kname = (r.kundeSnapshot && r.kundeSnapshot.name) || '—';
+      html += '<tr><td class="mono">' + esc(r.nummer || '(Entwurf)') + '</td>' +
+              '<td class="mono">' + datumDe(r.datum) + '</td>' +
+              '<td>' + esc(kname) + '</td>' +
+              '<td class="rechts mono">' + geld(r.brutto || 0) + '</td>' +
+              '<td>' + esc(r.status || 'ENTWURF') + (r.fest ? ' 🔒' : '') + '</td>' +
+              '<td class="rechts">' +
+              '<button class="btn-mini" data-ar-edit="' + idx + '">' +
+              (r.fest ? 'ansehen' : 'bearbeiten') + '</button> ' +
+              '<button class="btn-mini" data-ar-xml="' + idx + '">XML</button>' +
+              (r.fest ? '' : ' <button class="btn-mini btn-warn" data-ar-del="' + idx + '">löschen</button>') +
+              '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '<div class="btn-reihe">' +
+          '<button class="btn btn-pri" id="arNeu">+ Neue Rechnung</button>' +
+          '</div></div>';
+
+  html += '<div id="arEditor"></div>';
+
+  m.innerHTML = html;
+
+  m.querySelector('#arNeu').onclick = function () { arEditor(m, -1); };
+  m.querySelectorAll('[data-ar-edit]').forEach(function (b) {
+    b.onclick = function () { arEditor(m, parseInt(b.dataset.arEdit, 10)); };
+  });
+  m.querySelectorAll('[data-ar-xml]').forEach(function (b) {
+    b.onclick = function () { arXmlDownload(parseInt(b.dataset.arXml, 10)); };
+  });
+  m.querySelectorAll('[data-ar-del]').forEach(function (b) {
+    b.onclick = function () {
+      var i = parseInt(b.dataset.arDel, 10);
+      var r = a.ausgangsrechnungen[i];
+      if (r && r.fest) { alert('Versendete Rechnungen können nicht gelöscht werden.'); return; }
+      if (!confirm('Rechnungs-Entwurf löschen?')) return;
+      a.ausgangsrechnungen.splice(i, 1);
+      speichereStill().then(function () { renderRechnungen(m); });
+    };
+  });
+}
+
+/* Inline-Editor für eine Rechnung. idx === -1 → neuer Entwurf. */
+function arEditor(m, idx) {
+  var a = S.aktiv;
+  if (!S.unternehmen) { alert('Bitte zuerst Unternehmensdaten anlegen.'); return; }
+  var u = Ausgangsrechnung.defaults(S.unternehmen);
+  var bestehend = idx >= 0 ? a.ausgangsrechnungen[idx] : null;
+  var r = bestehend ? JSON.parse(JSON.stringify(bestehend))
+                    : arNeuEntwurf(a, u);
+  var fest = !!r.fest;
+  /* Hilfsfunktion: Kundenliste als <option> */
+  function kundenOpt() {
+    if (!u.kunden.length) {
+      return '<option value="">— noch keine Kunden — </option>';
+    }
+    return '<option value="">— Kunde wählen —</option>' +
+      u.kunden.map(function (k) {
+        return '<option value="' + esc(k.id) + '"' +
+               (r.kundeId === k.id ? ' selected' : '') + '>' +
+               esc(k.name) + (k.ort ? ' · ' + esc(k.ort) : '') + '</option>';
+      }).join('');
+  }
+  function fall(v, lab) {
+    return '<option value="' + esc(v) + '"' +
+           (r.besonderheit === v ? ' selected' : '') + '>' + esc(lab) + '</option>';
+  }
+  function einheitOpt(sel) {
+    return AR_EINHEITEN.map(function (e) {
+      return '<option value="' + e[0] + '"' + (sel === e[0] ? ' selected' : '') +
+        '>' + e[0] + ' (' + e[1] + ')</option>';
+    }).join('');
+  }
+  function ro(t) { return fest ? ' readonly disabled' : ''; }
+  function disabled() { return fest ? ' disabled' : ''; }
+
+  /* Positionen-Block */
+  function posTab() {
+    var rows = (r.positionen || []).map(function (p, i) {
+      return '<tr data-ar-pos="' + i + '">' +
+        '<td><input type="text" data-pf="bezeichnung" value="' + esc(p.bezeichnung || '') + '"' + ro() + '></td>' +
+        '<td><input type="number" step="0.0001" min="0" data-pf="menge" value="' +
+          esc(p.menge != null ? p.menge : '') + '"' + ro() + ' style="width:90px"></td>' +
+        '<td><select data-pf="einheit"' + disabled() + '>' + einheitOpt(p.einheit || 'C62') + '</select></td>' +
+        '<td><input type="number" step="0.01" min="0" data-pf="einzelpreis" value="' +
+          esc(p.einzelpreis != null ? p.einzelpreis : '') + '"' + ro() + ' style="width:110px"></td>' +
+        '<td><input type="number" step="0.01" min="0" data-pf="ustSatz" value="' +
+          esc(p.ustSatz != null ? p.ustSatz : '') + '"' + ro() + ' style="width:70px"></td>' +
+        '<td class="rechts mono">' + geld(Berechnung.num(p.menge) * Berechnung.num(p.einzelpreis)) + '</td>' +
+        '<td>' + (fest ? '' :
+          '<button class="btn-mini btn-warn" data-pos-del="' + i + '">×</button>') + '</td>' +
+        '</tr>';
+    }).join('');
+    return '<table class="liste"><thead><tr><th>Bezeichnung</th><th>Menge</th>' +
+      '<th>Einheit</th><th>Einzelpreis</th><th>USt %</th>' +
+      '<th class="rechts">Netto-Position</th><th></th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>' +
+      (fest ? '' :
+        '<div class="btn-reihe"><button class="btn" id="posAdd">+ Position</button></div>');
+  }
+
+  var box = m.querySelector('#arEditor');
+  var html = '<div class="karte" style="margin-top:10px">';
+  html += '<h3>' + (fest ? 'Rechnung ansehen ' : (idx >= 0 ? 'Rechnung bearbeiten' : 'Neue Rechnung')) +
+          (r.nummer ? ' — <span class="mono">' + esc(r.nummer) + '</span>' : '') +
+          (fest ? ' 🔒' : '') + '</h3>';
+  if (!u.kunden.length) {
+    html += '<div class="box box-info" style="margin-bottom:10px">' +
+            'Noch keine Kunden angelegt. ' +
+            '<a href="#" data-z-kunden>Jetzt zur Kundenverwaltung</a> wechseln, ' +
+            'um den ersten Kunden anzulegen.</div>';
+  }
+  html += '<div class="gitter g2">';
+  html += feldWrap('Kunde', '', '<select data-r="kundeId"' + disabled() + '>' + kundenOpt() + '</select>');
+  html += feldWrap('Steuerlogik', '', '<select data-r="besonderheit"' + disabled() + '>' +
+    AR_STEUERFAELLE.map(function (s) { return fall(s[0], s[1]); }).join('') + '</select>');
+  html += feldWrap('Rechnungsdatum', '', '<input type="date" data-r="datum" value="' + esc(r.datum || '') + '"' + ro() + '>');
+  html += feldWrap('Leistungsdatum',
+    'oder Zeitraum unten — eines ist Pflicht',
+    '<input type="date" data-r="leistungsdatum" value="' + esc(r.leistungsdatum || '') + '"' + ro() + '>');
+  html += feldWrap('Leistungszeitraum von', 'optional',
+    '<input type="date" data-r="leistungszeitraumVon" value="' + esc(r.leistungszeitraumVon || '') + '"' + ro() + '>');
+  html += feldWrap('Leistungszeitraum bis', 'optional',
+    '<input type="date" data-r="leistungszeitraumBis" value="' + esc(r.leistungszeitraumBis || '') + '"' + ro() + '>');
+  html += feldWrap('Fälligkeit', 'BT-9 PaymentDueDate',
+    '<input type="date" data-r="faelligkeit" value="' + esc(r.faelligkeit || '') + '"' + ro() + '>');
+  html += feldWrap('Zahlungsbedingungen', '',
+    '<input type="text" data-r="zahlungsbedingungen" value="' + esc(r.zahlungsbedingungen || '') + '"' + ro() + '>');
+  html += feldWrap('Bestell-/Auftragsnr.', 'optional, BT-13',
+    '<input type="text" data-r="bestellnr" value="' + esc(r.bestellnr || '') + '"' + ro() + '>');
+  html += feldWrap('Leitweg-ID (B2G)', 'optional, BT-10; ohne Eintrag wird Kundenname gesetzt',
+    '<input type="text" data-r="leitwegId" value="' + esc(r.leitwegId || '') + '"' + ro() + '>');
+  html += '</div>';
+  html += '<h4 style="margin-top:14px">Positionen</h4>';
+  html += '<div id="posBlock">' + posTab() + '</div>';
+  html += '<h4 style="margin-top:14px">Hinweis-Text</h4>';
+  html += feldWrap('Freitext für die Rechnungs-Note', 'erscheint zusätzlich zum Steuerhinweis',
+    '<input type="text" data-r="hinweis" value="' + esc(r.hinweis || '') + '"' + ro() + '>');
+  /* Live-Vorschau */
+  html += '<div id="arVorschau" class="box" style="margin-top:14px"></div>';
+  /* Aktionen */
+  if (fest) {
+    html += '<div class="btn-reihe">' +
+      '<button class="btn btn-pri" id="arXml">XRechnung-UBL herunterladen</button> ' +
+      '<button class="btn" id="arXmlCii">XRechnung-CII herunterladen</button> ' +
+      '<button class="btn" id="arPdf" hidden>ZUGFeRD-PDF herunterladen</button> ' +
+      '<button class="btn" id="arClose">Schließen</button>' +
+      '</div>';
+  } else {
+    html += '<div class="btn-reihe">' +
+      '<button class="btn btn-pri" id="arSpeichern">Entwurf speichern</button> ' +
+      '<button class="btn btn-pri" id="arSenden">Versenden &amp; festschreiben</button> ' +
+      '<button class="btn" id="arXml">XRechnung-UBL (Entwurf) herunterladen</button> ' +
+      '<button class="btn" id="arXmlCii">XRechnung-CII (Entwurf) herunterladen</button> ' +
+      '<button class="btn" id="arPdf" hidden>ZUGFeRD-PDF (Entwurf) herunterladen</button> ' +
+      '<button class="btn" id="arClose">Schließen</button>' +
+      '</div>';
+  }
+  html += '</div>';
+  box.innerHTML = html;
+
+  /* Sync von Eingaben in das Modell + Live-Vorschau */
+  function lese() {
+    box.querySelectorAll('[data-r]').forEach(function (el) {
+      if (el.disabled) return;
+      r[el.dataset.r] = el.value;
+    });
+    box.querySelectorAll('[data-ar-pos]').forEach(function (tr) {
+      var i = parseInt(tr.dataset.arPos, 10);
+      var p = r.positionen[i];
+      tr.querySelectorAll('[data-pf]').forEach(function (el) {
+        if (el.disabled) return;
+        var f = el.dataset.pf;
+        if (f === 'menge' || f === 'einzelpreis' || f === 'ustSatz') {
+          p[f] = Berechnung.num(el.value);
+        } else {
+          p[f] = el.value;
+        }
+      });
+    });
+    /* Kunde-Snapshot synchron halten, solange Entwurf */
+    if (r.kundeId) {
+      var k = u.kunden.find(function (x) { return x.id === r.kundeId; });
+      if (k) r.kundeSnapshot = JSON.parse(JSON.stringify(k));
+    } else {
+      r.kundeSnapshot = r.kundeSnapshot || {};
+    }
+    var s = XRechnungUBL.summen(r);
+    r.netto = s.netto; r.ust = s.ust; r.brutto = s.brutto;
+  }
+  function aktualisiereVorschau() {
+    lese();
+    var eigene = Ausgangsrechnung.eigeneAusUnternehmen(S.unternehmen);
+    var pr = XRechnungUBL.pruefe(r, eigene);
+    var v = box.querySelector('#arVorschau');
+    var vp = '<div class="gitter g2" style="gap:14px">';
+    vp += '<div><b>Summen</b><br>' +
+          '<div>Netto: <span class="mono">' + geld(r.netto) + '</span></div>' +
+          '<div>USt: <span class="mono">' + geld(r.ust) + '</span></div>' +
+          '<div><b>Brutto: <span class="mono">' + geld(r.brutto) + '</span></b></div>' +
+          (r.nummer ? '<div>Nummer: <span class="mono">' + esc(r.nummer) + '</span></div>' :
+            '<div>Nächste Nummer: <span class="mono">' +
+            esc(Ausgangsrechnung.naechsteNummer(u, r.datum)) + '</span></div>') +
+          '</div>';
+    vp += '<div><b>Pflichtcheck</b><br>';
+    if (pr.ok && !pr.hinweise.length) {
+      vp += '<div style="color:#1a8a31">✓ Alle Pflichtfelder sind belegt.</div>';
+    } else {
+      if (pr.fehler.length) vp += '<ul style="margin:6px 0 0 18px;color:#a4262c">' +
+        pr.fehler.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>';
+      if (pr.hinweise.length) vp += '<ul style="margin:6px 0 0 18px">' +
+        pr.hinweise.map(function (h) { return '<li>' + esc(h) + '</li>'; }).join('') + '</ul>';
+    }
+    vp += '</div></div>';
+    v.innerHTML = vp;
+  }
+  function reposTab() {
+    var pb = box.querySelector('#posBlock');
+    pb.innerHTML = posTab();
+    bindePositionen();
+    aktualisiereVorschau();
+  }
+  function bindePositionen() {
+    box.querySelectorAll('[data-pf]').forEach(function (el) {
+      el.oninput = aktualisiereVorschau;
+      el.onchange = aktualisiereVorschau;
+    });
+    var pa = box.querySelector('#posAdd');
+    if (pa) pa.onclick = function () {
+      r.positionen.push({ id: 'P-' + Date.now(), bezeichnung: '', menge: 1,
+        einheit: 'C62', einzelpreis: 0, ustSatz: 19 });
+      reposTab();
+    };
+    box.querySelectorAll('[data-pos-del]').forEach(function (b) {
+      b.onclick = function () {
+        r.positionen.splice(parseInt(b.dataset.posDel, 10), 1);
+        reposTab();
+      };
+    });
+  }
+  /* Initial-Bindings */
+  box.querySelectorAll('[data-r]').forEach(function (el) {
+    el.oninput = aktualisiereVorschau;
+    el.onchange = aktualisiereVorschau;
+  });
+  bindePositionen();
+  aktualisiereVorschau();
+  var zk = box.querySelector('[data-z-kunden]');
+  if (zk) zk.onclick = function (e) { e.preventDefault(); setView('kunden'); };
+
+  var closeBtn = box.querySelector('#arClose');
+  if (closeBtn) closeBtn.onclick = function () { box.innerHTML = ''; };
+
+  var saveBtn = box.querySelector('#arSpeichern');
+  if (saveBtn) saveBtn.onclick = function () {
+    lese();
+    r.status = 'ENTWURF';
+    if (idx >= 0) a.ausgangsrechnungen[idx] = r;
+    else a.ausgangsrechnungen.push(r);
+    speichereStill().then(function () {
+      hinweisToast('Entwurf gespeichert.');
+      renderRechnungen(m);
+    });
+  };
+
+  var sendBtn = box.querySelector('#arSenden');
+  if (sendBtn) sendBtn.onclick = function () {
+    lese();
+    var eigene = Ausgangsrechnung.eigeneAusUnternehmen(S.unternehmen);
+    var pr = XRechnungUBL.pruefe(r, eigene);
+    if (!pr.ok) {
+      alert('Pflichtcheck fehlgeschlagen:\n\n' + pr.fehler.join('\n'));
+      return;
+    }
+    if (!confirm('Rechnung versenden und festschreiben?\n' +
+                 'Es wird eine lückenlose Rechnungsnummer aus dem Nummernkreis vergeben, ' +
+                 'der Buchungssatz wird der Buchhaltung hinzugefügt und beides GoBD-fest markiert.')) return;
+    /* Tatsächlicher Vergabevorgang im Unternehmensobjekt — der Counter
+     * wird in u (kopiert) gezogen, anschließend zurück nach S.unternehmen. */
+    var un = JSON.parse(JSON.stringify(Ausgangsrechnung.defaults(S.unternehmen)));
+    var neueNr = Ausgangsrechnung.vergebeNummer(un, r.datum);
+    r.nummer = neueNr;
+    r.status = 'VERSENDET';
+    r.fest = true;
+    r.versandAm = new Date().toISOString();
+    r.protokoll = r.protokoll || [];
+    r.protokoll.push({ zeit: r.versandAm, was: 'Versendet — Nummer ' + neueNr + ' vergeben.' });
+    /* Buchungssätze erzeugen und in a.buchungen einfügen */
+    var stamp = Date.now();
+    var neueBu = Ausgangsrechnung.buchungenAusRechnung(r, String(stamp));
+    neueBu.forEach(function (b) { b.fest = true; });
+    a.buchungen = a.buchungen || [];
+    a.buchungen.push.apply(a.buchungen, neueBu);
+    r.buchungId = neueBu[0] ? neueBu[0].id : '';
+    /* Rechnung in den Abschluss schreiben */
+    if (idx >= 0) a.ausgangsrechnungen[idx] = r;
+    else a.ausgangsrechnungen.push(r);
+    /* Prüfkette für die neu festgeschriebenen Buchungen fortschreiben */
+    try {
+      if (typeof Pruefkette !== 'undefined' && Pruefkette.fortschreiben) {
+        Pruefkette.fortschreiben(a.buchungen);
+      }
+    } catch (e) { /* Prüfkette ist Best-Effort */ }
+    /* Unternehmens-Counter persistieren */
+    Store.speichereUnternehmen(un).then(function (g) {
+      if (g && !g.fehler) S.unternehmen = g;
+      speichereStill().then(function () {
+        hinweisToast('Rechnung ' + neueNr + ' versendet und verbucht.');
+        renderNav();
+        renderRechnungen(m);
+      });
+    });
+  };
+
+  function downloadXml(syntax) {
+    lese();
+    var eigene = Ausgangsrechnung.eigeneAusUnternehmen(S.unternehmen);
+    /* Für Entwurfs-Download trotzdem rendern — die Nummer kann (Entwurf) sein.
+     * Wir setzen für den Download eine Platzhalter-Nummer, falls keine da. */
+    var rExport = JSON.parse(JSON.stringify(r));
+    if (!rExport.nummer) rExport.nummer = 'ENTWURF-' + (new Date()).toISOString().slice(0, 10);
+    var xml = (syntax === 'cii' ? XRechnungCII : XRechnungUBL).render(rExport, eigene);
+    var suffix = syntax === 'cii' ? '_cii' : '_ubl';
+    var dateiname = 'xrechnung_' + (rExport.nummer || 'ENTWURF').replace(/[^A-Za-z0-9._-]/g, '_') +
+      suffix + '.xml';
+    ladeDatei(xml, dateiname, 'application/xml;charset=utf-8');
+  }
+  var xmlBtn = box.querySelector('#arXml');
+  if (xmlBtn) xmlBtn.onclick = function () { downloadXml('ubl'); };
+  var xmlBtnCii = box.querySelector('#arXmlCii');
+  if (xmlBtnCii) xmlBtnCii.onclick = function () { downloadXml('cii'); };
+
+  /* ZUGFeRD-Hybrid-PDF: Knopf nur freischalten, wenn pdf-lib im vendor-
+   * Verzeichnis liegt. Sonst bleibt der Knopf hidden — der User wird im
+   * Demo/Setup über tools/setup-pdf-lib.sh informiert (README). */
+  var pdfBtn = box.querySelector('#arPdf');
+  if (pdfBtn && typeof ZugferdPdf !== 'undefined') {
+    ZugferdPdf.istVerfuegbar().then(function (ok) {
+      if (!ok) return;
+      pdfBtn.hidden = false;
+      pdfBtn.onclick = function () {
+        lese();
+        var eigene = Ausgangsrechnung.eigeneAusUnternehmen(S.unternehmen);
+        var rExport = JSON.parse(JSON.stringify(r));
+        if (!rExport.nummer) rExport.nummer = 'ENTWURF-' + (new Date()).toISOString().slice(0, 10);
+        var ciiXml = XRechnungCII.render(rExport, eigene);
+        pdfBtn.disabled = true; pdfBtn.textContent = 'PDF wird erzeugt …';
+        ZugferdPdf.erzeuge(rExport, eigene, ciiXml).then(function (bytes) {
+          pdfBtn.disabled = false;
+          pdfBtn.textContent = 'ZUGFeRD-PDF herunterladen';
+          var name = 'zugferd_' + (rExport.nummer || 'ENTWURF').replace(/[^A-Za-z0-9._-]/g, '_') + '.pdf';
+          /* ladeDatei nimmt String — wir wrappen via Blob direkt. */
+          var blob = new Blob([bytes], { type: 'application/pdf' });
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob); a.download = name;
+          document.body.appendChild(a); a.click();
+          setTimeout(function () { a.remove(); URL.revokeObjectURL(a.href); }, 1000);
+        }, function (err) {
+          pdfBtn.disabled = false;
+          pdfBtn.textContent = 'ZUGFeRD-PDF herunterladen';
+          alert('PDF konnte nicht erzeugt werden:\n\n' + (err && err.message || err));
+        });
+      };
+    });
+  }
+}
+
+/* Erzeugt einen neuen Entwurf mit sinnvollen Defaults. */
+function arNeuEntwurf(a, u) {
+  var heute = new Date().toISOString().slice(0, 10);
+  return {
+    id: 'AR-' + Date.now(),
+    nummer: '',
+    art: 'RECHNUNG',
+    datum: heute,
+    leistungsdatum: heute,
+    leistungszeitraumVon: '',
+    leistungszeitraumBis: '',
+    kundeId: '',
+    kundeSnapshot: {},
+    bestellnr: '',
+    leitwegId: '',
+    faelligkeit: '',
+    zahlungsbedingungen: 'Zahlbar innerhalb von 14 Tagen ohne Abzug.',
+    positionen: [{ id: 'P-' + Date.now(), bezeichnung: '', menge: 1,
+                   einheit: 'C62', einzelpreis: 0, ustSatz: 19 }],
+    besonderheit: (S.unternehmen && S.unternehmen.kleinunternehmer === 'ja') ?
+      'KLEINUNTERNEHMER_19' : 'NORMAL',
+    netto: 0, ust: 0, brutto: 0,
+    hinweis: '',
+    status: 'ENTWURF', fest: false,
+    versandAm: '', buchungId: '',
+    protokoll: []
+  };
+}
+
+/* XML-Download aus der Listenansicht (ohne Editor zu öffnen). */
+function arXmlDownload(idx) {
+  var a = S.aktiv;
+  var r = a && a.ausgangsrechnungen && a.ausgangsrechnungen[idx];
+  if (!r) return;
+  var eigene = Ausgangsrechnung.eigeneAusUnternehmen(S.unternehmen);
+  var rExport = JSON.parse(JSON.stringify(r));
+  if (!rExport.nummer) rExport.nummer = 'ENTWURF-' + (new Date()).toISOString().slice(0, 10);
+  var xml = XRechnungUBL.render(rExport, eigene);
+  var dateiname = 'xrechnung_' + (rExport.nummer || 'ENTWURF').replace(/[^A-Za-z0-9._-]/g, '_') + '.xml';
+  ladeDatei(xml, dateiname, 'application/xml;charset=utf-8');
 }
 
 /* ===========================================================================

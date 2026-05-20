@@ -176,6 +176,61 @@ function api(req, res, pfad, query) {
       return sendJSON(res, 500, { fehler: 'XBRL-Erzeugung fehlgeschlagen: ' + ex.message });
     }
   }
+  // USt-IdNr.-Bestätigungsanfrage gegen VIES (EU-Stelle). Nur im Selbst-
+  // Hosting-Modus aktiv — der Browser darf VIES wegen fehlender CORS-Header
+  // nicht direkt aufrufen. Opt-in geschieht im UI pro Aufruf (Knopfdruck).
+  if (pfad === '/api/ustid/check' && req.method === 'GET') {
+    var raw = String(query.ustid || '').toUpperCase().replace(/[\s.\-/]+/g, '');
+    if (!/^[A-Z]{2}.+$/.test(raw)) {
+      return sendJSON(res, 400, { fehler: 'Ungültiges Format der USt-IdNr.' });
+    }
+    var landP = raw.slice(0, 2);
+    var nrP = raw.slice(2);
+    // VIES erwartet 'EL' für Griechenland intern als 'EL'; manche Aufrufe
+    // benutzen 'GR' — VIES kennt beide. Wir reichen unverändert durch.
+    var url = 'https://ec.europa.eu/taxation_customs/vies/rest-api/ms/' +
+              encodeURIComponent(landP) + '/vat/' + encodeURIComponent(nrP);
+    var https = require('https');
+    var antwortAm = new Date().toISOString();
+    var anfrage = https.get(url, { timeout: 8000,
+      headers: { 'Accept': 'application/json', 'User-Agent': 'OpenBilanz/1.0' }
+    }, function (r) {
+      var body = '';
+      r.setEncoding('utf8');
+      r.on('data', function (c) { body += c; });
+      r.on('end', function () {
+        try {
+          if (r.statusCode < 200 || r.statusCode >= 300) {
+            return sendJSON(res, 502,
+              { fehler: 'VIES antwortete mit HTTP ' + r.statusCode, antwortAm: antwortAm });
+          }
+          var d = JSON.parse(body);
+          sendJSON(res, 200, {
+            gueltig:     !!d.isValid,
+            land:        landP,
+            ustid:       raw,
+            name:        d.name || '',
+            adresse:     d.address || '',
+            quelle:      'VIES',
+            antwortAm:   antwortAm,
+            requestDate: d.requestDate || ''
+          });
+        } catch (e) {
+          sendJSON(res, 502, { fehler: 'VIES-Antwort nicht lesbar: ' + e.message,
+                               antwortAm: antwortAm });
+        }
+      });
+    });
+    anfrage.on('timeout', function () {
+      anfrage.destroy();
+      sendJSON(res, 504, { fehler: 'Zeitüberschreitung bei VIES (8 s).', antwortAm: antwortAm });
+    });
+    anfrage.on('error', function (err) {
+      sendJSON(res, 502, { fehler: 'VIES nicht erreichbar: ' + err.message,
+                            antwortAm: antwortAm });
+    });
+    return;
+  }
   // E-Bilanz gegen die amtliche Taxonomie validieren (nutzt Arelle, falls vorhanden)
   if (pfad === '/api/validate' && req.method === 'GET') {
     var vab = store.ladeAbschluss(query.id);

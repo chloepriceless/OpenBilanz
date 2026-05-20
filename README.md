@@ -131,6 +131,10 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **UStVA-Sonderfälle** — Soll-/Ist-Versteuerung, Kleinunternehmer § 19, Reverse-Charge § 13b, steuerfreie Umsätze § 4 | 🟡 |
 | **Broker-Import** — Interactive-Brokers-Flex-Berichte (Trades, Dividenden) | 🟡 |
 | **E-Rechnung empfangen** — XRechnung-XML und ZUGFeRD-/Factur-X-PDF einlesen (CII + UBL, eingebettete XML aus PDF/A-3 entpacken), Profil erkennen (MINIMUM/BASIC/EN 16931/XRechnung), Positionen und Plausi-Checks (Brutto = Netto + USt, Summe Positionen = Netto, Pflichtfelder), Übernahme als Eingangsrechnung gegen Verbindlichkeiten (3300) | 🟡 |
+| **Ausgangsrechnungen schreiben** — Kunden-Stammdaten, Rechnungs-Editor, Steuerlogik (Regelfall, § 13b Reverse-Charge, innergem. Lieferung/Leistung, § 19 Kleinunternehmer, § 4 steuerfrei), § 14 UStG-Pflichtcheck, lückenloser Rechnungsnummernkreis mit Jahreswechsel-Reset, GoBD-Festschreibung über die Prüfkette, automatischer Buchungssatz (Forderung 1200 an Erlöse 4400/4300 + USt 3806/3801; § 13b separat über 4336) | 🟡 |
+| **XRechnung erzeugen** — XRechnung 3.x als UBL **und** als CII (UN/CEFACT) erzeugen, Download als XML, KoSIT-Customization-ID gesetzt, SEPA-PaymentMeans aus IBAN; Roundtrip mit dem eingebauten Parser geprüft | 🟡 |
+| **ZUGFeRD-Hybrid-PDF** — PDF mit lesbarem Layout + eingebetteter Factur-X-CII-XML (AFRelationship=Alternative). Benötigt einmaliges `tools/setup-pdf-lib.sh` (vendort pdf-lib MIT, sRGB-ICC, Liberation Sans SIL-OFL lokal nach `public/vendor/`). Strikt-PDF/A-3-Konformität noch nicht extern Mustang-validiert — siehe Hinweis im Modulkopf. | 🟡 |
+| **USt-IdNr.-Prüfung** — strukturelle Offline-Prüfung pro EU-Staat (DE/AT/NL/IT mit voller Prüfziffer); im Selbst-Hosting-Modus zusätzlich qualifizierte Online-Bestätigung beim VIES (per Klick, Datenschutz-Hinweis im Dialog) | 🟡 |
 | **BWA** — betriebswirtschaftliche Auswertung mit Kennzahlen | 🟡 |
 | **Kapitalertragsteuer-Assistent** — 25 % KapSt + Soli auf Ausschüttungen | 🟡 |
 | **GoBD-Verfahrensdokumentation** — geführter Fragebogen → Dokument | 🟡 |

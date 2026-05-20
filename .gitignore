@@ -12,6 +12,9 @@ public/taxonomie/
 public/pyodide/
 public/wheels/
 
+# Drittquellen fuer ZUGFeRD-PDF-Erzeugung - per tools/setup-pdf-lib.sh laden
+public/vendor/
+
 # Selbstsigniertes Entwickler-Zertifikat fuer tools/serve-website.py
 tools/.devcert/
 
