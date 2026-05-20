@@ -168,6 +168,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Steuerberater-Paket (One-Click-ZIP)** — Bilanz/GuV/Anhang als HTML, Saldenliste, Journal CSV/JSON, DATEV-EXTF und Manifest in einer Store-Only-ZIP (zero-dep) | 🟡 |
 | **Beleg-Hash an Buchungen** — optionales Datei-Input speichert SHA-256, Name und Größe; die Datei bleibt beim Nutzer, der Hash dient als Verifikation bei späterer Prüfung | 🟡 |
 | **E-Rechnungs-Dedup** — SHA-256 jeder eingelesenen XRechnung/ZUGFeRD-Datei; bei Wiedereinlesen Warnung mit Verweis auf die ursprüngliche Buchung | 🟡 |
+| **Abschluss-Checkliste** — Anfangsbestände, AfA, Steuerrückstellung, RAP, Festschreibung, Bilanz ausgeglichen mit OK/offen/info-Ampel im JA-Editor | 🟡 |
 
 ### Zwei Erfassungswege
 

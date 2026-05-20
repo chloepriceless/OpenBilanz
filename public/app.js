@@ -1152,6 +1152,36 @@ function renderEditor(m) {
       'Abschluss, dann erscheint hier die Δ-Tabelle.</i></div></div>';
   }
 
+  /* Closing-Checkliste */
+  if (!istEB) {
+    var ck = Closing.pruefeJaReadiness(a);
+    var offen = ck.filter(function (p) { return p.status === 'offen'; }).length;
+    var info  = ck.filter(function (p) { return p.status === 'info'; }).length;
+    var ok2   = ck.filter(function (p) { return p.status === 'ok'; }).length;
+    html += '<div class="karte"><h2>Abschluss-Checkliste</h2>' +
+      '<div class="karte-hint">Erinnerungsstütze vor der Feststellung: ' +
+      ok2 + ' erledigt, ' + offen + ' offen, ' + info + ' zur Prüfung.</div>' +
+      '<table class="liste"><tbody>';
+    ck.forEach(function (p, i) {
+      var farbe = p.status === 'ok'    ? '#5dc98f'
+                : p.status === 'offen' ? '#c14545'
+                : '#7c91a0';
+      var ic = p.status === 'ok' ? '✓' : p.status === 'offen' ? '!' : '?';
+      var dot = '<span style="display:inline-block;width:18px;height:18px;border-radius:50%;' +
+        'background:' + farbe + ';color:#fff;text-align:center;line-height:18px;font-size:11px;' +
+        'font-weight:600;margin-right:6px">' + ic + '</span>';
+      var sprung = p.sprung
+        ? ' <span class="btn btn-sm" data-csprung="' + esc(JSON.stringify(p.sprung)) +
+          '">öffnen</span>'
+        : '';
+      html += '<tr><td>' + dot + '<b>' + esc(p.titel) + '</b>' +
+        (p.paragraph ? ' <span class="reg">· ' + esc(p.paragraph) + '</span>' : '') +
+        '<div class="karte-hint" style="margin-top:2px">' + esc(p.detail) + '</div></td>' +
+        '<td class="rechts">' + sprung + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
   /* Anhang */
   html += anhangKarte(a);
 
@@ -1162,6 +1192,7 @@ function renderEditor(m) {
     '</div><aside class="statusbox"><div id="statusbox"></div></aside></div>';
 
   bindeEditor(m);
+  bindeClosingSpruenge(m);
   aktualisiereStatus();
 }
 function opt(v, label, akt) {
@@ -4626,6 +4657,17 @@ function renderFristen(m) {
       try { s = JSON.parse(el.dataset.fsprung); } catch (e) { return; }
       if (s.abschlussId) mitSpeichern(function () { oeffneAbschluss(s.abschlussId); });
       else if (s.view) setView(s.view);
+    };
+  });
+}
+
+/* Klick-Handler für die Sprung-Buttons in der Closing-Checkliste (Editor). */
+function bindeClosingSpruenge(m) {
+  m.querySelectorAll('[data-csprung]').forEach(function (el) {
+    el.onclick = function () {
+      var s;
+      try { s = JSON.parse(el.dataset.csprung); } catch (e) { return; }
+      if (s.view) setView(s.view);
     };
   });
 }

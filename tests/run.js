@@ -36,6 +36,7 @@ var BuchungsPruefung = require('../public/shared/buchungspruefung.js');
 var Fristen = require('../public/shared/fristen.js');
 var StbPaket = require('../public/shared/stbpaket.js');
 var Belege = require('../public/shared/belege.js');
+var Closing = require('../public/shared/closing.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1517,6 +1518,43 @@ test('Belege: formatiereBeleg gibt kompakte Anzeige', function () {
   ok(/rechnung\.pdf/.test(s), 'Name');
   ok(/2 KB/.test(s), 'Größe');
   ok(/sha256 012345678/.test(s), 'Hash-Auszug');
+});
+
+/* ---- Closing-Checkliste --------------------------------------------- */
+test('Closing: ohne Buchungen sind alle offen', function () {
+  var a = { art: 'JAHRESABSCHLUSS', buchungen: [], anlagen: [] };
+  var l = Closing.pruefeJaReadiness(a);
+  ok(l.length >= 5, '>= 5 Pruefpunkte');
+  ok(l.find(function (x) { return /Anfangsbestände/.test(x.titel); }).status === 'offen', '');
+});
+test('Closing: Anfangsbestände erkannt sobald 9000 bebucht', function () {
+  var a = { art: 'JAHRESABSCHLUSS', buchungen: [
+    { id: '1', soll: '1800', haben: '9000', betrag: 100 }
+  ], anlagen: [] };
+  var l = Closing.pruefeJaReadiness(a);
+  eq(l.find(function (x) { return /Anfangsbestände/.test(x.titel); }).status, 'ok', '');
+});
+test('Closing: AfA-Hinweis wenn Anlagen vorhanden aber kein AfA-Konto bebucht', function () {
+  var a = { art: 'JAHRESABSCHLUSS', buchungen: [], anlagen: [{ name: 'PC' }] };
+  var l = Closing.pruefeJaReadiness(a);
+  eq(l.find(function (x) { return /AfA/.test(x.titel); }).status, 'offen', '');
+});
+test('Closing: Steuerrückstellung erkannt', function () {
+  var a = { art: 'JAHRESABSCHLUSS', buchungen: [
+    { id: '1', soll: '7600', haben: '3040', betrag: 5000 }
+  ], anlagen: [] };
+  var l = Closing.pruefeJaReadiness(a);
+  eq(l.find(function (x) { return /Steuerrückstellungen/.test(x.titel); }).status, 'ok', '');
+});
+test('Closing: Festschreibung erkennt offene Buchungen', function () {
+  var a = { art: 'JAHRESABSCHLUSS', buchungen: [
+    { id: '1', soll: '6815', haben: '1800', betrag: 100, fest: true },
+    { id: '2', soll: '6815', haben: '1800', betrag: 200 }
+  ], anlagen: [] };
+  var l = Closing.pruefeJaReadiness(a);
+  var p = l.find(function (x) { return /festgeschrieben/.test(x.titel); });
+  eq(p.status, 'offen', '');
+  ok(/1 von 2/.test(p.detail), '');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */
