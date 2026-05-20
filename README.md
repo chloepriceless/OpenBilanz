@@ -159,6 +159,7 @@ Gerät des Nutzers — der Server liefert nur statische Dateien aus.
 | **Buchungsvorlagen** — häufige Geschäftsvorfälle als Template (Name, Text, Soll, Haben, optionaler Default-Betrag) | 🟡 |
 | **Wiederkehrende Buchungen** — Vorlagen mit Takt (monatlich/quartalsweise/jährlich), Fälligkeits-Hinweisbox in der Buchhaltung | 🟡 |
 | **Autocomplete für Buchungstext** — lernt aus dem eigenen Journal, schlägt Soll- und Haben-Konto beim Tippen vor | 🟡 |
+| **Buchungs-Plausi pro Zeile** — vor dem Aufnehmen ins Journal: Pflichtfelder, Soll≠Haben, Aufwand/Aufwand, Datum im GJ, EBK 9000 nur in Eröffnungsbuchungen | 🟡 |
 
 ### Zwei Erfassungswege
 

@@ -32,6 +32,7 @@ var Fx    = require('../public/shared/fx.js');
 var Palette = require('../public/shared/palette.js');
 var Vorlagen = require('../public/shared/vorlagen.js');
 var Autocomplete = require('../public/shared/autocomplete.js');
+var BuchungsPruefung = require('../public/shared/buchungspruefung.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1364,6 +1365,41 @@ test('Autocomplete: Haben-Feld separat abfragbar', function () {
   var h = Autocomplete.vorschlaege('Lufthansa', j, { feld: 'haben' });
   eq(s[0].konto, '6650', '');
   eq(h[0].konto, '1800', '');
+});
+
+/* ---- Buchungs-Plausi (vor Aufnahme ins Journal) --------------------- */
+test('BuchungsPruefung: gültige Buchung passiert ohne Fehler', function () {
+  var r = BuchungsPruefung.pruefe(
+    { datum: '2026-03-15', betrag: 100, soll: '6815', haben: '1800' },
+    { beginn: '2026-01-01', stichtag: '2026-12-31' });
+  eq(r.ok, true, '');
+  eq(r.fehler.length, 0, '');
+});
+test('BuchungsPruefung: Soll = Haben wird abgelehnt', function () {
+  var r = BuchungsPruefung.pruefe(
+    { datum: '2026-03-15', betrag: 100, soll: '1800', haben: '1800' });
+  eq(r.ok, false, '');
+});
+test('BuchungsPruefung: Aufwand auf Aufwand gibt Warnung', function () {
+  var r = BuchungsPruefung.pruefe(
+    { datum: '2026-03-15', betrag: 100, soll: '6815', haben: '6300' });
+  eq(r.ok, true, 'keine harten Fehler');
+  ok(r.warnungen.some(function (w) { return /Aufwand/.test(w); }), '');
+});
+test('BuchungsPruefung: Datum nach Stichtag warnt', function () {
+  var r = BuchungsPruefung.pruefe(
+    { datum: '2027-01-10', betrag: 100, soll: '6815', haben: '1800' },
+    { beginn: '2026-01-01', stichtag: '2026-12-31' });
+  ok(r.warnungen.some(function (w) { return /nach dem Bilanzstichtag/.test(w); }), '');
+});
+test('BuchungsPruefung: EBK 9000 ohne Erlaubnis warnt', function () {
+  var r = BuchungsPruefung.pruefe(
+    { datum: '2026-03-15', betrag: 100, soll: '1800', haben: '9000' });
+  ok(r.warnungen.some(function (w) { return /9000/.test(w); }), '');
+  var r2 = BuchungsPruefung.pruefe(
+    { datum: '2026-03-15', betrag: 100, soll: '1800', haben: '9000' },
+    { erlaubeEbk: true });
+  ok(!r2.warnungen.some(function (w) { return /9000/.test(w); }), 'mit Erlaubnis kein Hinweis');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */

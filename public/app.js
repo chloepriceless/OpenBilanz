@@ -2817,7 +2817,14 @@ function renderBuchhaltung(m) {
       soll: document.getElementById('buSoll').value,
       haben: document.getElementById('buHaben').value
     };
-    if (!b.betrag) { alert('Bitte einen Betrag eingeben.'); return; }
+    var pr = BuchungsPruefung.pruefe(b, {
+      beginn: a.geschaeftsjahrVon, stichtag: a.stichtag, erlaubeEbk: false
+    });
+    if (!pr.ok) { alert('Buchung nicht plausibel:\n• ' + pr.fehler.join('\n• ')); return; }
+    if (pr.warnungen.length) {
+      if (!confirm('Hinweise zur Buchung:\n• ' + pr.warnungen.join('\n• ') +
+        '\n\nTrotzdem buchen?')) return;
+    }
     a.buchungen.push(b);
     speichereStill().then(function () { renderBuchhaltung(m); });
   };
