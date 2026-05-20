@@ -368,6 +368,12 @@ Der Aufbau aller Datei- und Austauschformate — die `.obz`-Sicherung als
 vollständiger JSON-Datenbestand, Journal-CSV/JSON, DATEV, GDPdU und der
 Bankimport — ist in **`DATENFORMATE.md`** dokumentiert.
 
+Die Funktionen rund um **E-Rechnungen** (XRechnung empfangen, eigene
+XRechnung-UBL / -CII erzeugen, ZUGFeRD-Hybrid-PDF, USt-IdNr.-Prüfung mit
+VIES) sind in **[`E-RECHNUNG.md`](E-RECHNUNG.md)** anleitend beschrieben.
+Eine Kurzfassung als Schritt-für-Schritt-Hilfe steht im Tool selbst unter
+**Hilfe → Buchungshilfe** (Abschnitte 8–13).
+
 ---
 
 ## Tests

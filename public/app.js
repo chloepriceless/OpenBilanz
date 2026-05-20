@@ -4038,6 +4038,97 @@ function renderHilfe(m) {
     'nur noch per Stornobuchung. Den passenden Gesellschafterbeschluss zur Feststellung ' +
     'erzeugt der Reiter „Gesellschafterbeschlüsse“.', null);
 
+  html += '<h2 style="margin-top:30px">E-Rechnung — Empfang &amp; Versand</h2>';
+
+  html += fall('8. Eingangsrechnung einlesen (XRechnung oder ZUGFeRD-PDF)',
+    'In der <b>Buchhaltung</b> die Karte „E-Rechnung (XRechnung / ZUGFeRD)“ aufrufen ' +
+    'und entweder eine .xml (XRechnung in UBL- oder CII-Syntax) oder eine .pdf ' +
+    '(ZUGFeRD-/Factur-X-Hybrid) auswählen. OpenBilanz extrahiert bei der PDF die ' +
+    'eingebettete XML aus dem PDF/A-3-Anhang, erkennt das Profil, listet die ' +
+    'Positionen und prüft die Plausibilität (Brutto = Netto + USt, Summe Positionen ' +
+    '= Netto, Pflichtfelder § 14 UStG vorhanden). Mit dem Knopf „Als Eingangsrechnung ' +
+    'buchen“ wird der folgende Standard-Buchungssatz erzeugt — das Aufwandskonto ' +
+    'kannst du vorher auswählen.',
+    [['6300', '3300', 'Eingangsrechnung (Netto) gegen Verbindlichkeiten aLuL'],
+     ['1406', '3300', 'enthaltene Vorsteuer 19 % auf Verbindlichkeit umgehängt']]);
+
+  html += '<div class="box box-info"><b>Empfangs-Pflicht seit 1.1.2025</b>' +
+    'Jede inlandsansässige GmbH muss eingehende B2B-Rechnungen im strukturierten ' +
+    'XRechnungs- oder ZUGFeRD-Format annehmen können. Eine reine PDF ohne XML genügt ' +
+    'als Eingangsrechnung im B2B-Inland nicht mehr — Lieferanten dürfen sie weiterhin ' +
+    'schicken (Übergangsfristen bis 31.12.2027), bis dahin gilt die alte ' +
+    'PDF/Papier-Form aber als legitimer Beleg.</div>';
+
+  html += fall('9. Kunden &amp; eigene Rechnungs-Angaben pflegen',
+    'Bevor du die erste Ausgangsrechnung schreibst, einmalig im Menü <b>Stammdaten → ' +
+    'Kunden</b> einrichten:<br>' +
+    '<b>(a) Eigene Rechnungs-Angaben</b> — Name auf der Rechnung, Anschrift, ' +
+    'Steuernummer ODER USt-IdNr. (eines davon ist § 14 UStG-Pflicht), Bankverbindung ' +
+    '(IBAN landet als SEPA-PaymentMeans im XML), Registergericht und HR-Nummer. ' +
+    'Felder, die leer bleiben, werden automatisch aus den Unternehmensdaten gezogen.<br>' +
+    '<b>(b) Rechnungsnummernkreis</b> — das Schema (z. B. <span class="mono">RE-{JAHR}-{NR:04}</span>) ' +
+    'und die nächste Nummer. Der Zähler setzt beim Jahreswechsel automatisch zurück. ' +
+    'Wichtig: §14 UStG verlangt eine einmalig vergebene Rechnungsnummer — manuell ' +
+    'reinpfuschen erst, wenn du wirklich verstehst was du tust.<br>' +
+    '<b>(c) Kundenliste</b> — pro Kunde Name, Anschrift, Land (ISO-2: DE/AT/FR/…), ' +
+    'USt-IdNr. (Pflicht bei § 13b oder innergemeinschaftlichen Geschäften), E-Mail. ' +
+    'Die USt-IdNr. wird live strukturell geprüft (für DE/AT/NL/IT auch die Prüfziffer); ' +
+    'im Selbst-Hosting-Modus gibt es zusätzlich einen „Online prüfen“-Knopf, der die ' +
+    'qualifizierte Bestätigung beim VIES holt und das Ergebnis archiviert.', null);
+
+  html += fall('10. Ausgangsrechnung erstellen und versenden',
+    'Im jeweiligen Abschluss-Jahr <b>Ausgangsrechnungen → + Neue Rechnung</b>. ' +
+    'Kunde auswählen, Datum + Leistungsdatum setzen, Steuerlogik wählen (Regelfall, ' +
+    '§ 13b Reverse-Charge, innergem. Lieferung/Leistung, § 19 Kleinunternehmer, ' +
+    '§ 4 steuerfrei), Positionen erfassen (Bezeichnung, Menge, Einheit, Einzelpreis, ' +
+    'USt-Satz). Die Live-Vorschau zeigt sofort Brutto und den § 14-Pflichtcheck.<br><br>' +
+    'Zwei Wege:<br>' +
+    '<b>Entwurf speichern</b> — bleibt editierbar, noch keine Nummer, noch keine Buchung.<br>' +
+    '<b>Versenden &amp; festschreiben</b> — vergibt die nächste freie Nummer aus dem ' +
+    'Nummernkreis, erzeugt den Buchungssatz (siehe unten) und markiert beides als ' +
+    'GoBD-fest (Hash in der Prüfkette). Danach nur noch per Stornobuchung änderbar.<br><br>' +
+    'Buchungssatz für den Regelfall:',
+    [['1200', '4400', 'Forderung aus Lieferungen und Leistungen (Netto, 19 %)'],
+     ['1200', '3806', 'Umsatzsteuer 19 %'],
+     ['1200', '4300', 'analog für Erlöse zu 7 %'],
+     ['1200', '4336', '§ 13b — Erlöse Reverse-Charge, kein USt-Ausweis']]);
+
+  html += fall('11. XRechnung-XML herunterladen (UBL oder CII)',
+    'Im Rechnungs-Editor stehen unten zwei Download-Knöpfe: <b>XRechnung-UBL</b> und ' +
+    '<b>XRechnung-CII</b>. Beides sind gleichberechtigte EN-16931-Syntaxen mit der ' +
+    'KoSIT-Customization-ID für XRechnung 3.x. UBL ist im deutschen Markt etwas ' +
+    'häufiger; CII ist die Basis für ZUGFeRD-Hybrid-PDFs. <br><br>' +
+    'Vor der ersten produktiven Nutzung: die Datei mit dem KoSIT-Validator (Apache 2.0, ' +
+    'externes Java-Tool) gegenprüfen — der prüft XSD und Schematron der amtlichen ' +
+    'Regeln. Solange der Knopf in OpenBilanz die XML nur erzeugt, ohne sie extern ' +
+    'validiert zu haben, bleibt die README-Zeile bei 🟡.', null);
+
+  html += fall('12. ZUGFeRD-Hybrid-PDF erzeugen (optional)',
+    'Wenn dein Empfänger zusätzlich zur reinen XRechnung-XML eine PDF mit ' +
+    'eingebetteter XML wünscht (ZUGFeRD / Factur-X), gibt es im Rechnungs-Editor ' +
+    'einen dritten Download-Knopf. Voraussetzung ist <b>einmalig</b>:<br><br>' +
+    '<span class="mono" style="display:block;padding:8px;background:#f5f5f5;border-radius:4px">' +
+    './tools/setup-pdf-lib.sh</span><br>' +
+    'Das Skript lädt pdf-lib (MIT), das sRGB-ICC-Profil und die Liberation-Sans-Schrift ' +
+    'einmal lokal nach <span class="mono">public/vendor/</span> — analog zu Pyodide/' +
+    'Arelle. Kein Runtime-CDN, keine Drittabhängigkeit zur Laufzeit. Der ZUGFeRD-Knopf ' +
+    'erscheint im UI automatisch, sobald das vendor-Asset vorhanden ist.<br><br>' +
+    '<b>Konformitäts-Hinweis</b>: OpenBilanz erzeugt eine funktionierende Hybrid-PDF ' +
+    'mit korrekt eingebetteter Factur-X-CII-XML — der Empfang via parseERechnungPdf ' +
+    'liest sie roundtrip-sicher zurück. Volle PDF/A-3-Konformität (vollständiger ' +
+    'XMP-Stream, OutputIntent mit ICC, Tagged-PDF) ist noch nicht extern Mustang-' +
+    'validiert. Für reines B2B-Inland reicht die XRechnung-XML rechtlich ohnehin — ' +
+    'die Hybrid-PDF ist Komfort, keine Pflicht.', null);
+
+  html += fall('13. Hinweis zum Selbst-Hosting-Modus für VIES-Online-Prüfung',
+    'Die qualifizierte USt-IdNr.-Bestätigung beim VIES funktioniert <b>nur im Selbst-' +
+    'Hosting-Modus</b> (gestartet via <span class="mono">./start.sh</span> oder ' +
+    '<span class="mono">node server.js</span>). Im reinen Website-Modus blockiert ' +
+    'der Browser den Direkt-Aufruf an die EU-Stelle (kein CORS) — die strukturelle ' +
+    'Offline-Prüfung bleibt aber überall verfügbar. Bei jedem Klick auf den ' +
+    '„Online prüfen“-Knopf erscheint ein Datenschutz-Hinweis: außer der USt-IdNr. ' +
+    'wird nichts an Dritte übertragen.', null);
+
   html += '<div class="box box-warn"><b>Keine Steuer- oder Rechtsberatung</b>Diese ' +
     'Beispiele sind eine vereinfachte Orientierung. Bei Sonderfällen (Sacheinlagen, ' +
     'gemischte Nutzung, Rückstellungen, latente Steuern) im Zweifel fachlichen Rat ' +
