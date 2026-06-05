@@ -54,3 +54,44 @@ Schema-Migration). Owner: Pfenni (gmbh-verwaltung).
 ## Freigabe-Frage an den Hub
 Ist (a) so plausibel? Wenn ja → ich baue Schritt (a) (Codex-Refute auf
 Migration+Adapter, dann Tests), committe atomar, melde mit Commit-Artefakt.
+
+---
+
+# Schritt (a) — Detaildesign (BUILD-GO 2026-06-05)
+
+## Reine Migrations-Transform (isoliert, refute-Ziel)
+Der riskanteste Teil wird als **reine Funktion** gebaut, getrennt von IDB/Datei-I/O,
+damit er ohne Browser testbar ist und der Hub ihn isoliert refuten kann:
+Modul `public/shared/mandanten-migration.js`:
+- `migriere(altSnapshot, opts) -> v2Snapshot`
+  - Input v1: `{ unternehmen: <obj|null>, abschluesse: [<obj>] }` (ohne mandantId)
+  - Output v2: `{ version:2, mandanten:[{id:'standard',name,angelegtAm}],
+    unternehmen:[{mandantId:'standard',…}], abschluesse:[{mandantId:'standard',…}] }`
+  - `opts.jetzt` (ISO) überschreibt angelegtAm → deterministisch/testbar (kein new-Date-Vergleich).
+- `istMigriert(snap)` = `Array.isArray(snap.mandanten) && length>0`.
+
+### Invarianten (Vertrag)
+- **Idempotent:** schon migriert → unverändert (klon) zurück; `migriere(migriere(x))==migriere(x)`.
+- **Verlustfrei:** jeder Abschluss bleibt erhalten (id-Menge + Anzahl identisch), nur
+  `mandantId='standard'` ergänzt; Unternehmensdaten unverändert + mandantId.
+- **Name:** Mandant 'standard' erhält `unternehmen.name` (Fallback 'Standard').
+- **Fresh install (keine Daten):** kein Phantom-Mandant → leeres v2; der erste Mandant
+  entsteht erst, wenn der Nutzer Daten anlegt (Runtime, nicht Migration).
+- Tiefe Kopie (JSON-Klon) → keine Referenz-Sharing-Bugs.
+
+## Verdrahtung (NACH dem Migrations-Refute, eigene Commits)
+- **store-idb.js:** VERSION 1→2. In `onupgradeneeded` (oldVersion<2): neuer Store
+  `mandanten` (keyPath 'id'); bestehende `unternehmen`/`abschluesse` per Cursor mit
+  `mandantId='standard'` anreichern + Mandant 'standard' anlegen (gleiche Transform-Regel).
+  `unternehmen`-keyPath bleibt; mandantId als Feld + Index. Snapshot-Im/Export mandant-aware.
+- **lib/store.js:** Layout `data/mandanten/<id>/{unternehmen.json, abschluesse/}` +
+  `data/mandanten.json`. **Server-Backup** `data/.backup-pre-mandanten-<ts>/` VOR der
+  Datei-Migration (reversibel). Funktionen bekommen `mandantId`-Parameter (Default 'standard').
+- **store-adapter.js:** `mandantId` durch `ladeState`/save reichen; aktiver Mandant im State.
+
+## Reihenfolge der Commits in (a)
+1. mandanten-migration.js (rein) + Tests  ← **dieser Commit = Refute-Ziel**
+2. store-idb.js V2 + onupgradeneeded nutzt die Transform
+3. lib/store.js mandant-aware + Server-Backup + Migration
+4. store-adapter.js mandantId-Threading
+Jeder Schritt grün (`npm test`) + committet. Refute auf #1 (und Review von #2/#3) vor Deploy.

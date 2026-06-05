@@ -39,6 +39,7 @@ var Belege = require('../public/shared/belege.js');
 var Closing = require('../public/shared/closing.js');
 var HealthCheck = require('../public/shared/healthcheck.js');
 var Belegnummern = require('../public/shared/belegnummern.js');
+var MandantenMigration = require('../public/shared/mandanten-migration.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1390,6 +1391,69 @@ test('Belegnummern: riesige Luecke wird gekuerzt, Anzahl bleibt exakt', function
   eq(r.reihen[0].lueckenAnzahl, 4998, 'exakte Lueckenzahl 2..4999');
   ok(r.reihen[0].gekuerzt, 'gekuerzt-Flag gesetzt');
   ok(r.reihen[0].luecken.length <= Belegnummern.MAX_LUECKEN, 'Liste gedeckelt');
+});
+
+/* ---- Mandanten-Migration (Welle 7, Schritt a) ---------------------- */
+var MM_JETZT = { jetzt: '2026-06-05T00:00:00.000Z' };
+test('MandantenMigration: v1 -> v2 ordnet alles Mandant standard zu', function () {
+  var alt = {
+    unternehmen: { name: 'Lindgruen GmbH', ort: 'Leipzig' },
+    abschluesse: [{ id: 'A1', stichtag: '2024-12-31' }, { id: 'A2', stichtag: '2023-12-31' }]
+  };
+  var v2 = MandantenMigration.migriere(alt, MM_JETZT);
+  eq(v2.version, 2, 'version 2');
+  eq(v2.mandanten.length, 1, 'ein Mandant');
+  eq(v2.mandanten[0].id, 'standard', 'id standard');
+  eq(v2.mandanten[0].name, 'Lindgruen GmbH', 'Name aus Unternehmen');
+  eq(v2.mandanten[0].angelegtAm, '2026-06-05T00:00:00.000Z', 'jetzt injiziert');
+  eq(v2.unternehmen.length, 1, 'ein Unternehmen');
+  eq(v2.unternehmen[0].mandantId, 'standard', 'Unternehmen mandantId');
+  eq(v2.unternehmen[0].ort, 'Leipzig', 'Unternehmensdaten erhalten');
+  eq(v2.abschluesse.length, 2, 'beide Abschluesse erhalten');
+  ok(v2.abschluesse.every(function (a) { return a.mandantId === 'standard'; }), 'alle mandantId');
+});
+test('MandantenMigration: verlustfrei (id-Menge identisch)', function () {
+  var alt = { unternehmen: { name: 'X' },
+    abschluesse: [{ id: 'A1' }, { id: 'A2' }, { id: 'A3' }] };
+  var v2 = MandantenMigration.migriere(alt, MM_JETZT);
+  var ids = v2.abschluesse.map(function (a) { return a.id; }).sort().join(',');
+  eq(ids, 'A1,A2,A3', 'keine Abschluss-id verloren oder dazuerfunden');
+});
+test('MandantenMigration: idempotent (zweimal == einmal)', function () {
+  var alt = { unternehmen: { name: 'X' }, abschluesse: [{ id: 'A1', stichtag: '2024-12-31' }] };
+  var einmal = MandantenMigration.migriere(alt, MM_JETZT);
+  var zweimal = MandantenMigration.migriere(einmal, MM_JETZT);
+  eq(JSON.stringify(zweimal), JSON.stringify(einmal), 'zweite Migration aendert nichts');
+  eq(zweimal.mandanten.length, 1, 'Mandant nicht verdoppelt');
+});
+test('MandantenMigration: bereits migrierter Stand bleibt unveraendert', function () {
+  var v2 = { version: 2, mandanten: [{ id: 'standard', name: 'A', angelegtAm: 't' }],
+    unternehmen: [{ mandantId: 'standard', name: 'A' }],
+    abschluesse: [{ id: 'A1', mandantId: 'standard' }] };
+  ok(MandantenMigration.istMigriert(v2), 'als migriert erkannt');
+  var r = MandantenMigration.migriere(v2, MM_JETZT);
+  eq(r.mandanten.length, 1, 'nicht verdoppelt');
+  eq(r.abschluesse[0].mandantId, 'standard', 'mandantId erhalten');
+});
+test('MandantenMigration: fresh install (keine Daten) ohne Phantom-Mandant', function () {
+  var leer = MandantenMigration.migriere({ unternehmen: null, abschluesse: [] }, MM_JETZT);
+  eq(leer.mandanten.length, 0, 'kein Phantom-Mandant');
+  eq(leer.abschluesse.length, 0, '');
+  var nullArg = MandantenMigration.migriere(null, MM_JETZT);
+  eq(nullArg.mandanten.length, 0, 'null-Eingabe robust');
+});
+test('MandantenMigration: Abschluesse ohne Unternehmen -> Name Fallback Standard', function () {
+  var v2 = MandantenMigration.migriere({ unternehmen: null, abschluesse: [{ id: 'A1' }] }, MM_JETZT);
+  eq(v2.mandanten.length, 1, 'Mandant fuer verwaiste Abschluesse');
+  eq(v2.mandanten[0].name, 'Standard', 'Fallback-Name');
+  eq(v2.unternehmen.length, 0, 'kein Unternehmen');
+  eq(v2.abschluesse[0].mandantId, 'standard', 'Abschluss zugeordnet');
+});
+test('MandantenMigration: tiefe Kopie - Original bleibt unangetastet', function () {
+  var alt = { unternehmen: { name: 'X' }, abschluesse: [{ id: 'A1' }] };
+  MandantenMigration.migriere(alt, MM_JETZT);
+  ok(!('mandantId' in alt.abschluesse[0]), 'Original-Abschluss nicht mutiert');
+  ok(!('mandantId' in alt.unternehmen), 'Original-Unternehmen nicht mutiert');
 });
 
 /* ---- Autocomplete: Konto-Vorschlaege aus Journal -------------------- */
