@@ -30,3 +30,5 @@ __pycache__/
 HANDOFF.md
 PLAN.md
 test-backup/
+.planning/inbox/
+.planning/archive/
