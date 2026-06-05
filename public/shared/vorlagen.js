@@ -85,6 +85,12 @@
   }
 
   function istFaellig(vorlage, heute) {
+    var w = vorlage && vorlage.wiederkehrend;
+    if (!w || !MONATE[w.takt]) return false;
+    // Noch nie ausgefuehrt -> ab Erstaufruf faellig, unabhaengig vom heute-Wert.
+    // (Nicht ueber naechsteFaelligkeit, das im Erstfall die reale Systemuhr
+    //  liefert und den Vergleich zeitabhaengig/flaky machen wuerde.)
+    if (!parseDatum(w.letzteAusfuehrung)) return true;
     var n = naechsteFaelligkeit(vorlage);
     if (!n) return false;
     var h = heute instanceof Date ? iso(heute)
