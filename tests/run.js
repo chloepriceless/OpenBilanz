@@ -1506,6 +1506,15 @@ test('Fristen: Aufbewahrung 10 Jahre nach Stichtag', function () {
   eq(auf.frist, '2034-12-31', '');
   eq(auf.ampel, 'gruen', 'noch weit hin');
 });
+test('Fristen: Buchungsbelege 8 Jahre nach Stichtag (BEG IV)', function () {
+  var u = {}, abs = [{ id: 'A', art: 'JAHRESABSCHLUSS', stichtag: '2024-12-31' }];
+  var r = Fristen.naechsteFristen(u, abs, '2026-05-20');
+  var bel = r.find(function (x) { return x.art === 'aufbewahrung-belege'; });
+  ok(bel, 'Buchungsbeleg-Frist gelistet');
+  eq(bel.frist, '2032-12-31', '8 Jahre nach Stichtag');
+  var abschl = r.find(function (x) { return x.art === 'aufbewahrung'; });
+  eq(abschl.frist, '2034-12-31', 'Abschluss-Aufbewahrung bleibt 10 Jahre');
+});
 test('Fristen: Eröffnungsbilanz hat nur Aufbewahrung', function () {
   var u = {}, abs = [{ id: 'A', art: 'EROEFFNUNGSBILANZ', stichtag: '2020-01-01' }];
   var r = Fristen.naechsteFristen(u, abs, '2026-05-20');

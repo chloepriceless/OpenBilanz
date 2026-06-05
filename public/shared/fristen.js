@@ -96,7 +96,7 @@
         art: 'offenlegung',
         sprung: { view: 'offenlegung', abschlussId: a.id }
       });
-      // Aufbewahrung: 10 Jahre nach Stichtag (Jahresabschluss)
+      // Aufbewahrung: 10 Jahre nach Stichtag (Jahresabschluss, Bücher, Inventare)
       var auf = addJahre(stichtag, 10);
       liste.push({
         titel: 'Aufbewahrung · ' + bez,
@@ -105,6 +105,19 @@
         ampel: ampel(tagsZwischen(auf, h)),
         paragraph: '§ 257 HGB · § 147 AO',
         art: 'aufbewahrung',
+        sprung: null
+      });
+      // Aufbewahrung Buchungsbelege: 8 Jahre (verkürzt durch BEG IV, Bundesrat
+      // 18.10.2024, anzuwenden ab 01.01.2025). Nur Belege - Bücher/Abschlüsse
+      // bleiben bei 10 Jahren (§ 257 Abs. 1 Nr. 4 i.V.m. Abs. 4 HGB / § 147 AO).
+      var aufBel = addJahre(stichtag, 8);
+      liste.push({
+        titel: 'Aufbewahrung Buchungsbelege · ' + bez,
+        frist: iso(aufBel),
+        restTage: tagsZwischen(aufBel, h),
+        ampel: ampel(tagsZwischen(aufBel, h)),
+        paragraph: '§ 257 Abs. 1 Nr. 4 HGB · § 147 AO (BEG IV)',
+        art: 'aufbewahrung-belege',
         sprung: null
       });
     });
