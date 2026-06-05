@@ -55,6 +55,14 @@ OpenBilanz erzeugt automatisch:
 > Das Aufwandskonto (Soll-Seite) kannst du vor dem Buchen umstellen —
 > Standard ist 6300 (sonstige betriebliche Aufwendungen).
 
+> **Aufbewahrung (GoBD, BMF-Schreiben vom 14.07.2025):** Aufbewahrungspflichtig
+> ist die **strukturierte XML** der E-Rechnung — sie ist die maßgebliche Form.
+> Ein zusätzliches PDF oder ein Ausdruck muss nur archiviert werden, wenn es
+> abweichende oder zusätzliche Inhalte enthält (z. B. ein ZUGFeRD-Hybrid-PDF mit
+> Mehrinformation im Sichtteil). OpenBilanz hält den SHA-256-Hash der eingelesenen
+> XML in der Prüfkette fest; die Datei selbst legst du revisionssicher ab
+> (10 Jahre, § 147 AO).
+
 ---
 
 ## 3. Versand — Stammdaten einrichten
