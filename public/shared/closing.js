@@ -138,5 +138,101 @@
     return l;
   }
 
-  return { pruefeJaReadiness: pruefeJaReadiness, summeKonto: summeKonto, hatKonto: hatKonto };
+  function fmtEur(x) {
+    return (Math.round((+x || 0) * 100) / 100).toFixed(2).replace('.', ',');
+  }
+
+  /* pruefeUstvaReadiness(buchungen, von, bis, ustva)
+   * Closing-Checkliste vor der UStVA-Abgabe (§ 18 UStG). Entkoppelt: das
+   * UStVA-Kennzahlen-Ergebnis (Ustva.berechne(...)) wird als Parameter
+   * uebergeben, damit dieses Modul ohne Abhaengigkeit auskommt und rein
+   * testbar bleibt. Rueckgabe wie pruefeJaReadiness:
+   *   [{ titel, status:'ok'|'offen'|'info', detail, paragraph?, sprung? }]
+   */
+  function pruefeUstvaReadiness(buchungen, von, bis, ustva) {
+    var l = [], u = ustva || {};
+    var imZeitraum = (buchungen || []).filter(function (b) {
+      if (!b || b.storniert) return false;
+      var d = b.datum || '';
+      if (von && d < von) return false;
+      if (bis && d > bis) return false;
+      return true;
+    });
+
+    // Kleinunternehmer: keine USt -> uebrige Pruefungen entfallen.
+    if (u.kleinunternehmer) {
+      l.push({
+        titel: 'Kleinunternehmer (§ 19 UStG)',
+        status: 'info',
+        detail: 'Als Kleinunternehmer wird keine Umsatzsteuer ausgewiesen; eine UStVA ist ' +
+          'regelmäßig nicht abzugeben. Die übrigen UStVA-Prüfungen entfallen.',
+        paragraph: '§ 19 UStG'
+      });
+      return l;
+    }
+
+    // 1. Keine offenen (nicht festgeschriebenen) Buchungen im Zeitraum (GoBD).
+    var offen = imZeitraum.filter(function (x) { return !x.fest; }).length;
+    l.push({
+      titel: 'Buchungen des Zeitraums festgeschrieben',
+      status: !imZeitraum.length ? 'info' : (offen === 0 ? 'ok' : 'offen'),
+      detail: !imZeitraum.length
+        ? 'Im gewählten Zeitraum sind keine Buchungen vorhanden.'
+        : offen === 0
+          ? 'Alle ' + imZeitraum.length + ' Buchungen des Zeitraums sind festgeschrieben.'
+          : offen + ' von ' + imZeitraum.length + ' Buchungen im Zeitraum sind noch nicht ' +
+            'festgeschrieben. Vor der UStVA-Abgabe festschreiben.',
+      paragraph: '§ 146 AO',
+      sprung: { view: 'buchhaltung' }
+    });
+
+    // 2. Gebuchte USt (3806/3801) stimmt mit der aus den Erlösen 19/7 % errechneten USt überein.
+    var berechnet = +u.ustBerechnet || 0;
+    var gebucht = +u.ustGebucht || 0;
+    var diff = Math.round((gebucht - berechnet) * 100) / 100;
+    var toleranz = Math.max(1.00, Math.abs(berechnet) * 0.01);   // Rundung über viele Buchungen
+    l.push({
+      titel: 'Gebuchte USt stimmt mit den Erlösen überein',
+      status: Math.abs(diff) <= toleranz ? 'ok' : 'offen',
+      detail: Math.abs(diff) <= toleranz
+        ? 'Gebuchte USt (3806/3801: ' + fmtEur(gebucht) + ' EUR) entspricht der aus den ' +
+          'Erlösen 19/7 % errechneten USt (' + fmtEur(berechnet) + ' EUR).'
+        : 'Differenz zwischen gebuchter USt (3806/3801: ' + fmtEur(gebucht) + ' EUR) und aus ' +
+          'den Erlösen errechneter USt (' + fmtEur(berechnet) + ' EUR): ' + fmtEur(diff) +
+          ' EUR. Mögliche Ursache: falscher Steuerschlüssel, fehlende USt-Buchung oder Erlös ' +
+          'ohne Umsatzsteuer.',
+      paragraph: '§ 18 UStG',
+      sprung: { view: 'ustva' }
+    });
+
+    // 3. Vorsteuer plausibel: 1406/1401 sollten einen Soll-Saldo (>= 0) haben.
+    var vst = +u.vorsteuerKonten || 0;
+    l.push({
+      titel: 'Vorsteuer plausibel',
+      status: vst >= -0.005 ? 'ok' : 'offen',
+      detail: vst >= -0.005
+        ? 'Abziehbare Vorsteuer (1406/1401): ' + fmtEur(vst) + ' EUR (Soll-Saldo, plausibel).'
+        : 'Die Vorsteuerkonten 1406/1401 haben einen Haben-Überhang (' + fmtEur(vst) + ' EUR). ' +
+          'Das ist untypisch - bitte Buchungsrichtung prüfen.',
+      paragraph: '§ 15 UStG',
+      sprung: { view: 'buchhaltung' }
+    });
+
+    // 4. Zahllast / Erstattung (Info-Echo der Kennzahl 83).
+    var kz83 = +u.kz83 || 0;
+    l.push({
+      titel: kz83 >= 0 ? 'Zahllast' : 'Erstattung',
+      status: 'info',
+      detail: kz83 >= 0
+        ? 'Voraussichtliche Zahllast (Kz 83): ' + fmtEur(kz83) + ' EUR ans Finanzamt.'
+        : 'Voraussichtlicher Erstattungsanspruch: ' + fmtEur(-kz83) + ' EUR (Kz 83: ' +
+          fmtEur(kz83) + ' EUR).',
+      sprung: { view: 'ustva' }
+    });
+
+    return l;
+  }
+
+  return { pruefeJaReadiness: pruefeJaReadiness, pruefeUstvaReadiness: pruefeUstvaReadiness,
+           summeKonto: summeKonto, hatKonto: hatKonto };
 });

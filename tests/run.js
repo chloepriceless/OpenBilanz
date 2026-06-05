@@ -1625,6 +1625,57 @@ test('Closing: Festschreibung erkennt offene Buchungen', function () {
   ok(/1 von 2/.test(p.detail), '');
 });
 
+/* ---- Closing-Checkliste UStVA (§ 18 UStG) --------------------------- */
+function findP(liste, re) { return liste.find(function (x) { return re.test(x.titel); }); }
+test('UStVA-Readiness: sauberer Monat ist ok', function () {
+  var b = [
+    { datum: '2026-03-10', soll: '1200', haben: '4400', betrag: 1000, fest: true },
+    { datum: '2026-03-10', soll: '1200', haben: '3806', betrag: 190,  fest: true }
+  ];
+  var u = Ustva.berechne(b, '2026-03-01', '2026-03-31', {});
+  var l = Closing.pruefeUstvaReadiness(b, '2026-03-01', '2026-03-31', u);
+  eq(findP(l, /festgeschrieben/).status, 'ok', 'alle fest');
+  eq(findP(l, /Gebuchte USt/).status, 'ok', 'USt passt');
+  eq(findP(l, /Vorsteuer/).status, 'ok', 'Vorsteuer plausibel');
+});
+test('UStVA-Readiness: USt-Buchung passt nicht zu den Erlösen', function () {
+  var b = [
+    { datum: '2026-03-10', soll: '1200', haben: '4400', betrag: 1000, fest: true },
+    { datum: '2026-03-10', soll: '1200', haben: '3806', betrag: 100,  fest: true } // statt 190
+  ];
+  var u = Ustva.berechne(b, '2026-03-01', '2026-03-31', {});
+  var l = Closing.pruefeUstvaReadiness(b, '2026-03-01', '2026-03-31', u);
+  eq(findP(l, /Gebuchte USt/).status, 'offen', 'Differenz erkannt');
+});
+test('UStVA-Readiness: offene Buchung im Zeitraum wird gemeldet', function () {
+  var b = [
+    { datum: '2026-03-10', soll: '1200', haben: '4400', betrag: 1000, fest: true },
+    { datum: '2026-03-10', soll: '1200', haben: '3806', betrag: 190,  fest: false }
+  ];
+  var u = Ustva.berechne(b, '2026-03-01', '2026-03-31', {});
+  var l = Closing.pruefeUstvaReadiness(b, '2026-03-01', '2026-03-31', u);
+  eq(findP(l, /festgeschrieben/).status, 'offen', '1 offen');
+  ok(/1 von 2/.test(findP(l, /festgeschrieben/).detail), 'Zählung');
+});
+test('UStVA-Readiness: Vorsteuerüberhang ergibt Erstattung', function () {
+  var b = [
+    { datum: '2026-03-10', soll: '1200', haben: '4400', betrag: 1000, fest: true },
+    { datum: '2026-03-10', soll: '1200', haben: '3806', betrag: 190,  fest: true },
+    { datum: '2026-03-12', soll: '1406', haben: '1600', betrag: 300,  fest: true }
+  ];
+  var u = Ustva.berechne(b, '2026-03-01', '2026-03-31', {});
+  var l = Closing.pruefeUstvaReadiness(b, '2026-03-01', '2026-03-31', u);
+  ok(!!findP(l, /Erstattung/), 'Erstattung-Eintrag vorhanden');
+});
+test('UStVA-Readiness: Kleinunternehmer überspringt die Prüfungen', function () {
+  var b = [{ datum: '2026-03-10', soll: '1200', haben: '4400', betrag: 1000, fest: true }];
+  var u = Ustva.berechne(b, '2026-03-01', '2026-03-31', { kleinunternehmer: true });
+  var l = Closing.pruefeUstvaReadiness(b, '2026-03-01', '2026-03-31', u);
+  eq(l.length, 1, 'nur ein Info-Eintrag');
+  eq(l[0].status, 'info', '');
+  ok(/Kleinunternehmer/.test(l[0].titel), '');
+});
+
 /* ---- HealthCheck Startseite ----------------------------------------- */
 test('HealthCheck: leere Stammdaten geben Achtung', function () {
   var l = HealthCheck.pruefe({}, []);
