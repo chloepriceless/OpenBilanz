@@ -44,9 +44,11 @@ Upgrade-Checkliste und ist über `VERSION`/`STAND` parametrisiert. Die
 Finanzverwaltung gibt **jährlich um den 1. April** eine neue Kerntaxonomie
 heraus.
 
-→ **Offen / wiederkehrend:** Sobald die neue Kerntaxonomie („7.0", erwartet
-~Mai/Juni 2026) veröffentlicht ist, Namespace-URIs und Elementnamen gegen die
-neue XSD prüfen und migrieren. Siehe Beobachtungsliste (Abschnitt 5).
+→ **Offen / wiederkehrend:** Stand 2026-06 ist auf esteuer.de **weiterhin 6.9
+(01.04.2025) die aktuellste** veröffentlichte Version — eine erwartete „7.0" ist
+bislang **nicht** erschienen. Sobald eine neue Kerntaxonomie veröffentlicht wird,
+Namespace-URIs und Elementnamen gegen die neue XSD prüfen und migrieren. Siehe
+Beobachtungsliste (Abschnitt 5).
 
 ---
 
@@ -124,7 +126,7 @@ bzw. veröffentlichtes Recht · **geplant** = Vorhaben/Entwurf, noch nicht in Kr
 
 | Parameter | Aktueller Wert | Nächste Änderung | Status | OpenBilanz-Auswirkung |
 |---|---|---|---|---|
-| E-Bilanz-Kerntaxonomie | 6.9 (01.04.2025) | „7.0" jährlich, erwartet ~Mai/Juni 2026 | beschlossen | `taxonomie.js`: Namespace/Elemente prüfen (siehe 1.2) |
+| E-Bilanz-Kerntaxonomie | 6.9 (01.04.2025) — Stand 2026-06 weiterhin aktuellste; keine „7.0" erschienen | neue Version jährlich (Finanzverwaltung, meist ~01.04.) | beschlossen | `taxonomie.js`: bei neuer Version Namespace/Elemente prüfen (siehe 1.2) |
 | Taxonomie 6.9 Pflicht | WJ ab 01.01.2026; WJ 2025 zulässig | — | beschlossen | Hinweis in Doku/Tool |
 | Kontennachweis-Pflicht | WJ ab 01.01.2025 | — | beschlossen | siehe 1.1 — erzeugt; Einzelfeld-Übermittlung noch zu verifizieren |
 | Körperschaftsteuersatz | 15 % (bis VZ 2027) | 14 % (2028) … 10 % (ab 2032) | beschlossen | umgesetzt — `KST_SATZ` jahresabhängig |
