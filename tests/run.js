@@ -38,6 +38,7 @@ var StbPaket = require('../public/shared/stbpaket.js');
 var Belege = require('../public/shared/belege.js');
 var Closing = require('../public/shared/closing.js');
 var HealthCheck = require('../public/shared/healthcheck.js');
+var Belegnummern = require('../public/shared/belegnummern.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1323,6 +1324,72 @@ test('Vorlagen: markiereAusgefuehrt setzt letzteAusfuehrung', function () {
   var v = { name: 'X', wiederkehrend: { takt: 'monatlich' } };
   Vorlagen.markiereAusgefuehrt(v, '2026-05-20');
   eq(v.wiederkehrend.letzteAusfuehrung, '2026-05-20', '');
+});
+
+/* ---- Belegnummern: Lueckenanalyse Nummernkreis (§ 14 UStG) ---------- */
+test('Belegnummern: parse zerlegt Reihe und laufende Nummer', function () {
+  var p = Belegnummern.parse('RE-2026-0042');
+  eq(p.reihe, 'RE-2026-', 'reihe');
+  eq(p.nummer, 42, 'nummer');
+  eq(p.breite, 4, 'breite');
+  eq(p.suffix, '', 'suffix');
+});
+test('Belegnummern: parse nimmt die LETZTE Ziffernfolge als Nummer', function () {
+  var p = Belegnummern.parse('2026-1');
+  eq(p.reihe, '2026-', 'Jahr bleibt in der Reihe');
+  eq(p.nummer, 1, 'nummer');
+});
+test('Belegnummern: parse ohne Ziffer liefert null', function () {
+  eq(Belegnummern.parse('ABC'), null, 'keine Ziffer');
+  eq(Belegnummern.parse(''), null, 'leer');
+  eq(Belegnummern.parse(null), null, 'null');
+});
+test('Belegnummern: lueckenlose Reihe ist ok', function () {
+  var r = Belegnummern.analysiere(['RE-2026-0001', 'RE-2026-0002', 'RE-2026-0003']);
+  ok(r.ok, 'ok');
+  eq(r.luecken.length, 0, 'keine Luecken');
+  eq(r.reihen.length, 1, 'eine Reihe');
+  ok(r.reihen[0].vollstaendig, 'vollstaendig');
+  eq(r.reihen[0].von, 1, 'von');
+  eq(r.reihen[0].bis, 3, 'bis');
+});
+test('Belegnummern: erkennt eine fehlende Nummer', function () {
+  var r = Belegnummern.analysiere(['RE-2026-0001', 'RE-2026-0002', 'RE-2026-0004']);
+  ok(!r.ok, 'nicht ok');
+  eq(r.luecken.length, 1, 'eine Luecke');
+  eq(r.luecken[0], 'RE-2026-0003', 'fehlt formatiert mit fuehrender Null');
+  eq(r.reihen[0].lueckenAnzahl, 1, 'lueckenAnzahl');
+});
+test('Belegnummern: Jahreswechsel ergibt zwei eigenstaendige Reihen', function () {
+  var r = Belegnummern.analysiere([
+    'RE-2025-0001', 'RE-2025-0002',
+    'RE-2026-0001', 'RE-2026-0002'
+  ]);
+  eq(r.reihen.length, 2, 'zwei Reihen');
+  ok(r.ok, 'beide lueckenlos => ok');
+});
+test('Belegnummern: Dublette wird gemeldet', function () {
+  var r = Belegnummern.analysiere(['RE-2026-0001', 'RE-2026-0002', 'RE-2026-0002']);
+  eq(r.dubletten.length, 1, 'eine Dublette');
+  eq(r.dubletten[0], 'RE-2026-0002', '');
+  ok(!r.ok, 'Dublette => nicht ok');
+});
+test('Belegnummern: nicht parsbare Nummern landen in unparsbar', function () {
+  var r = Belegnummern.analysiere(['RE-2026-0001', 'ENTWURF', '']);
+  eq(r.unparsbar.length, 1, 'nur ENTWURF unparsbar (leer ignoriert)');
+  eq(r.unparsbar[0], 'ENTWURF', '');
+});
+test('Belegnummern: einzelne Nummer hat keine Luecke', function () {
+  var r = Belegnummern.analysiere(['RE-2026-0005']);
+  ok(r.ok, 'ok');
+  eq(r.reihen[0].von, 5, 'von == bis');
+  eq(r.reihen[0].bis, 5, '');
+});
+test('Belegnummern: riesige Luecke wird gekuerzt, Anzahl bleibt exakt', function () {
+  var r = Belegnummern.analysiere(['A-1', 'A-5000']);
+  eq(r.reihen[0].lueckenAnzahl, 4998, 'exakte Lueckenzahl 2..4999');
+  ok(r.reihen[0].gekuerzt, 'gekuerzt-Flag gesetzt');
+  ok(r.reihen[0].luecken.length <= Belegnummern.MAX_LUECKEN, 'Liste gedeckelt');
 });
 
 /* ---- Autocomplete: Konto-Vorschlaege aus Journal -------------------- */
