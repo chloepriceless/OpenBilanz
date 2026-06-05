@@ -1449,6 +1449,11 @@ test('MandantenMigration: Abschluesse ohne Unternehmen -> Name Fallback Standard
   eq(v2.unternehmen.length, 0, 'kein Unternehmen');
   eq(v2.abschluesse[0].mandantId, 'standard', 'Abschluss zugeordnet');
 });
+test('MandantenMigration: vorhandene fremde mandantId wird NICHT ueberschrieben', function () {
+  var teil = { unternehmen: null, abschluesse: [{ id: 'A1', mandantId: 'kunde-b' }] };
+  var r = MandantenMigration.migriere(teil, MM_JETZT);
+  eq(r.abschluesse[0].mandantId, 'kunde-b', 'fremde mandantId bleibt (kein Clobber auf standard)');
+});
 test('MandantenMigration: tiefe Kopie - Original bleibt unangetastet', function () {
   var alt = { unternehmen: { name: 'X' }, abschluesse: [{ id: 'A1' }] };
   MandantenMigration.migriere(alt, MM_JETZT);

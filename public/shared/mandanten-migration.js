@@ -36,6 +36,20 @@
     return !!(snap && Array.isArray(snap.mandanten) && snap.mandanten.length > 0);
   }
 
+  /* Traegt der Stand bereits IRGENDWO eine mandantId? Dann ist er nicht der
+   * saubere einfirmige v1-Stand, fuer den migriere() gedacht ist - die Daten
+   * duerfen dann NICHT auf 'standard' ueberschrieben werden (Datenkorruption
+   * bei Re-Import von Multi-Mandant-Daten). Schutzwaechter. */
+  function hatMandantBezug(snap) {
+    if (!snap) return false;
+    var u = snap.unternehmen;
+    if (u && !Array.isArray(u) && u.mandantId) return true;
+    if (Array.isArray(u) && u.some(function (x) { return x && x.mandantId; })) return true;
+    var ab = snap.abschluesse;
+    if (Array.isArray(ab) && ab.some(function (x) { return x && x.mandantId; })) return true;
+    return false;
+  }
+
   /* migriere(altSnapshot, opts)
    *   altSnapshot v1: { unternehmen: <obj|null>, abschluesse: [<obj>] }
    *               ODER ein bereits migrierter v2-Stand (-> unveraendert).
@@ -44,7 +58,9 @@
    */
   function migriere(altSnapshot, opts) {
     var snap = altSnapshot || {};
-    if (istMigriert(snap)) return klon(snap);          // idempotent
+    // idempotent + Schutz: schon migriert ODER traegt bereits mandantId -> nicht
+    // anfassen (kein Clobber fremder Mandantenzuordnung).
+    if (istMigriert(snap) || hatMandantBezug(snap)) return klon(snap);
 
     var jetzt = (opts && opts.jetzt) || new Date().toISOString();
     var u = snap.unternehmen || null;
