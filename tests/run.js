@@ -1479,6 +1479,67 @@ test('MandantenMigration: tiefe Kopie - Original bleibt unangetastet', function 
   ok(!('mandantId' in alt.unternehmen), 'Original-Unternehmen nicht mutiert');
 });
 
+/* ---- Server-Dateilayout-Migration (Welle 7, Schritt a/3) ----------- */
+var StoreMig = require('../lib/mandanten-store-migration.js');
+(function () {
+  var sfs = require('fs'), sos = require('os'), spath = require('path');
+  var SMIG = { ts: '2026-06-06T00-00-00', jetzt: '2026-06-06T00:00:00.000Z' };
+  function tmpBase() { return sfs.mkdtempSync(spath.join(sos.tmpdir(), 'obz-mig-')); }
+  function altLayout(base, withUnt, ids) {
+    if (withUnt) sfs.writeFileSync(spath.join(base, 'unternehmen.json'),
+      JSON.stringify({ name: 'Lindgruen GmbH', ort: 'Leipzig' }));
+    var ad = spath.join(base, 'abschluesse'); sfs.mkdirSync(ad, { recursive: true });
+    (ids || []).forEach(function (id) {
+      sfs.writeFileSync(spath.join(ad, id + '.json'),
+        JSON.stringify({ id: id, stichtag: '2024-12-31' }));
+    });
+  }
+  function weg(b) { sfs.rmSync(b, { recursive: true, force: true }); }
+
+  test('StoreMig: altes Layout wird erkannt', function () {
+    var b = tmpBase(); altLayout(b, true, ['A1']);
+    ok(StoreMig.istAltesLayout(b), 'erkannt');
+    weg(b);
+  });
+  test('StoreMig: migriert verlustfrei, Pre-Backup, Originale bleiben', function () {
+    var b = tmpBase(); altLayout(b, true, ['A1', 'A2']);
+    var r = StoreMig.migriereDateiLayout(b, SMIG);
+    ok(r.migriert, 'migriert');
+    eq(r.anzahlAbschluesse, 2, 'beide Abschluesse');
+    ok(sfs.existsSync(spath.join(b, 'mandanten', 'standard', 'unternehmen.json')), 'unternehmen im Ziel');
+    ok(sfs.existsSync(spath.join(b, 'mandanten', 'standard', 'abschluesse', 'A1.json')), 'A1 im Ziel');
+    ok(sfs.existsSync(spath.join(b, 'mandanten', 'standard', 'abschluesse', 'A2.json')), 'A2 im Ziel');
+    var idx = JSON.parse(sfs.readFileSync(spath.join(b, 'mandanten.json'), 'utf8'));
+    eq(idx.length, 1, 'ein Mandant'); eq(idx[0].id, 'standard', 'id'); eq(idx[0].name, 'Lindgruen GmbH', 'Name');
+    ok(sfs.existsSync(spath.join(r.backupDir, 'abschluesse', 'A1.json')), 'Pre-Backup A1');
+    ok(sfs.existsSync(spath.join(r.backupDir, 'unternehmen.json')), 'Pre-Backup unternehmen');
+    ok(sfs.existsSync(spath.join(b, 'unternehmen.json')), 'Original unternehmen bleibt');
+    ok(sfs.existsSync(spath.join(b, 'abschluesse', 'A1.json')), 'Original A1 bleibt');
+    weg(b);
+  });
+  test('StoreMig: Zielinhalt == Quellinhalt (verlustfrei)', function () {
+    var b = tmpBase(); altLayout(b, true, ['A1']);
+    StoreMig.migriereDateiLayout(b, SMIG);
+    var quelle = sfs.readFileSync(spath.join(b, 'abschluesse', 'A1.json'), 'utf8');
+    var ziel = sfs.readFileSync(spath.join(b, 'mandanten', 'standard', 'abschluesse', 'A1.json'), 'utf8');
+    eq(ziel, quelle, 'Abschluss-Inhalt identisch kopiert');
+    weg(b);
+  });
+  test('StoreMig: idempotent (zweiter Lauf no-op)', function () {
+    var b = tmpBase(); altLayout(b, true, ['A1']);
+    StoreMig.migriereDateiLayout(b, SMIG);
+    var r2 = StoreMig.migriereDateiLayout(b, SMIG);
+    ok(!r2.migriert, 'kein zweiter Lauf'); eq(r2.grund, 'bereits-migriert', '');
+    weg(b);
+  });
+  test('StoreMig: keine Altdaten -> kein Lauf', function () {
+    var b = tmpBase();
+    var r = StoreMig.migriereDateiLayout(b, SMIG);
+    ok(!r.migriert, ''); eq(r.grund, 'keine-altdaten', '');
+    weg(b);
+  });
+})();
+
 /* ---- Autocomplete: Konto-Vorschlaege aus Journal -------------------- */
 test('Autocomplete: lernt das passende Konto aus drei früheren Buchungen', function () {
   var j = [
