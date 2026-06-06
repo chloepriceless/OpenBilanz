@@ -1,23 +1,30 @@
 /* ===========================================================================
  * mandanten-migration.js  -  Migration einfirmig -> mehrmandantenfaehig
  * ---------------------------------------------------------------------------
- * REINE Transform-Logik (kein I/O, keine Uhr im Vergleich): wandelt einen
- * alten, einfirmigen Datenstand (ohne mandantId) in den neuen Mehrmandanten-
- * Stand um, in dem die bestehenden Daten dem automatisch angelegten Mandanten
- * "standard" zugeordnet werden. Diese Funktion ist bewusst vom IndexedDB- bzw.
- * Datei-I/O getrennt, damit sie ohne Browser testbar ist und isoliert geprueft
- * werden kann (die Migration ist der korrektheitskritische Punkt von Welle 7,
- * Browser-Datenverlustrisiko ohne Server-Backup im Website-Modus).
+ * REINE Transform-Logik (kein I/O, keine Uhr im Vergleich): vervollstaendigt
+ * einen beliebigen Datenstand zu einem gueltigen Mehrmandanten-Stand (v2). Der
+ * alte, einfirmige Stand (ohne mandantId) bekommt einen automatischen Mandanten
+ * "standard"; bestehende mandantId-Zuordnungen bleiben erhalten.
  *
- * Vertrag:
- *   - idempotent:  bereits migrierter Stand -> unveraendert (Klon) zurueck.
- *   - verlustfrei: jeder Abschluss bleibt erhalten (gleiche id-Menge/Anzahl),
- *                  nur mandantId='standard' wird ergaenzt.
+ * Diese Funktion ist bewusst vom IndexedDB-/Datei-I/O getrennt, damit sie ohne
+ * Browser testbar und isoliert pruefbar ist (die Migration ist der korrektheits-
+ * kritische Punkt von Welle 7; Browser-Datenverlustrisiko im Website-Modus).
+ *
+ * Vertrag (vom Hub-Refute geschaerft):
+ *   - VERVOLLSTAENDIGEND statt ueberspringend: jeder Datensatz erhaelt eine
+ *     mandantId. Vorhandene (auch fremde) mandantId wird ERHALTEN, fehlende auf
+ *     'standard' gesetzt. So wird ein MITTENDRIN abgebrochener Migrationslauf
+ *     (A1 hat schon mandantId, A2 noch nicht) repariert statt still verschluckt
+ *     (EDGE1) - kein Datenverlust.
+ *   - mandanten[] deckt jede referenzierte mandantId ab; bestehende Mandanten-
+ *     Eintraege (Name/angelegtAm) bleiben unveraendert.
+ *   - idempotent: ein vollstaendiger v2-Stand kommt unveraendert wieder heraus.
+ *   - verlustfrei: keine id geht verloren oder kommt hinzu.
  *   - fresh install (keine Daten) -> leeres v2 ohne Phantom-Mandant.
  *
  * API:
  *   migriere(altSnapshot, opts) -> v2Snapshot
- *   istMigriert(snap) -> Boolean
+ *   istMigriert(snap) -> Boolean   (vollstaendig migriert?)
  * ========================================================================= */
 (function (root, factory) {
   var api = factory();
@@ -30,68 +37,83 @@
 
   function klon(o) { return JSON.parse(JSON.stringify(o)); }
 
-  /* Ein Stand gilt als migriert, sobald er eine (nicht-leere) Mandantenliste
-   * fuehrt - das ist genau das, was migriere() erzeugt. */
+  /* Vollstaendig migriert = fuehrt eine Mandantenliste UND jeder Datensatz hat
+   * eine mandantId. Ein partiell migrierter Stand (manche Saetze ohne mandantId)
+   * gilt NICHT als migriert und wird von migriere() vervollstaendigt. */
   function istMigriert(snap) {
-    return !!(snap && Array.isArray(snap.mandanten) && snap.mandanten.length > 0);
-  }
-
-  /* Traegt der Stand bereits IRGENDWO eine mandantId? Dann ist er nicht der
-   * saubere einfirmige v1-Stand, fuer den migriere() gedacht ist - die Daten
-   * duerfen dann NICHT auf 'standard' ueberschrieben werden (Datenkorruption
-   * bei Re-Import von Multi-Mandant-Daten). Schutzwaechter. */
-  function hatMandantBezug(snap) {
-    if (!snap) return false;
+    if (!snap || !Array.isArray(snap.mandanten) || snap.mandanten.length === 0) return false;
     var u = snap.unternehmen;
-    if (u && !Array.isArray(u) && u.mandantId) return true;
-    if (Array.isArray(u) && u.some(function (x) { return x && x.mandantId; })) return true;
-    var ab = snap.abschluesse;
-    if (Array.isArray(ab) && ab.some(function (x) { return x && x.mandantId; })) return true;
-    return false;
+    var uOk = !u
+      || (Array.isArray(u) && u.every(function (x) { return !x || x.mandantId; }))
+      || (!Array.isArray(u) && typeof u === 'object' && !!u.mandantId);
+    var ab = Array.isArray(snap.abschluesse) ? snap.abschluesse : [];
+    var abOk = ab.every(function (x) { return !x || x.mandantId; });
+    return uOk && abOk;
   }
 
   /* migriere(altSnapshot, opts)
-   *   altSnapshot v1: { unternehmen: <obj|null>, abschluesse: [<obj>] }
-   *               ODER ein bereits migrierter v2-Stand (-> unveraendert).
-   *   opts.jetzt:  ISO-Zeitstempel fuer mandant.angelegtAm (Default: jetzt).
+   *   altSnapshot: v1 (einfirmig), partiell migriert ODER vollstaendiges v2.
+   *   opts.jetzt:  ISO-Zeitstempel fuer NEU angelegte Mandanten (Default: jetzt).
    * Rueckgabe v2: { version:2, mandanten:[...], unternehmen:[...], abschluesse:[...] }
    */
   function migriere(altSnapshot, opts) {
-    var snap = altSnapshot || {};
-    // idempotent + Schutz: schon migriert ODER traegt bereits mandantId -> nicht
-    // anfassen (kein Clobber fremder Mandantenzuordnung).
-    if (istMigriert(snap) || hatMandantBezug(snap)) return klon(snap);
-
     var jetzt = (opts && opts.jetzt) || new Date().toISOString();
-    var u = snap.unternehmen || null;
-    var abschluesse = Array.isArray(snap.abschluesse) ? snap.abschluesse : [];
+    var snap = altSnapshot ? klon(altSnapshot) : {};
 
-    // Fresh install: nichts zu migrieren -> kein Phantom-Mandant.
-    if (!u && abschluesse.length === 0) {
+    // --- Unternehmen auf Array-Form mit mandantId normalisieren ---
+    var unternehmen = [];
+    var uRoh = snap.unternehmen;
+    if (Array.isArray(uRoh)) {
+      unternehmen = uRoh.filter(Boolean).map(function (u) {
+        if (!u.mandantId) u.mandantId = STANDARD_ID;   // fehlende ergaenzen, vorhandene erhalten
+        return u;
+      });
+    } else if (uRoh && typeof uRoh === 'object') {
+      if (!uRoh.mandantId) uRoh.mandantId = STANDARD_ID;
+      unternehmen = [uRoh];
+    }
+
+    // --- Abschluesse: mandantId vervollstaendigen (vorhandene erhalten) ---
+    var abschluesse = (Array.isArray(snap.abschluesse) ? snap.abschluesse : [])
+      .filter(Boolean).map(function (a) {
+        if (!a.mandantId) a.mandantId = STANDARD_ID;
+        return a;
+      });
+
+    // --- Fresh install: keine Daten -> leeres v2, kein Phantom-Mandant ---
+    if (unternehmen.length === 0 && abschluesse.length === 0) {
       return { version: 2, mandanten: [], unternehmen: [], abschluesse: [] };
     }
 
-    var name = (u && (u.name || u.firma)) ? String(u.name || u.firma) : 'Standard';
-    var mandanten = [{ id: STANDARD_ID, name: name, angelegtAm: jetzt }];
+    // --- mandanten[] aufbauen: bestehende erhalten + referenzierte ergaenzen ---
+    var mandanten = (Array.isArray(snap.mandanten) ? snap.mandanten : []).filter(Boolean);
+    var bekannt = {};
+    mandanten.forEach(function (m) { if (m && m.id != null) bekannt[m.id] = true; });
 
-    var unternehmen = [];
-    if (u) {
-      var uc = klon(u);
-      uc.mandantId = STANDARD_ID;
-      unternehmen.push(uc);
+    function nameFuer(id) {
+      if (id === STANDARD_ID) {
+        var u = unternehmen.filter(function (x) { return x.mandantId === STANDARD_ID; })[0];
+        if (u && (u.name || u.firma)) return String(u.name || u.firma);
+        return 'Standard';
+      }
+      return String(id);   // unbekannte Fremd-mandantId: id als Name (Stub, nicht verwaisen)
     }
 
-    var neueAbschluesse = abschluesse.map(function (a) {
-      var ac = klon(a);
-      ac.mandantId = STANDARD_ID;
-      return ac;
+    var referenziert = {};
+    unternehmen.forEach(function (u) { referenziert[u.mandantId] = true; });
+    abschluesse.forEach(function (a) { referenziert[a.mandantId] = true; });
+    Object.keys(referenziert).forEach(function (id) {
+      if (!bekannt[id]) {
+        mandanten.push({ id: id, name: nameFuer(id), angelegtAm: jetzt });
+        bekannt[id] = true;
+      }
     });
 
     return {
       version: 2,
       mandanten: mandanten,
       unternehmen: unternehmen,
-      abschluesse: neueAbschluesse
+      abschluesse: abschluesse
     };
   }
 

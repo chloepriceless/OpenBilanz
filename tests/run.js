@@ -1453,6 +1453,24 @@ test('MandantenMigration: vorhandene fremde mandantId wird NICHT ueberschrieben'
   var teil = { unternehmen: null, abschluesse: [{ id: 'A1', mandantId: 'kunde-b' }] };
   var r = MandantenMigration.migriere(teil, MM_JETZT);
   eq(r.abschluesse[0].mandantId, 'kunde-b', 'fremde mandantId bleibt (kein Clobber auf standard)');
+  ok(r.mandanten.some(function (m) { return m.id === 'kunde-b'; }),
+     'Mandant fuer fremde id angelegt (nicht verwaist)');
+});
+test('MandantenMigration: EDGE1 - abgebrochener Lauf wird vervollstaendigt', function () {
+  // Crash mittendrin: A1 hat schon mandantId, A2 noch nicht, mandanten[] fehlt.
+  var partiell = { abschluesse: [{ id: 'A1', mandantId: 'standard' }, { id: 'A2' }] };
+  var r = MandantenMigration.migriere(partiell, MM_JETZT);
+  eq(r.abschluesse.length, 2, 'beide Abschluesse erhalten (kein Verlust)');
+  ok(r.abschluesse.every(function (a) { return a.mandantId === 'standard'; }),
+     'A2 wird nachgezogen statt verwaist');
+  eq(r.mandanten.length, 1, 'Mandant standard angelegt');
+  ok(MandantenMigration.istMigriert(r), 'Ergebnis ist vollstaendig migriert');
+});
+test('MandantenMigration: partiell migriert gilt NICHT als istMigriert', function () {
+  ok(!MandantenMigration.istMigriert({
+    mandanten: [{ id: 'standard' }],
+    abschluesse: [{ id: 'A1', mandantId: 'standard' }, { id: 'A2' }]
+  }), 'ein Satz ohne mandantId => nicht vollstaendig');
 });
 test('MandantenMigration: tiefe Kopie - Original bleibt unangetastet', function () {
   var alt = { unternehmen: { name: 'X' }, abschluesse: [{ id: 'A1' }] };
