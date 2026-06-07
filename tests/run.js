@@ -40,6 +40,7 @@ var Closing = require('../public/shared/closing.js');
 var HealthCheck = require('../public/shared/healthcheck.js');
 var Belegnummern = require('../public/shared/belegnummern.js');
 var MandantenMigration = require('../public/shared/mandanten-migration.js');
+var ImportProtokoll = require('../public/shared/import-protokoll.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1854,6 +1855,96 @@ test('HealthCheck: alter Backup-Stand wird gemeldet (Website-Modus)', function (
 test('HealthCheck: Selbst-Hosting-Modus zeigt keinen Backup-Eintrag', function () {
   var l = HealthCheck.pruefe({ name: 'X', steuernummer: '1', gruendungsdatum: '2024-01-01', stammkapital: 25000 }, []);
   ok(!l.find(function (x) { return /Backup/.test(x.titel); }), 'kein Backup-Eintrag im Selbst-Hosting');
+});
+
+/* ---- Importprotokoll: nachvollziehbarer Eintrag je Import ------------- */
+test('Importprotokoll: eintrag aus CAMT-Ergebnis zählt Einträge und Bereich', function () {
+  var parsed = { tx: [
+    { datum: '2026-03-05', betrag: 100, eingang: true },
+    { datum: '2026-01-12', betrag: 50, eingang: false },
+    { datum: '2026-02-28', betrag: 30, eingang: true }
+  ] };
+  var e = ImportProtokoll.eintrag('CAMT.053', parsed, { zeit: '2026-06-07T10:00:00Z' });
+  eq(e.format, 'CAMT.053', 'Format');
+  eq(e.zeit, '2026-06-07T10:00:00Z', 'Zeit injiziert');
+  eq(e.anzahlErkannt, 3, 'Anzahl erkannt');
+  eq(e.anzahlUebernommen, 3, 'Default uebernommen = erkannt');
+  eq(e.anzahlUebersprungen, 0, 'Default uebersprungen 0');
+  eq(e.datumsbereich.von, '2026-01-12', 'frühestes Datum');
+  eq(e.datumsbereich.bis, '2026-03-05', 'spätestes Datum');
+});
+test('Importprotokoll: eintrag aus DATEV-Ergebnis (buchungen) normalisiert', function () {
+  var parsed = { buchungen: [
+    { datum: '2025-12-31', betrag: 10, soll: '1200', haben: '4400' },
+    { datum: '2025-06-01', betrag: 20, soll: '1200', haben: '4400' }
+  ], jahr: '2025' };
+  var e = ImportProtokoll.eintrag('DATEV', parsed, { zeit: 'z', uebernommen: 2, uebersprungen: 0 });
+  eq(e.anzahlErkannt, 2, 'aus buchungen gezählt');
+  eq(e.datumsbereich.von, '2025-06-01', 'von');
+  eq(e.datumsbereich.bis, '2025-12-31', 'bis');
+});
+test('Importprotokoll: übersprungene Duplikate werden festgehalten', function () {
+  var parsed = { tx: [{ datum: '2026-01-01', betrag: 1 }, { datum: '2026-01-02', betrag: 2 }] };
+  var e = ImportProtokoll.eintrag('MT940', parsed, { zeit: 'z', uebernommen: 1, uebersprungen: 1 });
+  eq(e.anzahlErkannt, 2, 'erkannt');
+  eq(e.anzahlUebernommen, 1, 'übernommen');
+  eq(e.anzahlUebersprungen, 1, 'übersprungen');
+});
+test('Importprotokoll: leere/ungültige Datumsangaben werden im Bereich ignoriert', function () {
+  var parsed = { buchungen: [
+    { datum: '', betrag: 1 },
+    { datum: '2026-04-10', betrag: 2 },
+    { datum: 'kaputt', betrag: 3 }
+  ] };
+  var e = ImportProtokoll.eintrag('DATEV', parsed, { zeit: 'z' });
+  eq(e.anzahlErkannt, 3, 'alle gezählt');
+  eq(e.datumsbereich.von, '2026-04-10', 'nur gültiges Datum');
+  eq(e.datumsbereich.bis, '2026-04-10', 'nur gültiges Datum');
+});
+test('Importprotokoll: ohne gültiges Datum ist der Bereich null', function () {
+  var e = ImportProtokoll.eintrag('MT940', { tx: [{ datum: '' }, {}] }, { zeit: 'z' });
+  eq(e.anzahlErkannt, 2, 'gezählt');
+  eq(e.datumsbereich, null, 'kein Bereich');
+});
+test('Importprotokoll: leeres/fehlerhaftes Ergebnis liefert Nulleintrag', function () {
+  var e1 = ImportProtokoll.eintrag('CAMT.053', { fehler: 'kaputt' }, { zeit: 'z' });
+  eq(e1.anzahlErkannt, 0, 'Fehlerergebnis = 0 erkannt');
+  eq(e1.datumsbereich, null, 'kein Bereich');
+  var e2 = ImportProtokoll.eintrag('CAMT.053', null, { zeit: 'z' });
+  eq(e2.anzahlErkannt, 0, 'null-Ergebnis = 0 erkannt');
+});
+test('Importprotokoll: dateiname und dateiHash werden nur bei Angabe gesetzt', function () {
+  var ohne = ImportProtokoll.eintrag('MT940', { tx: [] }, { zeit: 'z' });
+  ok(!('dateiname' in ohne), 'kein dateiname ohne Angabe');
+  ok(!('dateiHash' in ohne), 'kein dateiHash ohne Angabe');
+  var mit = ImportProtokoll.eintrag('MT940', { tx: [] },
+    { zeit: 'z', dateiname: 'kontoauszug.sta', dateiHash: 'abc123' });
+  eq(mit.dateiname, 'kontoauszug.sta', 'dateiname gesetzt');
+  eq(mit.dateiHash, 'abc123', 'dateiHash gesetzt');
+});
+test('Importprotokoll: anhaengen stellt jüngsten voran und mutiert nicht', function () {
+  var alt = [{ format: 'DATEV', zeit: '2026-01-01T00:00:00Z' }];
+  var e = ImportProtokoll.eintrag('CAMT.053', { tx: [{ datum: '2026-02-01' }] }, { zeit: '2026-02-02T00:00:00Z' });
+  var neu = ImportProtokoll.anhaengen(alt, e);
+  eq(neu.length, 2, 'beide drin');
+  eq(neu[0].format, 'CAMT.053', 'jüngster vorne');
+  eq(alt.length, 1, 'Original unverändert (immutabel)');
+});
+test('Importprotokoll: anhaengen begrenzt die Länge', function () {
+  var arr = [];
+  for (var i = 0; i < 5; i++) {
+    arr = ImportProtokoll.anhaengen(arr, { format: 'X', zeit: String(i) }, 3);
+  }
+  eq(arr.length, 3, 'auf maxLen begrenzt');
+  eq(arr[0].zeit, '4', 'jüngster zuerst');
+  eq(arr[2].zeit, '2', 'ältester gefallen');
+});
+test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function () {
+  var log = [{ format: 'CAMT.053', dateiHash: 'deadbeef' }, { format: 'MT940' }];
+  ok(ImportProtokoll.istWiederholung(log, 'deadbeef'), 'bekannter Hash');
+  ok(!ImportProtokoll.istWiederholung(log, 'cafe'), 'unbekannter Hash');
+  ok(!ImportProtokoll.istWiederholung(log, ''), 'leerer Hash = false');
+  ok(!ImportProtokoll.istWiederholung(null, 'x'), 'kein Protokoll = false');
 });
 
 /* ---- Lauf ------------------------------------------------------------- */
