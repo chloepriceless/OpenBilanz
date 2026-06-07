@@ -11,6 +11,26 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+### Hinzugefügt
+- **Welle 7 — Mehrmandanten (Multi-Tenant):** OpenBilanz verwaltet jetzt mehrere
+  Firmen/Gesellschaften getrennt. Jeder Mandant hat eigene Stammdaten und
+  Abschlüsse; ein Mandanten-Dropdown in der Seitenleiste (Hotkey Alt+1..9) wechselt
+  den aktiven Mandanten, „+" legt einen neuen an. Startseite zeigt eine Zeitleiste
+  der Abschlüsse je Mandant (EB → JA → JA).
+  - Reine, getestete Migrations-Transform (`public/shared/mandanten-migration.js`).
+  - Server (`lib/store.js`): Layout `data/mandanten/<id>/…` + `data/mandanten.json`,
+    Auto-Migration des alten einfirmigen Layouts beim Start (Pre-Backup, kopieren,
+    Verifikation), `mandantId`-Parameter (Default „standard"). Routen in `server.js`
+    + neue Route `/api/mandanten`.
+  - Browser (`public/shared/store-idb.js`): IndexedDB-Version 2 mit verlustfreier
+    `onupgradeneeded`-Migration der Einfirmen-Daten zum Mandanten „standard"; Voll-
+    Export/Import mandantenübergreifend (alte .obz-Sicherungen importieren weiter).
+  - Adapter (`public/shared/store-adapter.js`): aktiver Mandant wird transparent
+    durchgereicht; backward-kompatibel (ohne Auswahl alles auf „standard").
+  - **Noch nicht released/deployed:** vor Versionierung/Deploy stehen der
+    Hub-Re-Refute der Gesamt-Migration und ein manueller Browser-Smoke-Test der
+    IDB-Migration aus (IndexedDB ist zero-dependency nicht unit-testbar).
+
 ## [2.2.0] - 2026-06-07
 
 ### Hinzugefügt
