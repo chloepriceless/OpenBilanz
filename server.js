@@ -123,11 +123,25 @@ function statisch(res, urlPfad) {
 
 /* ---- API ---------------------------------------------------------------- */
 function api(req, res, pfad, query) {
-  // Zustand laden
+  // Aktiver Mandant aus der Query (Default 'standard') - Welle 7.
+  var mandant = (query && query.mandant) || store.STANDARD;
+  // Mandanten-Index
+  if (pfad === '/api/mandanten' && req.method === 'GET') {
+    return sendJSON(res, 200, { mandanten: store.listeMandanten() });
+  }
+  if (pfad === '/api/mandanten' && req.method === 'POST') {
+    return leseBody(req, function (e, body) {
+      if (e) return sendJSON(res, 400, { fehler: 'Ungueltige Daten' });
+      sendJSON(res, 200, store.mandantAnlegen((body && body.name) || '', body && body.id));
+    });
+  }
+  // Zustand laden (je Mandant)
   if (pfad === '/api/state' && req.method === 'GET') {
     return sendJSON(res, 200, {
-      unternehmen: store.ladeUnternehmen(),
-      abschluesse: store.listeAbschluesse().map(function (a) {
+      aktiverMandant: mandant,
+      mandanten: store.listeMandanten(),
+      unternehmen: store.ladeUnternehmen(mandant),
+      abschluesse: store.listeAbschluesse(mandant).map(function (a) {
         return { id: a.id, art: a.art, bezeichnung: a.bezeichnung, stichtag: a.stichtag,
                  groessenklasse: a.groessenklasse, status: a.status };
       })
@@ -137,35 +151,35 @@ function api(req, res, pfad, query) {
   if (pfad === '/api/unternehmen' && req.method === 'PUT') {
     return leseBody(req, function (e, body) {
       if (e) return sendJSON(res, 400, { fehler: 'Ungueltige Daten' });
-      sendJSON(res, 200, store.speichereUnternehmen(body));
+      sendJSON(res, 200, store.speichereUnternehmen(body, mandant));
     });
   }
   // Einzelnen Abschluss laden
   if (pfad === '/api/abschluss' && req.method === 'GET') {
-    var a = store.ladeAbschluss(query.id);
+    var a = store.ladeAbschluss(query.id, mandant);
     return a ? sendJSON(res, 200, a) : sendJSON(res, 404, { fehler: 'Nicht gefunden' });
   }
   // Abschluss speichern (anlegen/aktualisieren)
   if (pfad === '/api/abschluss' && req.method === 'PUT') {
     return leseBody(req, function (e, body) {
       if (e) return sendJSON(res, 400, { fehler: 'Ungueltige Daten' });
-      sendJSON(res, 200, store.speichereAbschluss(body));
+      sendJSON(res, 200, store.speichereAbschluss(body, mandant));
     });
   }
   // Abschluss löschen
   if (pfad === '/api/abschluss' && req.method === 'DELETE') {
-    return sendJSON(res, 200, { geloescht: store.loescheAbschluss(query.id) });
+    return sendJSON(res, 200, { geloescht: store.loescheAbschluss(query.id, mandant) });
   }
   // Unternehmen löschen (Teil des „Alle Daten zurücksetzen")
   if (pfad === '/api/unternehmen' && req.method === 'DELETE') {
-    return sendJSON(res, 200, { geloescht: store.loescheUnternehmen() });
+    return sendJSON(res, 200, { geloescht: store.loescheUnternehmen(mandant) });
   }
   // E-Bilanz erzeugen und herunterladen
   //   form=ebilanz (Standard): XBRL im ELSTER-EBilanz-Container (Übermittlung)
   //   form=instanz:            reine XBRL-Instanz (zum Validieren)
   if (pfad === '/api/xbrl' && req.method === 'GET') {
-    var ab = store.ladeAbschluss(query.id);
-    var un = store.ladeUnternehmen();
+    var ab = store.ladeAbschluss(query.id, mandant);
+    var un = store.ladeUnternehmen(mandant);
     if (!ab) return sendJSON(res, 404, { fehler: 'Abschluss nicht gefunden' });
     try {
       var instanz = query.form === 'instanz';
@@ -233,8 +247,8 @@ function api(req, res, pfad, query) {
   }
   // E-Bilanz gegen die amtliche Taxonomie validieren (nutzt Arelle, falls vorhanden)
   if (pfad === '/api/validate' && req.method === 'GET') {
-    var vab = store.ladeAbschluss(query.id);
-    var vun = store.ladeUnternehmen();
+    var vab = store.ladeAbschluss(query.id, mandant);
+    var vun = store.ladeUnternehmen(mandant);
     if (!vab) return sendJSON(res, 404, { fehler: 'Abschluss nicht gefunden' });
     try {
       var verg = xbrl.erzeugeXBRL(vun || {}, vab);
