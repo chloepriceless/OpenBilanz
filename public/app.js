@@ -642,6 +642,26 @@ function renderStart(m) {
     }
   }
 
+  // Zeitleiste je Mandant: EB -> JA -> JA in zeitlicher Folge (Welle 7, c).
+  if (S.abschluesse.length) {
+    html += '<div class="karte" style="margin-top:18px"><h2>Zeitleiste</h2>' +
+      '<div class="karte-hint">Abschlüsse dieses Mandanten in zeitlicher Folge &ndash; ' +
+      'zum Öffnen anklicken.</div>' +
+      '<div class="zeitleiste" style="display:flex;flex-wrap:wrap;align-items:center;' +
+      'gap:8px;margin-top:12px">';
+    S.abschluesse.forEach(function (a, i) {
+      if (i) html += '<span style="opacity:.45">&rarr;</span>';
+      var istEB = a.art === 'EROEFFNUNGSBILANZ';
+      var jahr = (a.stichtag || '').slice(0, 4) || '–';
+      var fest = a.status === 'FESTGESTELLT';
+      html += '<span class="tag ' + (istEB ? 'tag-eb' : 'tag-ja') + '" data-oeffne="' + a.id +
+        '" style="cursor:pointer' + (fest ? '' : ';opacity:.7') + '" title="' +
+        esc(a.bezeichnung || '') + (fest ? ' (festgestellt)' : ' (Entwurf)') + '">' +
+        (istEB ? 'EB ' : 'JA ') + esc(jahr) + '</span>';
+    });
+    html += '</div></div>';
+  }
+
   if (S.abschluesse.length) {
     html += '<div class="karte" style="margin-top:18px"><h2>Ihre Abschlüsse</h2>' +
             '<div class="karte-hint">Klicken Sie einen Eintrag zum Bearbeiten an.</div>' +
