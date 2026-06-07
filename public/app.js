@@ -2816,6 +2816,10 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
       n++;
     });
     if (!n) { alert('Keine Zeile ausgewählt.'); return; }
+    var fmtLabel = quelle === 'CAMT' ? 'CAMT.053'
+      : quelle === 'IBKR' ? 'Broker (IBKR Flex)' : quelle;
+    a.importLog = ImportProtokoll.anhaengen(a.importLog,
+      ImportProtokoll.eintrag(fmtLabel, tx, { uebernommen: n }));
     speichereStill().then(function () {
       hinweisToast(n + ' Buchung(en) aus dem Import übernommen.');
       renderBuchhaltung(m);
@@ -2861,6 +2865,8 @@ function datevVorschau(m, a, parsed, boxId) {
       n++;
     });
     if (!n) { alert('Keine Zeile ausgewählt.'); return; }
+    a.importLog = ImportProtokoll.anhaengen(a.importLog,
+      ImportProtokoll.eintrag('DATEV', bu, { uebernommen: n }));
     speichereStill().then(function () {
       hinweisToast(n + ' Buchung(en) aus dem DATEV-Import übernommen.');
       renderBuchhaltung(m);
@@ -2873,6 +2879,7 @@ function renderBuchhaltung(m) {
   if (a.art === 'EROEFFNUNGSBILANZ') { setView('editor'); return; }  // EB wird direkt erfasst
   if (!a.buchungen) a.buchungen = [];
   if (!a.protokoll) a.protokoll = [];
+  if (!a.importLog) a.importLog = [];
   a.buchungen.forEach(function (b, i) { if (!b.id) b.id = 'B-leg-' + i; });
   var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>';
   html += '<div class="kopf"><h1>Buchhaltung &ndash; ' + esc(a.bezeichnung) + '</h1>' +
@@ -3195,6 +3202,26 @@ function renderBuchhaltung(m) {
     '<input type="file" id="erDatei" ' +
     'accept=".xml,.pdf,text/xml,application/xml,application/pdf">' +
     '<div id="erVorschau"></div></div>';
+
+  /* Importprotokoll: nachvollziehbare Übersicht der Datei-Importe (GoBD). */
+  if (a.importLog && a.importLog.length) {
+    html += '<div class="karte"><h2>Importprotokoll</h2>' +
+      '<div class="karte-hint">Welche Datei-Importe wurden wann in diesen Abschluss ' +
+      'übernommen (jüngste zuerst) — für die Nachvollziehbarkeit nach GoBD.</div>' +
+      '<table class="liste"><thead><tr><th>Zeitpunkt</th><th>Format</th>' +
+      '<th class="rechts">Übernommen</th><th class="rechts">Erkannt</th>' +
+      '<th>Datumsbereich</th></tr></thead><tbody>';
+    a.importLog.forEach(function (e) {
+      var br = e.datumsbereich
+        ? datumDe(e.datumsbereich.von) + ' &ndash; ' + datumDe(e.datumsbereich.bis) : '—';
+      html += '<tr><td class="mono">' + esc(zeitstempelDe(e.zeit)) + '</td>' +
+        '<td>' + esc(e.format) + '</td>' +
+        '<td class="rechts mono">' + esc(String(e.anzahlUebernommen)) + '</td>' +
+        '<td class="rechts mono">' + esc(String(e.anzahlErkannt)) + '</td>' +
+        '<td class="mono">' + br + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
 
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };

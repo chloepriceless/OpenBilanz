@@ -15,7 +15,7 @@
  * ========================================================================= */
 'use strict';
 
-var CACHE = 'openbilanz-v4';
+var CACHE = 'openbilanz-v5';
 
 var SHELL = [
   './', './index.html', './styles.css', './app.js', './manifest.webmanifest',
@@ -23,6 +23,7 @@ var SHELL = [
   './shared/positionen.js', './shared/berechnung.js', './shared/taxonomie.js',
   './shared/skr04.js', './shared/steuer.js', './shared/ustva.js',
   './shared/mt940.js', './shared/datev.js', './shared/importe.js',
+  './shared/import-protokoll.js',
   './shared/journalexport.js',
   './shared/gdpdu.js', './shared/pruefkette.js', './shared/xbrl.js',
   './shared/store-idb.js', './shared/store-adapter.js',
