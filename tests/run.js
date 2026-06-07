@@ -41,6 +41,7 @@ var HealthCheck = require('../public/shared/healthcheck.js');
 var Belegnummern = require('../public/shared/belegnummern.js');
 var MandantenMigration = require('../public/shared/mandanten-migration.js');
 var ImportProtokoll = require('../public/shared/import-protokoll.js');
+var Store = require('../lib/store.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -1946,6 +1947,80 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
   ok(!ImportProtokoll.istWiederholung(log, ''), 'leerer Hash = false');
   ok(!ImportProtokoll.istWiederholung(null, 'x'), 'kein Protokoll = false');
 });
+
+/* ---- lib/store.js mandantenfaehig (Welle 7, Server) ------------------- */
+(function () {
+  var sfs = require('fs'), sos = require('os'), spath = require('path');
+  function frischesData() {
+    var d = spath.join(sos.tmpdir(), 'obz-store-' + process.pid + '-' + (storeTmpN++));
+    sfs.mkdirSync(d, { recursive: true });
+    Store.setDataDir(d);
+    return d;
+  }
+  var storeTmpN = 0;
+
+  test('Store: speichert/laedt Unternehmen + Abschluss unter standard (Default-Mandant)', function () {
+    var d = frischesData();
+    Store.init();
+    Store.speichereUnternehmen({ name: 'Muster GmbH', rechtsform: 'GmbH' });
+    Store.speichereAbschluss({ id: 'A-1', stichtag: '2024-12-31', art: 'JAHRESABSCHLUSS' });
+    var u = Store.ladeUnternehmen();
+    eq(u && u.name, 'Muster GmbH', 'Unternehmen geladen');
+    var liste = Store.listeAbschluesse();
+    eq(liste.length, 1, 'ein Abschluss');
+    eq(liste[0].id, 'A-1', 'Abschluss-id');
+    ok(sfs.existsSync(spath.join(d, 'mandanten', 'standard', 'unternehmen.json')),
+      'Datei liegt unter mandanten/standard/');
+    var mand = JSON.parse(sfs.readFileSync(spath.join(d, 'mandanten.json'), 'utf8'));
+    ok(mand.some(function (m) { return m.id === 'standard'; }), 'standard im Index');
+    eq(mand.filter(function (m) { return m.id === 'standard'; })[0].name, 'Muster GmbH',
+      'Mandantenname aus Unternehmen');
+  });
+
+  test('Store: Mandanten sind isoliert (standard vs. firma2)', function () {
+    frischesData();
+    Store.init();
+    Store.speichereAbschluss({ id: 'A-S', stichtag: '2024-12-31' });               // standard
+    Store.speichereAbschluss({ id: 'A-2', stichtag: '2024-12-31' }, 'firma2');      // anderer Mandant
+    eq(Store.listeAbschluesse().length, 1, 'standard hat 1');
+    eq(Store.listeAbschluesse('firma2').length, 1, 'firma2 hat 1');
+    eq(Store.ladeAbschluss('A-2', 'firma2').id, 'A-2', 'firma2-Abschluss ladbar');
+    eq(Store.ladeAbschluss('A-2'), null, 'firma2-Abschluss NICHT unter standard sichtbar');
+    eq(Store.ladeAbschluss('A-S', 'firma2'), null, 'standard-Abschluss NICHT unter firma2');
+  });
+
+  test('Store: init migriert altes einfirmiges Layout nach mandanten/standard/', function () {
+    var d = frischesData();
+    /* Altes Layout direkt anlegen (vor mandantenfaehigem Store). */
+    sfs.writeFileSync(spath.join(d, 'unternehmen.json'),
+      JSON.stringify({ name: 'Alt GmbH' }), 'utf8');
+    sfs.mkdirSync(spath.join(d, 'abschluesse'), { recursive: true });
+    sfs.writeFileSync(spath.join(d, 'abschluesse', 'A-alt.json'),
+      JSON.stringify({ id: 'A-alt', stichtag: '2023-12-31' }), 'utf8');
+    Store.init();   // soll automatisch migrieren
+    eq(Store.ladeUnternehmen() && Store.ladeUnternehmen().name, 'Alt GmbH',
+      'altes Unternehmen unter standard auffindbar');
+    var liste = Store.listeAbschluesse();
+    eq(liste.length, 1, 'alter Abschluss migriert');
+    eq(liste[0].id, 'A-alt', 'alte id erhalten');
+    ok(sfs.readdirSync(d).some(function (f) { return /^\.backup-pre-mandanten-/.test(f); }),
+      'Pre-Backup angelegt');
+    ok(sfs.existsSync(spath.join(d, 'unternehmen.json')),
+      'Originaldatei bleibt (kopiert, nicht verschoben)');
+  });
+
+  test('Store: mandantAnlegen legt Eintrag + Ordner an, Duplikat wird abgelehnt', function () {
+    frischesData();
+    Store.init();
+    var r1 = Store.mandantAnlegen('Zweite GmbH', 'zweite');
+    eq(r1.ok, true, 'erster Anlauf ok');
+    eq(r1.id, 'zweite', 'id gesetzt');
+    ok(Store.listeMandanten().some(function (m) { return m.id === 'zweite'; }), 'im Index');
+    var r2 = Store.mandantAnlegen('Zweite GmbH', 'zweite');
+    eq(r2.ok, false, 'Duplikat abgelehnt');
+    eq(r2.grund, 'existiert', 'Grund Duplikat');
+  });
+})();
 
 /* ---- Lauf ------------------------------------------------------------- */
 /* Sequenziell laufen lassen, async-Tests (Promise-Rückgabewert) werden
