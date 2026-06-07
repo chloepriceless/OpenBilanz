@@ -9,11 +9,22 @@
     "stamp": "node tools/stamp-version.js"
   },
   "keywords": [
-    "gmbh", "hgb", "bilanz", "jahresabschluss", "eroeffnungsbilanz",
-    "e-bilanz", "xbrl", "elster", "buchhaltung", "skr04"
+    "gmbh",
+    "hgb",
+    "bilanz",
+    "jahresabschluss",
+    "eroeffnungsbilanz",
+    "e-bilanz",
+    "xbrl",
+    "elster",
+    "buchhaltung",
+    "skr04"
   ],
   "engines": {
     "node": ">=18"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5"
+  }
 }

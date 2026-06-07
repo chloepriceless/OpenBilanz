@@ -2036,6 +2036,118 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
   });
 })();
 
+/* ---- IDB-Migration v1->v2 (fake-indexeddb, W3-bis) -------------------- */
+/* Deckt den einzigen sonst ungetesteten Laufzeit-Pfad ab: store-idb.js
+ * onupgradeneeded (migriereV1zuV2). Graceful-Skip ohne fake-indexeddb -> der
+ * Standardlauf `node tests/run.js` bleibt zero-install grün. */
+(function () {
+  var fakeOk = false;
+  try { require('fake-indexeddb/auto'); fakeOk = true; } catch (e) { fakeOk = false; }
+  if (!fakeOk) {
+    test('IDB-Migration v1->v2: übersprungen (fake-indexeddb nicht installiert)', function () {
+      ok(true, 'optional: `npm install` aktiviert die IDB-onupgradeneeded-Tests');
+    });
+    return;
+  }
+  var StoreIDB = require('../public/shared/store-idb.js');
+  var DBNAME = 'openbilanz';
+
+  function del() {
+    return new Promise(function (res) {
+      var r = indexedDB.deleteDatabase(DBNAME);
+      r.onsuccess = r.onerror = r.onblocked = function () { res(); };
+    });
+  }
+  /* Roh eine v1-DB im Schema von store-idb v1 aufbauen + befuellen. */
+  function baueV1(daten) {
+    return new Promise(function (resolve, reject) {
+      var req = indexedDB.open(DBNAME, 1);
+      req.onupgradeneeded = function (e) {
+        var db = e.target.result;
+        db.createObjectStore('unternehmen', { keyPath: '_id' });
+        var ab = db.createObjectStore('abschluesse', { keyPath: 'id' });
+        ab.createIndex('stichtag', 'stichtag', { unique: false });
+        db.createObjectStore('meta', { keyPath: 'key' });
+      };
+      req.onsuccess = function () {
+        var db = req.result;
+        var t = db.transaction(['unternehmen', 'abschluesse'], 'readwrite');
+        if (daten.unternehmen) {
+          var u = JSON.parse(JSON.stringify(daten.unternehmen)); u._id = 'singleton';
+          t.objectStore('unternehmen').put(u);
+        }
+        (daten.abschluesse || []).forEach(function (a) { t.objectStore('abschluesse').put(a); });
+        t.oncomplete = function () { db.close(); resolve(); };
+        t.onerror = function () { reject(t.error); };
+      };
+      req.onerror = function () { reject(req.error); };
+    });
+  }
+  function frischeIDB(daten) {
+    StoreIDB._resetCache();
+    return del().then(function () { return baueV1(daten); })
+      .then(function () { StoreIDB._resetCache(); });   /* nächstes offen() -> v2-Upgrade */
+  }
+
+  test('IDB v1->v2: befüllte Alt-DB wird verlustfrei nach Mandant standard migriert', function () {
+    return frischeIDB({
+      unternehmen: { name: 'Muster GmbH', rechtsform: 'GmbH' },
+      abschluesse: [
+        { id: 'A-1', stichtag: '2024-12-31', art: 'JAHRESABSCHLUSS', buchungen: [{ x: 1 }] },
+        { id: 'A-2', stichtag: '2023-12-31', art: 'EROEFFNUNGSBILANZ' }
+      ]
+    }).then(function () {
+      return Promise.all([
+        StoreIDB.listeMandanten(),
+        StoreIDB.ladeUnternehmen('standard'),
+        StoreIDB.listeAbschluesse('standard'),
+        StoreIDB.getMeta('mandantenMigrationHinweis')
+      ]);
+    }).then(function (r) {
+      var mand = r[0], unt = r[1], absl = r[2], flag = r[3];
+      eq(mand.length, 1, 'genau ein Mandant');
+      eq(mand[0].id, 'standard', 'Mandant-id standard');
+      eq(mand[0].name, 'Muster GmbH', 'Mandantenname aus Unternehmen');
+      eq(unt && unt.name, 'Muster GmbH', 'Unternehmen unter standard');
+      eq(absl.length, 2, 'beide Abschlüsse erhalten (verlustfrei)');
+      var ids = absl.map(function (a) { return a.id; }).sort().join(',');
+      eq(ids, 'A-1,A-2', 'beide ids erhalten');
+      ok(absl.every(function (a) { return a.mandantId === 'standard'; }), 'mandantId gesetzt');
+      var a1 = absl.filter(function (a) { return a.id === 'A-1'; })[0];
+      ok(a1.buchungen && a1.buchungen.length === 1, 'Nutzdaten (buchungen) erhalten');
+      ok(flag, 'W3: Backup-Hinweis-Flag gesetzt');
+    });
+  });
+
+  test('IDB v1->v2: leere Alt-DB erzeugt KEINEN Phantom-Mandanten', function () {
+    return frischeIDB({}).then(function () {
+      return Promise.all([StoreIDB.listeMandanten(), StoreIDB.getMeta('mandantenMigrationHinweis')]);
+    }).then(function (r) {
+      eq(r[0].length, 0, 'kein Mandant bei leerer Alt-DB');
+      ok(!r[1], 'kein Backup-Hinweis ohne Daten');
+    });
+  });
+
+  test('IDB v1->v2: Mandanten-Isolation nach Migration (Quergriff null)', function () {
+    return frischeIDB({
+      unternehmen: { name: 'Iso GmbH' },
+      abschluesse: [{ id: 'A-iso', stichtag: '2024-12-31' }]
+    }).then(function () {
+      return StoreIDB.speichereAbschluss({ id: 'A-f2', stichtag: '2024-12-31' }, 'firma2');
+    }).then(function () {
+      return Promise.all([
+        StoreIDB.listeAbschluesse('standard'),
+        StoreIDB.listeAbschluesse('firma2'),
+        StoreIDB.ladeAbschluss('A-f2', 'standard')   /* Quergriff */
+      ]);
+    }).then(function (r) {
+      eq(r[0].length, 1, 'standard sieht nur eigenen');
+      eq(r[1].length, 1, 'firma2 sieht nur eigenen');
+      eq(r[2], null, 'Quergriff auf fremden Abschluss -> null');
+    });
+  });
+})();
+
 /* ---- Lauf ------------------------------------------------------------- */
 /* Sequenziell laufen lassen, async-Tests (Promise-Rückgabewert) werden
  * abgewartet, ohne dass synchrone Tests darauf umgeschrieben werden müssen. */

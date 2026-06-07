@@ -341,6 +341,8 @@
 
   return {
     init: function () { return offen().then(function () {}); },
+    /* Test-Hook: gecachte DB-Verbindung verwerfen (fake-indexeddb-Tests). */
+    _resetCache: function () { dbPromise = null; },
     listeMandanten: listeMandanten, speichereMandant: speichereMandant,
     loescheMandant: loescheMandant,
     ladeUnternehmen: ladeUnternehmen, speichereUnternehmen: speichereUnternehmen,
