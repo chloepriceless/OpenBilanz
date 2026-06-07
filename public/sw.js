@@ -15,7 +15,7 @@
  * ========================================================================= */
 'use strict';
 
-var CACHE = 'openbilanz-v5';
+var CACHE = 'openbilanz-v6';
 
 var SHELL = [
   './', './index.html', './styles.css', './app.js', './manifest.webmanifest',
@@ -26,6 +26,7 @@ var SHELL = [
   './shared/import-protokoll.js',
   './shared/journalexport.js',
   './shared/gdpdu.js', './shared/pruefkette.js', './shared/xbrl.js',
+  './shared/mandanten-migration.js',
   './shared/store-idb.js', './shared/store-adapter.js',
   './shared/validate-browser.js', './shared/obz.js', './shared/fileio.js',
   './assets/marke.png', './assets/favicon.png', './assets/apple-touch-icon.png',
