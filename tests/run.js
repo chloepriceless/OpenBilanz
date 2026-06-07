@@ -2020,6 +2020,20 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
     eq(r2.ok, false, 'Duplikat abgelehnt');
     eq(r2.grund, 'existiert', 'Grund Duplikat');
   });
+
+  test('Store: ladeAbschluss Feld-Quergriff-Sperre (W4) + mandantId am Satz', function () {
+    var d = frischesData();
+    Store.init();
+    var gesp = Store.speichereAbschluss({ id: 'A-OK', stichtag: '2024-12-31' }, 'firma2');
+    eq(gesp.mandantId, 'firma2', 'mandantId wird am Satz geführt (W4)');
+    var ok = Store.ladeAbschluss('A-OK', 'firma2');
+    eq(ok && ok.id, 'A-OK', 'eigener Satz lädt');
+    /* Datei mit FREMDEM mandantId-Feld direkt in firma2/ ablegen (über die API
+     * nicht erzeugbar) -> Feld-Sperre muss greifen, nicht nur die Verzeichnistrennung. */
+    sfs.writeFileSync(spath.join(d, 'mandanten', 'firma2', 'abschluesse', 'A-BAD.json'),
+      JSON.stringify({ id: 'A-BAD', mandantId: 'andere', stichtag: '2024-12-31' }), 'utf8');
+    eq(Store.ladeAbschluss('A-BAD', 'firma2'), null, 'fremdes mandantId-Feld -> null');
+  });
 })();
 
 /* ---- Lauf ------------------------------------------------------------- */

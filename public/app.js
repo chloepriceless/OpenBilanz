@@ -360,6 +360,7 @@ function boot() {
     } else {
       setView('start');
     }
+    pruefeMigrationHinweis();   // Welle 7: nach v1->v2-IDB-Migration einmalig Backup empfehlen
   });
   if (Store.modus === 'website' && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function () {});
@@ -549,6 +550,28 @@ function mitSpeichern(fn) {
 function navItem(view, ic, label) {
   return '<div class="nav-item' + (S.view === view ? ' aktiv' : '') + '" data-view="' + view + '">' +
          '<span class="ic">' + ic + '</span><span>' + label + '</span></div>';
+}
+/* Welle 7 (W3): Nach der einmaligen IDB-v1->v2-Migration (Einbahn, kein Auto-
+ * Backup im Browser) EINMALIG zum Backup-Export raten. Das Flag wird in
+ * store-idb.js onupgradeneeded gesetzt und hier nach Anzeige geloescht. */
+function pruefeMigrationHinweis() {
+  if (!Store.getMeta) return;                      /* nur Website-Modus (IndexedDB) */
+  Store.getMeta('mandantenMigrationHinweis').then(function (flag) {
+    if (!flag) return;
+    Store.setMeta('mandantenMigrationHinweis', null);   /* nur einmal zeigen */
+    dialog('<h3>Daten aktualisiert</h3>' +
+      '<p>OpenBilanz unterstützt jetzt mehrere Mandanten. Ihre vorhandenen Daten wurden ' +
+      'automatisch dem Mandanten &bdquo;Standard&ldquo; zugeordnet &ndash; es geht nichts ' +
+      'verloren.</p>' +
+      '<div class="box box-warn"><b>Empfehlung</b>Diese Aktualisierung der Browser-Datenbank ' +
+      'lässt sich technisch nicht rückgängig machen. Exportieren Sie zur Sicherheit jetzt ' +
+      'einmal ein Backup (.obz).</div>' +
+      '<div class="btn-reihe"><button class="btn btn-pri" id="mhExport">Backup exportieren</button>' +
+      '<button class="btn" id="mhSpaeter">Später</button></div>');
+    var ex = document.getElementById('mhExport'), sp = document.getElementById('mhSpaeter');
+    if (sp) sp.onclick = dialogZu;
+    if (ex) ex.onclick = function () { dialogZu(); exportiereBackup(); };
+  }, function () {});
 }
 function setView(view) {
   S.view = view;

@@ -64,6 +64,11 @@
            * (kein Phantom-Mandant bei leerer Alt-DB - Vertrag der Transform). */
           t.objectStore('mandanten').put(
             { id: STD, name: name, angelegtAm: new Date().toISOString() });
+          /* W3: Flag setzen -> die App empfiehlt beim naechsten Start EINMALIG ein
+           * Backup. Die IDB-v2-Migration ist eine Einbahn ohne Auto-Backup; ein
+           * .obz-Export ist die Wiederherstellungs-Versicherung. */
+          t.objectStore('meta').put(
+            { key: 'mandantenMigrationHinweis', value: { zeit: new Date().toISOString() } });
         }
       };
     };
@@ -100,8 +105,11 @@
         db.onversionchange = function () { db.close(); dbPromise = null; };
         resolve(db);
       };
-      req.onerror   = function () { reject(req.error); };
-      req.onblocked = function () { reject(new Error('Datenbank blockiert - bitte andere OpenBilanz-Tabs schliessen.')); };
+      /* dbPromise NICHT rejected cachen (W6): bei Fehler/Blockade auf null
+       * zuruecksetzen, damit ein spaeterer Aufruf (z. B. nach Schliessen des
+       * Alt-Tabs) automatisch erneut oeffnen kann statt dauerhaft zu scheitern. */
+      req.onerror   = function () { dbPromise = null; reject(req.error); };
+      req.onblocked = function () { dbPromise = null; reject(new Error('Datenbank blockiert - bitte andere OpenBilanz-Tabs schliessen.')); };
     });
     return dbPromise;
   }
