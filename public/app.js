@@ -4,7 +4,8 @@
 'use strict';
 
 /* ---- Zustand ----------------------------------------------------------- */
-var S = { unternehmen: null, abschluesse: [], aktiv: null, view: 'start', erklaerungen: true };
+var S = { unternehmen: null, abschluesse: [], aktiv: null, view: 'start', erklaerungen: true,
+          mandanten: [], aktiverMandant: 'standard' };
 
 /* ---- Persistenz -------------------------------------------------------- */
 window.OPENBILANZ_MODE = (function () {
@@ -187,6 +188,13 @@ function installTastatur() {
       oeffneCommandPalette();
       return;
     }
+    /* Alt+1..9: schneller Mandanten-Wechsel (Welle 7). */
+    if (e.altKey && !e.ctrlKey && !e.metaKey && /^[1-9]$/.test(e.key)) {
+      var liste = S.mandanten || [];
+      var ziel = liste[parseInt(e.key, 10) - 1];
+      if (ziel) { e.preventDefault(); mandantWechseln(ziel.id); }
+      return;
+    }
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       var el = e.target, t = el && el.tagName;
       if (!el || !el.classList) return;
@@ -337,6 +345,8 @@ function boot() {
   Store.ladeState().then(function (st) {
     S.unternehmen = st.unternehmen;
     S.abschluesse = st.abschluesse || [];
+    S.mandanten = st.mandanten || [];
+    S.aktiverMandant = st.aktiverMandant || (Store.getMandant ? Store.getMandant() : 'standard');
     renderNav();
     initBackupUI();
     if (pruefeDemoLink()) return;          // Deep-Link ?demo öffnet das Demo-Portal
@@ -418,6 +428,19 @@ function renderNav() {
   document.getElementById('firmaName').textContent =
     (S.unternehmen && S.unternehmen.name) || 'Keine Firma';
   var n = [];
+  var mList = S.mandanten || [];
+  var mOpts = mList.length
+    ? mList.map(function (m) {
+        return '<option value="' + esc(m.id) + '"' +
+          (m.id === S.aktiverMandant ? ' selected' : '') + '>' + esc(m.name || m.id) + '</option>';
+      }).join('')
+    : '<option value="standard" selected>Standard</option>';
+  n.push('<div class="nav-grp">Mandant</div>');
+  n.push('<div class="nav-mandant" style="display:flex;gap:6px;padding:2px 10px 8px">' +
+    '<select id="mandantWahl" style="flex:1;min-width:0" ' +
+    'title="Aktiven Mandanten wählen (Alt+1..9)">' + mOpts + '</select>' +
+    '<button class="btn" id="mandantNeu" style="padding:2px 10px" ' +
+    'title="Neuen Mandanten anlegen">+</button></div>');
   n.push('<div class="nav-grp">Übersicht</div>');
   n.push(navItem('start', '⌂', 'Startseite'));
   n.push('<div class="nav-grp">Bilanzen &amp; Abschlüsse</div>');
@@ -454,6 +477,11 @@ function renderNav() {
   n.push(navItem('beschluesse', '§', 'Gesellschafterbeschlüsse'));
   document.getElementById('nav').innerHTML = n.join('');
 
+  var mw = document.getElementById('mandantWahl');
+  if (mw) mw.onchange = function () { mandantWechseln(mw.value); };
+  var mn = document.getElementById('mandantNeu');
+  if (mn) mn.onclick = dialogNeuerMandant;
+
   document.querySelectorAll('#nav .nav-item, #nav .nav-unter').forEach(function (el) {
     el.onclick = function () {
       if (el.dataset.oeffne) {
@@ -470,6 +498,48 @@ function renderNav() {
 function navUnter(view, label) {
   return '<div class="nav-unter' + (S.view === view ? ' aktiv' : '') +
          '" data-sub="' + view + '">' + label + '</div>';
+}
+/* ---- Mandanten-Wechsel/-Anlegen (Welle 7) ---------------------------- */
+function ladeMandantState(fallbackId, zielView) {
+  return Store.ladeState().then(function (st) {
+    S.unternehmen = st.unternehmen;
+    S.abschluesse = st.abschluesse || [];
+    S.mandanten = st.mandanten || S.mandanten;
+    S.aktiverMandant = st.aktiverMandant || fallbackId;
+    renderNav();
+    setView(zielView || (S.unternehmen ? 'start' : 'stammdaten'));
+  });
+}
+function mandantWechseln(id) {
+  if (!id || id === S.aktiverMandant) return;
+  mitSpeichern(function () {
+    if (Store.setMandant) Store.setMandant(id);
+    S.aktiv = null;
+    ladeMandantState(id);
+  });
+}
+function dialogNeuerMandant() {
+  dialog('<h3>Neuer Mandant</h3>' +
+    '<p class="karte-hint">Eine weitere Firma/Gesellschaft anlegen. Jeder Mandant hat ' +
+    'eigene Stammdaten und Abschlüsse; gespeicherte Daten bleiben getrennt.</p>' +
+    feldWrap('Name', 'z. B. Zweite GmbH', '<input id="nmName" autocomplete="off">') +
+    '<div class="btn-reihe"><button class="btn btn-pri" id="nmOk">Anlegen</button>' +
+    '<button class="btn" id="nmAb">Abbrechen</button></div>');
+  document.getElementById('nmAb').onclick = dialogZu;
+  document.getElementById('nmOk').onclick = function () {
+    var name = (document.getElementById('nmName').value || '').trim();
+    if (!name) return;
+    dialogZu();
+    Store.mandantAnlegen(name).then(function (r) {
+      if (r && r.ok === false) { hinweisToast('Diesen Mandanten gibt es schon.'); return; }
+      var neuId = (r && r.id) || name;
+      if (Store.setMandant) Store.setMandant(neuId);
+      S.aktiv = null;
+      ladeMandantState(neuId, 'stammdaten').then(function () {
+        hinweisToast('Mandant „' + name + '" angelegt.');
+      });
+    });
+  };
 }
 /* Fuehrt fn aus; sichert vorher stillschweigend, wenn der Editor offen ist. */
 function mitSpeichern(fn) {
@@ -6210,11 +6280,15 @@ function dialogPasswortAbfrage(weiter) {
 }
 function dialogImportBestaetigen(snapshot, weiter) {
   var anz = (snapshot.abschluesse || []).length;
-  var firma = (snapshot.unternehmen && snapshot.unternehmen.name) || 'ohne Firmenname';
+  /* v1-Sicherung: unternehmen = Objekt; v2 (mandantenfähig): Array je Mandant. */
+  var uref = Array.isArray(snapshot.unternehmen) ? snapshot.unternehmen[0] : snapshot.unternehmen;
+  var firma = (uref && uref.name) || 'ohne Firmenname';
+  var mAnz = Array.isArray(snapshot.mandanten) ? snapshot.mandanten.length : 0;
   var datum = snapshot.exportiertAm ? datumDe(snapshot.exportiertAm.slice(0, 10)) : 'unbekannt';
   dialog('<h3>Backup importieren</h3>' +
     '<p>Sicherung vom <b>' + esc(datum) + '</b> &ndash; ' + esc(firma) + ', ' +
-    anz + ' Abschluss' + (anz === 1 ? '' : 'e') + '.</p>' +
+    anz + ' Abschluss' + (anz === 1 ? '' : 'e') +
+    (mAnz > 1 ? ' aus ' + mAnz + ' Mandanten' : '') + '.</p>' +
     '<div class="box box-warn"><b>Achtung</b>Der Import ersetzt alle aktuell in ' +
     'diesem Browser gespeicherten Daten.</div>' +
     '<div class="btn-reihe"><button class="btn btn-pri" id="ibOk">Importieren</button>' +
