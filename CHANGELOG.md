@@ -11,6 +11,18 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-06-07
+
+### Hinzugefügt
+- **Importprotokoll:** Bank- (CAMT.053, MT940), Broker- (Interactive Brokers
+  Flex) und DATEV-Importe legen jetzt einen GoBD-nachvollziehbaren Protokoll-
+  eintrag an — Format, Zeitpunkt, Anzahl erkannt/übernommen und Datumsbereich —
+  und zeigen ihn als read-only „Importprotokoll"-Karte in der Buchhaltung
+  (jüngste zuerst). Reine, voll unit-getestete Logik in
+  `public/shared/import-protokoll.js` (`584866b`), UI-Verdrahtung in `app.js`
+  (`f947779`). Additives, backward-kompatibles Abschluss-Feld `importLog`, das in
+  beiden Betriebsarten (Node-JSON und IndexedDB) mitgespeichert wird.
+
 ## [2.1.0] - 2026-06-07
 
 Konsolidierte Nachzieh-Release. Seit dem 2.0.0-Launch (2026-05-17) wurde der
@@ -121,6 +133,7 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/chloepriceless/OpenBilanz/releases/tag/v2.0.0
