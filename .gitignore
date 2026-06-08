@@ -32,3 +32,6 @@ PLAN.md
 test-backup/
 .planning/inbox/
 .planning/archive/
+
+# GPL-Quelldatei (ERPNext SKR04) - nur Build-Input, nicht distribuieren
+tools/skr04-erpnext-source.json

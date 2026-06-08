@@ -218,6 +218,20 @@
     'P.D': '3900', 'P.E': '3065'
   };
 
+  /* Vollständiger SKR04: generierte Zusatz-Konten (skr04-voll.js) - optional.
+   * Damit ist der GESAMTE SKR04 wähl-/buchbar, nicht nur die kuratierte Auswahl.
+   * Die kuratierten KONTEN oben haben Vorrang (Generator schliesst ihre Nummern
+   * aus). Browser: skr04-voll.js wird DAVOR geladen -> self.SKR04_VOLL_KONTEN.
+   * Node: per require. Fehlt die Datei, bleibt es bei der kuratierten Auswahl. */
+  var VOLL = [];
+  try {
+    if (typeof module !== 'undefined' && module.exports) {
+      VOLL = require('./skr04-voll.js') || [];
+    } else if (typeof self !== 'undefined' && self.SKR04_VOLL_KONTEN) {
+      VOLL = self.SKR04_VOLL_KONTEN;
+    }
+  } catch (e) { VOLL = []; }
+
   /* Nutzerdefinierte Konten: zur Laufzeit ueber setEigene() registriert (aus
    * den Unternehmensdaten). Jeder Eintrag hat dieselbe Form wie ein KONTEN-
    * Eintrag (nr, name, seite, pos|kat) und wird aus einem Vorlage-Konto
@@ -229,12 +243,13 @@
                pos: k.pos, kat: k.kat, vorlage: k.vorlage, eigen: true };
     });
   }
-  /* Eingebaute + eigene Konten — Basis fuer alle Konto-Auswahllisten. */
-  function alleKonten() { return KONTEN.concat(eigene); }
+  /* Eingebaute (kuratiert + voll) + eigene Konten — Basis aller Auswahllisten. */
+  function alleKonten() { return KONTEN.concat(VOLL, eigene); }
 
   function kontoFinden(nr) {
     var i;
     for (i = 0; i < KONTEN.length; i++) if (KONTEN[i].nr === nr) return KONTEN[i];
+    for (i = 0; i < VOLL.length; i++) if (VOLL[i].nr === nr) return VOLL[i];
     for (i = 0; i < eigene.length; i++) if (eigene[i].nr === nr) return eigene[i];
     return null;
   }

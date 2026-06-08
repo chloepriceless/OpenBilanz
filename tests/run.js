@@ -211,6 +211,49 @@ test('SKR04: 6855 (Nebenkosten Geldverkehr) ist vorhanden', function () {
   eq(k.seite, 'AUFWAND', 'seite');
   eq(k.kat, 'sonstaufwand', 'kat');
 });
+/* ---- T1: Vollständiger SKR04-Kontenrahmen (skr04-voll.js) ------------- */
+test('SKR04-VOLL: 6420 (Beiträge) ist wähl-/buchbar + korrekt zugeordnet', function () {
+  var k = SKR04.kontoFinden('6420');
+  ok(k, 'Konto 6420 (Beiträge) fehlt — Christins Auslöser-Konto');
+  eq(k.seite, 'AUFWAND', '6420 ist Aufwand');
+  ok(SKR04.KAT_GUV[k.kat], '6420: kat muss gültig sein, war ' + k.kat);
+  ok(SKR04.alleKonten().some(function (x) { return x.nr === '6420'; }), '6420 in Auswahlliste');
+});
+test('SKR04-VOLL: Auswahlliste deckt den vollen Kontenrahmen ab', function () {
+  ok(SKR04.alleKonten().length > 800, 'alleKonten zu klein: ' + SKR04.alleKonten().length);
+});
+test('SKR04-VOLL: KEIN Verpuffen — jedes Konto hat eine gültige Bilanz-/GuV-Zuordnung', function () {
+  var alle = Positionen.AKTIVA.concat(Positionen.PASSIVA);
+  SKR04.alleKonten().forEach(function (k) {
+    if (k.seite === 'EBK') return;            // reines Verrechnungskonto, by design ohne pos
+    if (k.seite === 'AKTIV' || k.seite === 'PASSIV') {
+      ok(k.pos, 'Konto ' + k.nr + ' ohne pos (würde verpuffen)');
+      ok(Positionen.finde(alle, k.pos), 'Konto ' + k.nr + ': ungültige Position ' + k.pos);
+    } else if (k.seite === 'ERTRAG' || k.seite === 'AUFWAND') {
+      ok(SKR04.KAT_GUV[k.kat], 'Konto ' + k.nr + ': ungültige Kategorie ' + k.kat + ' (würde verpuffen)');
+    } else {
+      ok(false, 'Konto ' + k.nr + ': unbekannte seite ' + k.seite);
+    }
+  });
+});
+test('SKR04-VOLL: kuratierte Sonderfälle gewinnen gegen die generierte Liste', function () {
+  eq(SKR04.kontoFinden('1460').pos, 'B.IV', '1460 Geldtransit muss B.IV bleiben (nicht ERPNext-B.II)');
+  eq(SKR04.kontoFinden('3070').pos, 'P.B.3', '3070 sonstige Rückstellungen muss P.B.3 bleiben');
+  eq(SKR04.kontoFinden('1180').pos, 'B.I', '1180 Anz. auf Vorräte muss B.I bleiben (nicht ERPNext-A.I)');
+});
+test('SKR04-VOLL: Kontonummern in der gesamten Auswahlliste eindeutig', function () {
+  var seen = {};
+  SKR04.alleKonten().forEach(function (k) {
+    ok(!seen[k.nr], 'Doppelte Kontonummer ' + k.nr + ' in alleKonten()');
+    seen[k.nr] = true;
+  });
+});
+test('SKR04-VOLL: Stichprobe weiterer Standard-Konten buchbar + plausibel', function () {
+  var p = SKR04.kontoFinden('6310');   // Miete (sonst. Aufw.)
+  ok(p && p.seite === 'AUFWAND', '6310 fehlt/falsch');
+  var f = SKR04.kontoFinden('1200');   // Forderungen aLuL (kuratiert)
+  ok(f && f.pos === 'B.II', '1200 falsch');
+});
 test('SKR04: jedes Konto-pos ist eine gueltige HGB-Position', function () {
   var alle = Positionen.AKTIVA.concat(Positionen.PASSIVA);
   SKR04.KONTEN.forEach(function (k) {
