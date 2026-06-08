@@ -11,6 +11,8 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-06-08
+
 ### Hinzugefügt
 - **Welle 7 — Mehrmandanten (Multi-Tenant):** OpenBilanz verwaltet jetzt mehrere
   Firmen/Gesellschaften getrennt. Jeder Mandant hat eigene Stammdaten und
@@ -27,9 +29,11 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
     Export/Import mandantenübergreifend (alte .obz-Sicherungen importieren weiter).
   - Adapter (`public/shared/store-adapter.js`): aktiver Mandant wird transparent
     durchgereicht; backward-kompatibel (ohne Auswahl alles auf „standard").
-  - **Noch nicht released/deployed:** vor Versionierung/Deploy stehen der
-    Hub-Re-Refute der Gesamt-Migration und ein manueller Browser-Smoke-Test der
-    IDB-Migration aus (IndexedDB ist zero-dependency nicht unit-testbar).
+  - Migration verifiziert: Hub-Re-Refute deploy-safe (0 Blocker,
+    `.planning/HUB-REFUTE-welle7-idb.md`) + automatisierte fake-indexeddb-Tests der
+    v1→v2-`onupgradeneeded`-Migration (verlustfrei, kein Phantom-Mandant, Isolation).
+    Härtungen: Backup-Hinweis vor der Einbahn-Migration, dbPromise-Retry bei
+    blockierter DB, serverseitige `mandantId`-Quergriff-Sperre.
 
 ## [2.2.0] - 2026-06-07
 
@@ -153,7 +157,8 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/chloepriceless/OpenBilanz/releases/tag/v2.0.0
