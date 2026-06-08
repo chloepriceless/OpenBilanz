@@ -11,6 +11,18 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-06-08
+
+### Hinzugefügt
+- **Übermittlungs-Hinweise in „Fristen & Pflichten"**: Jeder Eintrag der lebenden
+  Fristen-Übersicht zeigt jetzt kurz, **wohin und wie** die Pflicht übermittelt wird —
+  Offenlegung → **Unternehmensregister** (seit 2022, nicht mehr Bundesanzeiger),
+  UStVA → **ELSTER** ans Finanzamt, Jahresabschluss aufstellen → interne Pflicht
+  (Grundlage für Offenlegung & E-Bilanz), Aufbewahrung → keine Abgabe (im Unternehmen
+  vorhalten) — jeweils mit Link zur amtlichen Stelle. Die Übermittlungswege sind gegen
+  die Primärquellen (§ 325 HGB, § 18 UStG) verifiziert. Datengetrieben über
+  `Fristen.uebermittlungFuer(art)`.
+
 ## [2.6.0] - 2026-06-08
 
 ### Hinzugefügt

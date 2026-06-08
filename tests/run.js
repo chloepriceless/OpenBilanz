@@ -2182,6 +2182,30 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
   });
 })();
 
+/* ---- Fristen: Übermittlungs-Hinweise (wohin/wie) --------------------- */
+(function () {
+  test('Fristen: uebermittlungFuer je Pflicht-Art (verifizierte Wege)', function () {
+    var off = Fristen.uebermittlungFuer('offenlegung');
+    ok(off && /Unternehmensregister/.test(off.text), 'Offenlegung -> Unternehmensregister');
+    eq(off.link, 'https://www.unternehmensregister.de', 'Offenlegung-Link');
+    ok(/nicht mehr beim Bundesanzeiger/.test(off.text), '§325-Stand: nicht Bundesanzeiger');
+    var ust = Fristen.uebermittlungFuer('ustva');
+    ok(ust && /ELSTER/.test(ust.text) && ust.link === 'https://www.elster.de', 'UStVA -> ELSTER');
+    ok(/aufbewahren/.test(Fristen.uebermittlungFuer('aufbewahrung').text), 'Aufbewahrung: keine Abgabe');
+    eq(Fristen.uebermittlungFuer('gibtsnicht'), null, 'unbekannte Art -> null');
+  });
+  test('Fristen: naechsteFristen hängt uebermittlung je Eintrag an', function () {
+    var fr = Fristen.naechsteFristen({}, [{ id: 'x', art: 'JAHRESABSCHLUSS',
+      stichtag: '2024-12-31', bezeichnung: 'JA 2024' }]);
+    var off = fr.filter(function (f) { return f.art === 'offenlegung'; })[0];
+    ok(off && off.uebermittlung && /Unternehmensregister/.test(off.uebermittlung.text),
+      'Offenlegungs-Frist trägt Übermittlungs-Hinweis');
+    var ust = fr.filter(function (f) { return f.art === 'ustva'; })[0];
+    ok(ust && ust.uebermittlung && ust.uebermittlung.link === 'https://www.elster.de',
+      'UStVA-Frist trägt ELSTER-Link');
+  });
+})();
+
 /* ---- Vollständiges Bilanz-PDF (bilanz-pdf.js, T-0153) ----------------- */
 (function () {
   var BilanzPdf = require('../public/shared/bilanz-pdf.js');

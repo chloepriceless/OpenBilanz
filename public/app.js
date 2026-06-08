@@ -4939,7 +4939,15 @@ function renderFristen(m) {
         ? ' <span class="btn btn-sm" data-fsprung="' + esc(JSON.stringify(f.sprung)) +
           '">öffnen</span>'
         : '';
-      html += '<tr><td>' + dot + esc(f.titel) + '</td>' +
+      var ueb = f.uebermittlung
+        ? '<div class="frist-uebermittlung" style="margin:3px 0 0 16px;font-size:11px;' +
+          'color:#666;line-height:1.45">↪ ' + esc(f.uebermittlung.text) +
+          (f.uebermittlung.link
+            ? ' <a href="' + esc(f.uebermittlung.link) + '" target="_blank" rel="noopener">' +
+              esc(f.uebermittlung.linkText || f.uebermittlung.link) + '</a>'
+            : '') + '</div>'
+        : '';
+      html += '<tr><td>' + dot + esc(f.titel) + ueb + '</td>' +
         '<td class="mono">' + esc(f.frist) + '</td>' +
         '<td class="rechts mono">' + esc(rest) + '</td>' +
         '<td>' + esc(f.paragraph) + '</td>' +

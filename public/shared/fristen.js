@@ -50,6 +50,37 @@
     return 'gruen';
   }
 
+  /* Übermittlungs-Hinweise je Pflicht-Art: WOHIN + WIE die Sache übermittelt wird.
+   * Rechtsstand mit Primärquelle verifiziert (§ 325 HGB: Einreichung beim
+   * Unternehmensregister, NICHT mehr Bundesanzeiger — seit DiRUG 2022; § 18 UStG:
+   * elektronisch über die amtliche Schnittstelle = ELSTER ans Finanzamt). */
+  var UEBERMITTLUNG = {
+    offenlegung: {
+      text: 'Elektronisch an das Unternehmensregister übermitteln (seit 2022 dort, ' +
+            'nicht mehr beim Bundesanzeiger).',
+      link: 'https://www.unternehmensregister.de', linkText: 'unternehmensregister.de'
+    },
+    ustva: {
+      text: 'Elektronisch über ELSTER ans Finanzamt (authentifiziert, amtlich ' +
+            'vorgeschriebener Datensatz).',
+      link: 'https://www.elster.de', linkText: 'elster.de'
+    },
+    aufstellung: {
+      text: 'Interne Pflicht — keine Übermittlung an eine Behörde. Grundlage für die ' +
+            'Offenlegung und die E-Bilanz ans Finanzamt (ELSTER/ERiC, § 5b EStG).',
+      link: 'https://www.elster.de', linkText: 'elster.de (E-Bilanz)'
+    },
+    aufbewahrung: {
+      text: 'Keine Abgabe — im Unternehmen geordnet aufbewahren und auf Verlangen ' +
+            '(z. B. Betriebsprüfung) vorlegen.'
+    },
+    'aufbewahrung-belege': {
+      text: 'Keine Abgabe — Belege im Unternehmen aufbewahren und auf Verlangen ' +
+            '(z. B. Betriebsprüfung) vorlegen.'
+    }
+  };
+  function uebermittlungFuer(art) { return UEBERMITTLUNG[art] || null; }
+
   function naechsteFristen(unternehmen, abschluesse, heute) {
     var h = parse(heute) || new Date();
     var heuteIso = iso(h);
@@ -148,6 +179,8 @@
       if (a.ampel !== b.ampel) return sortIdx[a.ampel] - sortIdx[b.ampel];
       return a.frist.localeCompare(b.frist);
     });
+    // Übermittlungs-Hinweis (wohin/wie) je Eintrag anhängen
+    liste.forEach(function (f) { f.uebermittlung = uebermittlungFuer(f.art); });
     return liste;
   }
 
@@ -158,5 +191,5 @@
     return namen[idx];
   }
 
-  return { naechsteFristen: naechsteFristen };
+  return { naechsteFristen: naechsteFristen, uebermittlungFuer: uebermittlungFuer };
 });
