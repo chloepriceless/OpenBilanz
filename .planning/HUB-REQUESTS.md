@@ -23,3 +23,19 @@ Deliverable: .planning/OPENBILANZ-AUDIT.md (pro Position: Claude-Verdict + Codex
 1) FIX statt nur reporten: Codex-Finding + Claude stimmt nach erneutem Code-Check zu -> direkt fixen (atomarer Commit). "Vorher nochmal den Code checken" (kein Blind-Fix). Falsch-Positive verwerfen+begruenden.
 2) Bei Abweichung ausfuehrlich bei DATEV + Gesetz recherchieren (HGB 242ff/264ff/272, GoB, AO; DATEV-Hilfecenter doc 1029183 + "ausstehende einlagen buchen und ausweisen"). Erst Merkel durchsuchen, fehlendes selbst holen + mit Quell-URL nach Merkel ingesten. DATEV nur interne Referenz (kein 1:1-Repost). Quellen ins Audit-Doc.
 Audit-Doc zusaetzliche Spalten: "Fix angewandt (Commit)" + "Quelle DATEV/Gesetz".
+
+---
+
+## STATUS (gmbh-verwaltung, verifiziert 2026-06-08 ~18:50)
+- **Bankimport (15:55) — Dropdown wieder da + Zeilen-Löschen:** ✅ ERLEDIGT v2.9.0. Live verifiziert
+  (camtVorschau: aufklappbares `camtKonto`-Dropdown via kontoDropdown + `camtDel`-Löschen je Zeile).
+- **Gezeichnetes Kapital aufgliedern (16:33) — davon eingezahlt/eingefordert/nicht eingefordert:**
+  ✅ ERLEDIGT. Eingabe-Karte hatte die volle Aufgliederung bereits (v2.10.0). LÜCKE im Bilanz-Ausweis
+  + PDF gefunden (zeigten nur §272-Nettomethode, „davon eingezahlt" fehlte) → ergänzt in **v2.13.0**
+  (kapitalAusweisZeilen + bilanz-pdf.js, Memo-Zeilen, ändern Summen nicht). Live verifiziert.
+- **Ausstehende-Einlagen-Eröffnungsbuchungen 2900/2910 (16:47):** ✅ ERLEDIGT. Rechenkern v2.11.0/2.11.1,
+  im Codex-Voll-Audit (T-0161) bestätigt; Ausweis (Anzeige+PDF) via §272-Nettomethode + davon-Aufgliederung
+  + Buchungshilfe korrekt. (DATEV-Doku 1029183: nur interne Referenz, kein Repost.)
+- **Fristen WOHIN/WIE übermitteln:** ✅ ERLEDIGT v2.7.0 (Übermittlungshinweise Unternehmensregister/ELSTER).
+- **CODEX-VOLL-AUDIT T-0161 (19:05/19:10):** ✅ ERLEDIGT. 1 kritischer §268-Bug behoben (v2.11.1),
+  Deliverable .planning/OPENBILANZ-AUDIT.md. Siehe dort.
