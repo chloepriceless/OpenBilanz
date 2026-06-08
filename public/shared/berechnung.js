@@ -160,8 +160,14 @@
       (aktiva['A'] || 0) + (aktiva['B'] || 0) + (aktiva['C'] || 0) +
       (aktiva['D'] || 0) + (aktiva['E'] || 0) + (aktiva['F'] || 0)
     );
+    // § 268 Abs. 3 HGB: Ist das Eigenkapital negativ, wird es als "Nicht durch
+    // Eigenkapital gedeckter Fehlbetrag" auf die Aktivseite reklassifiziert
+    // (aktiva['F'] = -ekSumme). In der Passivsumme trägt das Eigenkapital dann 0 bei
+    // (Math.max(P.A, 0)) - sonst würde das negative P.A doppelt zählen (einmal als
+    // Fehlbetrag aktivseitig, einmal negativ passivseitig) und die Bilanz einer
+    // korrekt gebuchten überschuldeten GmbH erschiene um den Fehlbetrag unausgeglichen.
     var summePassiva = cent(
-      (passiva['P.A'] || 0) + (passiva['P.B'] || 0) + (passiva['P.C'] || 0) +
+      Math.max(passiva['P.A'] || 0, 0) + (passiva['P.B'] || 0) + (passiva['P.C'] || 0) +
       (passiva['P.D'] || 0) + (passiva['P.E'] || 0)
     );
 

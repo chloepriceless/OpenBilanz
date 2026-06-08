@@ -73,15 +73,33 @@ test('§ 272: eingefordertes, nicht eingezahltes Kapital in B.II', function () {
   eq(r.passiva['P.A.I'], 17500, 'Eingefordertes Kapital');
   eq(r.summeAktiva, 17500, 'Summe Aktiva');
 });
-test('§ 268 Abs. 3: nicht durch EK gedeckter Fehlbetrag', function () {
-  // Stammkapital 25.000 aufgezehrt durch Verlust 85.000 -> EK = -60.000
+test('§ 268 Abs. 3: nicht durch EK gedeckter Fehlbetrag (konsistente Bücher -> ausgeglichen)', function () {
+  // Stammkapital 25.000 aufgezehrt durch Verlust 85.000 -> EK = -60.000.
+  // Konsistente Bücher: Aktiva 5.000 = EK -60.000 + Verbindlichkeiten 65.000.
+  // § 268 Abs. 3: der Fehlbetrag (60.000) erscheint als Aktivposten F, die Bilanz
+  // bleibt ausgeglichen (Bilanzsumme beidseitig 65.000).
+  var ja = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.IV': 5000 }, passiva: { 'P.C.4': 65000 },
+      guv: { 'gkv.8': 85000 } } };
+  var r = Berechnung.berechne(ja).bilanz;
+  eq(r.fehlbetrag, 60000, 'Fehlbetrag');
+  eq(r.summeAktiva, 65000, 'Summe Aktiva (inkl. Fehlbetrag)');
+  eq(r.summePassiva, 65000, 'Summe Passiva (negatives EK auf Aktivseite reklassifiziert)');
+  ok(r.ausgeglichen, 'Bilanz trotz Fehlbetrag ausgeglichen');
+});
+test('§ 268 Abs. 3: inkonsistente überschuldete Bücher werden korrekt als unausgeglichen erkannt', function () {
+  // Gleiches EK -60.000, aber Verbindlichkeiten 125.000 statt 65.000 -> Bücher sind
+  // real um 60.000 unausgeglichen (Aktiva 5.000 != EK -60.000 + Verb 125.000 = 65.000).
+  // Regression-Schutz: die Doppelzählung des negativen EK (§ 268 Abs. 3) darf diese
+  // Inkonsistenz NICHT mehr zufällig zu "ausgeglichen" kaschieren.
   var ja = { art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
     kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
     werte: { aktiva: { 'B.IV': 5000 }, passiva: { 'P.C.4': 125000 },
       guv: { 'gkv.8': 85000 } } };
   var r = Berechnung.berechne(ja).bilanz;
-  eq(r.fehlbetrag, 60000, 'Fehlbetrag');
-  ok(r.ausgeglichen, 'Bilanz trotz Fehlbetrag ausgeglichen');
+  ok(!r.ausgeglichen, 'inkonsistente Bücher müssen als unausgeglichen gelten');
+  eq(r.differenz, -60000, 'Differenz = -60.000 (fehlende Aktiva)');
 });
 
 /* ---- Rechenkern: GuV -------------------------------------------------- */

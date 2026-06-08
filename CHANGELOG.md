@@ -11,6 +11,20 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.11.1] - 2026-06-08
+
+### Behoben
+- **§ 268 Abs. 3 HGB — Bilanzgleichung bei negativem Eigenkapital (Fehlbetrag)**: Bei einer
+  überschuldeten GmbH (Eigenkapital durch Verluste negativ) meldete das Tool die korrekt
+  gebuchte Bilanz fälschlich als **nicht ausgeglichen** — um genau den „Nicht durch
+  Eigenkapital gedeckten Fehlbetrag". Ursache: Der Fehlbetrag wurde auf die Aktivseite
+  reklassifiziert, das negative Eigenkapital aber zusätzlich in der Passivsumme mitgezählt
+  (Doppelzählung). Jetzt trägt das negative Eigenkapital 0 zur Passivsumme bei (es steht als
+  Posten F auf der Aktivseite) — eine konsistent gebuchte überschuldete GmbH ist wieder
+  ausgeglichen, eine real unausgeglichene Bilanz wird weiterhin korrekt erkannt. Gefunden im
+  Codex-Voll-Audit (T-0161); ein bestehender Test hatte das Fehlverhalten mit inkonsistenten
+  Eingabewerten zementiert und wurde mitkorrigiert.
+
 ## [2.11.0] - 2026-06-08
 
 ### Behoben
