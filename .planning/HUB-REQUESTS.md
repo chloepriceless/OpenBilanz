@@ -18,3 +18,8 @@ Christin-Vorgabe woertlich: "alle Konten und Angaben muessen von Claude UND Code
 Codex ausfuehrlich ueber ALLES laufen lassen (Codex-Refute + Claude-Gegenpruefung), doppeltes Sign-off pro Position.
 Umfang: SKR04-Kontenzuordnungen, Eroeffnungsbilanz-Buchungen, Gezeichnetes Kapital (gezeichnet/eingezahlt/eingefordert/nicht eingefordert), ausstehende Einlagen (DATEV), Bankimport CAMT.053/MT940, Umbuchungen/Geldtransit 1460, alle Summenrechnungen + PDF-Zahlen.
 Deliverable: .planning/OPENBILANZ-AUDIT.md (pro Position: Claude-Verdict + Codex-Verdict + Endstatus + Begruendung), committen, Report an Hub (geprueft/gefixt/offen). Laeuft auf FINALEN Stand. Ledger T-0161.
+
+### [Hub 2026-06-08 19:10 MESZ] Nachschlag zu T-0161 (Codex-Audit) — Christin
+1) FIX statt nur reporten: Codex-Finding + Claude stimmt nach erneutem Code-Check zu -> direkt fixen (atomarer Commit). "Vorher nochmal den Code checken" (kein Blind-Fix). Falsch-Positive verwerfen+begruenden.
+2) Bei Abweichung ausfuehrlich bei DATEV + Gesetz recherchieren (HGB 242ff/264ff/272, GoB, AO; DATEV-Hilfecenter doc 1029183 + "ausstehende einlagen buchen und ausweisen"). Erst Merkel durchsuchen, fehlendes selbst holen + mit Quell-URL nach Merkel ingesten. DATEV nur interne Referenz (kein 1:1-Repost). Quellen ins Audit-Doc.
+Audit-Doc zusaetzliche Spalten: "Fix angewandt (Commit)" + "Quelle DATEV/Gesetz".

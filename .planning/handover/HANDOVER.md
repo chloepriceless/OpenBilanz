@@ -40,6 +40,21 @@ in OpenBilanz laufen — alle Konten und Angaben müssen von Claude UND Codex ge
   Christin/Hub klären, ob Audit jetzt über den Ist-Stand (T1+§272+Bankimport sind fertig) und T2/T3 separat.
   Empfehlung: Audit kann JETZT über den fertigen Kern laufen (T1/§272/Bankimport); T2/T3 danach + nachauditieren.
 
+### Audit-Addenda (Christin 19:07/19:09 MESZ)
+- **Recherche bei Abweichung:** nicht raten — gründlich belegen. PRIMÄR Gesetz/gemeinfrei (HGB §§242ff/266/272,
+  EStG/AO, GoB, amtlicher SKR04). CROSS-CHECK DATEV-Hilfecenter/Literatur NUR zum Verifizieren welche Behandlung
+  korrekt ist (Fakten/Recht frei). **COPYRIGHT hart:** DATEV-Prosa NIE wörtlich/umformuliert kopieren — Produkt-/
+  Glossar-/Merkel-Texte = EIGENER Text, aufs Gesetz gestützt, mit Quelle (§/URL+Datum).
+- **Merkel-Pflicht:** jede substanzielle Recherche → `POST http://192.168.20.81:8000/ingest {title,text,source_url,tags[]}`
+  (Quelle+Datum+Tags+[[Verlinkung]]).
+- **Sparmodus:** Recherche bounded (pro Abweichung, kein Blanket-Crawl), Teilarbeit ggf. auf Sonnet/Gateway,
+  Audit-Kernurteil bleibt bei Claude+Codex.
+- **Ticket = T-0161.** FIX statt nur reporten: Codex-Finding + Claude-Recheck-gegen-echten-Code bestätigt →
+  direkt fixen (atomarer Commit); Falsch-Positive verwerfen + im Doc begründen. **ERST Merkel durchsuchen**
+  (`GET http://192.168.20.81:8000/search?q=…` — Schlaubi hat DATEV evtl. schon geharvestet), nur Fehlendes holen.
+  DATEV-Ref: doc 1029183 + Suche „ausstehende einlagen buchen und ausweisen". Audit-Doc-Spalten zusätzlich:
+  „Fix angewandt (Commit)" + „Quelle DATEV/Gesetz".
+
 ## Danach: T2 + T3 (GO, nicht Brake)
 - **T2** geführte Umbuchungs-Vorlage zw. eigenen Konten (Geldtransit 1460). Bausteine: Buchungsmaske buSoll/buHaben
   (kontoDropdown), eigene Konten ekAdd, Vorlagen eigeneVorlagen. „klein".
