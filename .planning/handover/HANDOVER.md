@@ -1,6 +1,12 @@
 # HANDOVER — OpenBilanz (gmbh-verwaltung)
 
-**Stand: 2026-06-08 ~17:35 · HEAD `7170dfc` · in sync · Working-Tree sauber · 246 Tests grün**
+**Stand: 2026-06-08 ~18:55 · HEAD `7eaf48b` · in sync · Working-Tree sauber · 250 Tests grün**
+
+> Heute zusätzlich (nach Audit): **T2** geführte Umbuchung (v2.12.0, `shared/umbuchung.js`). **4 Christin-
+> Requests** (HUB-REQUESTS.md) verify-first abgearbeitet: Bankimport-Dropdown+Löschen (bereits live v2.9.0),
+> Fristen-Übermittlung (v2.7.0), 2900/2910-Ausweis (v2.11.x, audit-bestätigt) — alle bereits da; **EINE
+> echte Lücke gefixt:** „davon eingezahlt" fehlte im Bilanz-Ausweis+PDF (nur Eingabe-Karte hatte es) →
+> ergänzt in **v2.13.0** (kapitalAusweisZeilen + bilanz-pdf.js). Status pro Request in HUB-REQUESTS.md ## STATUS.
 
 > ✅ **CODEX-VOLL-AUDIT (T-0161) ERLEDIGT + LIVE.** 1 kritischer Bug gefunden+behoben: § 268 Abs. 3
 > HGB — überschuldete GmbH (negatives EK) meldete Bilanz fälschlich unausgeglichen (negatives P.A
