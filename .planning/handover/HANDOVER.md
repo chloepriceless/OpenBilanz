@@ -64,11 +64,20 @@ in OpenBilanz laufen — alle Konten und Angaben müssen von Claude UND Codex ge
   DATEV-Ref: doc 1029183 + Suche „ausstehende einlagen buchen und ausweisen". Audit-Doc-Spalten zusätzlich:
   „Fix angewandt (Commit)" + „Quelle DATEV/Gesetz".
 
-## Danach: T2 + T3 (GO, nicht Brake)
-- **T2** geführte Umbuchungs-Vorlage zw. eigenen Konten (Geldtransit 1460). Bausteine: Buchungsmaske buSoll/buHaben
-  (kontoDropdown), eigene Konten ekAdd, Vorlagen eigeneVorlagen. „klein".
-- **T3** durchsuchbares SKR04-Glossar (eigene Texte je Konto, KEIN DATEV-Copy, research-rigor). View 'glossar' +
-  GLOSSAR-Array existieren. Content-lastig, etappenweise (erst ~40 häufigste).
+## Queue T2/T3 (GO, nicht Brake)
+- ✅ **T2 ERLEDIGT + LIVE (v2.12.0, Commit `134e344`).** Geführte Umbuchung zw. eigenen Konten:
+  neue Karte „Geld umbuchen" im Buchhaltungs-Modus, erzeugt aus „von → nach + Betrag" automatisch
+  den korrekten Satz (Aktiv an Aktiv: Soll=Ziel, Haben=Quelle), optional über Geldtransit 1460
+  (2 Sätze, nettet auf 0). Logik in testbarem Modul `public/shared/umbuchung.js` (4 Tests, 250 grün);
+  jede Buchung läuft zusätzlich durch BuchungsPruefung. Live verifiziert (umbuchung.js HTTP200,
+  app.js umbAdd). OFFEN (Christin-Visual): Maske im Browser bedienen.
+- ⏳ **T3 OFFEN (nächster Task) — durchsuchbares SKR04-Glossar.** Eigene kurze Erklärung je Konto
+  (KEIN DATEV-Copy, research-rigor; Texte aufs Gesetz/HGB gestützt mit Quelle). View 'glossar' +
+  GLOSSAR-Array existieren bereits, globale Suche findet SKR04 schon. **Content-lastig, etappenweise
+  (erst ~40 häufigste Konten).** SPARMODUS-Hinweis: content/research-lastig → bevorzugt Sonnet/Haiku +
+  niedriger Effort, etappenweise; unter Sparmodus zunächst ZURÜCKGESTELLT (an Christin gemeldet),
+  zieht eine Session auf „weiter mit T3". RESUME: GLOSSAR-Array + view 'glossar' im app.js suchen,
+  Batch der häufigsten Konten mit eigenen Kurztexten (§/HGB-Beleg) ergänzen, Findings→Merkel.
 - **Blockiert:** Reddit oprctx4 (403, Text-Paste nötig).
 
 ## Schlüssel-Dateien
