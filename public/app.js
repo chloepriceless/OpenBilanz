@@ -342,6 +342,11 @@ function oeffneCommandPalette() {
 function boot() {
   installTastatur();
   installMausrad();
+  // Sichtbare Versionsanzeige in der Seitenleiste (Deploy-Verifikation).
+  var vEl = document.getElementById('appVersion');
+  if (vEl && typeof Version !== 'undefined') {
+    vEl.textContent = 'v' + Version.app + ' (' + Version.commit + ')';
+  }
   Store.ladeState().then(function (st) {
     S.unternehmen = st.unternehmen;
     S.abschluesse = st.abschluesse || [];
@@ -1849,7 +1854,7 @@ function erzeugeSteuerberaterPaket(a, u, r) {
   // Manifest
   var manifest = {
     erzeugt: new Date().toISOString(),
-    openbilanz: { version: (typeof Version !== 'undefined' && Version.bezeichnung) || 'unbekannt' },
+    openbilanz: { version: (typeof Version !== 'undefined' && Version.signatur && Version.signatur()) || 'unbekannt' },
     mandant: {
       name: u.name || '',
       steuernummer: u.steuernummer || '',

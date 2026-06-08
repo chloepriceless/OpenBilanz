@@ -11,6 +11,17 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-06-08
+
+### Hinzugefügt
+- Sichtbare **Versionsanzeige** in der Seitenleisten-Fußzeile (`v<version> (<commit>)`
+  aus `version.js`) — erleichtert die Deploy-Verifikation auf einen Blick.
+
+### Behoben
+- Export-Manifest (Steuerberater-Paket) trug als OpenBilanz-Version „unbekannt"
+  (Referenz auf das nicht existierende `Version.bezeichnung`) → nutzt jetzt
+  `Version.signatur()` (z. B. „OpenBilanz v2.4.0 (hash)").
+
 ## [2.3.0] - 2026-06-08
 
 ### Hinzugefügt
@@ -157,7 +168,8 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.0.0...v2.1.0
