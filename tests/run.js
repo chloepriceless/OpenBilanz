@@ -15,6 +15,7 @@ var Positionen = require('../public/shared/positionen.js');
 var Berechnung = require('../public/shared/berechnung.js');
 var Taxonomie  = require('../public/shared/taxonomie.js');
 var SKR04      = require('../public/shared/skr04.js');
+var Abschluss  = require('../public/shared/kontenabschluss.js');
 var Steuer     = require('../public/shared/steuer.js');
 var Ustva      = require('../public/shared/ustva.js');
 var Mt940      = require('../public/shared/mt940.js');
@@ -253,6 +254,50 @@ test('SKR04-VOLL: Stichprobe weiterer Standard-Konten buchbar + plausibel', func
   ok(p && p.seite === 'AUFWAND', '6310 fehlt/falsch');
   var f = SKR04.kontoFinden('1200');   // Forderungen aLuL (kuratiert)
   ok(f && f.pos === 'B.II', '1200 falsch');
+});
+/* ---- Kontenabschluss: Salden -> Werte (vorzeichenrichtig, Kontra-Konten) -- */
+test('Abschluss: normales Ertrags-/Aufwandskonto landet korrekt', function () {
+  var w = Abschluss.salden2werte({
+    '4400': { soll: 0, haben: 1000 },   // Umsatz (Haben)
+    '6420': { soll: 50, haben: 0 }      // Beiträge (Aufwand, Soll)
+  }, { guvVerfahren: 'GKV' });
+  eq(w.guv[SKR04.KAT_GUV.umsatz.GKV], 1000, 'Umsatz');
+  eq(w.guv[SKR04.KAT_GUV.sonstaufwand.GKV], 50, 'Aufwand');
+});
+test('Abschluss: Kontra-Konto (gewährter Skonto) MINDERT den Umsatz, nicht addiert', function () {
+  // Bug-Regression: früher Math.abs -> Skonto wurde aufaddiert (1200) -> Bilanz-Bruch.
+  var w = Abschluss.salden2werte({
+    '4400': { soll: 0, haben: 1000 },   // Umsatz 1000
+    '4730': { soll: 200, haben: 0 }     // gewährter Skonto 200 (kat=umsatz, Soll-Saldo)
+  }, { guvVerfahren: 'GKV' });
+  eq(w.guv[SKR04.KAT_GUV.umsatz.GKV], 800, 'Umsatz netto nach Erlösschmälerung');
+});
+test('Abschluss: erhaltener Skonto mindert den Materialaufwand', function () {
+  var w = Abschluss.salden2werte({
+    '5200': { soll: 1000, haben: 0 },   // Wareneingang 1000 (material, Soll)
+    '5730': { soll: 0, haben: 100 }     // erhaltener Skonto 100 (material, Haben-Saldo)
+  }, { guvVerfahren: 'GKV' });
+  eq(w.guv[SKR04.KAT_GUV.material.GKV], 900, 'Material netto nach erhaltenem Skonto');
+});
+test('Abschluss: Bilanz bleibt ausgeglichen trotz Kontra-Buchung', function () {
+  // Bank an Umsatz 1000, gewährter Skonto 4730 an Bank 200 -> Bank 800, Ergebnis 800.
+  var w = Abschluss.salden2werte({
+    '1800': { soll: 1000, haben: 200 }, // Bank: +800
+    '4400': { soll: 0, haben: 1000 },
+    '4730': { soll: 200, haben: 0 }
+  }, { guvVerfahren: 'GKV' });
+  var aktiva = w.aktiva['B.IV'] || 0;
+  var ergebnis = (w.guv[SKR04.KAT_GUV.umsatz.GKV] || 0);
+  eq(aktiva, 800, 'Bank-Aktiva');
+  eq(aktiva - ergebnis, 0, 'Aktiva = Ergebnis (ohne EK) -> ausgeglichen');
+});
+test('Abschluss: 2900 -> kapitalGezeichnet, EBK/P.A.I/P.A.V werden übersprungen', function () {
+  var w = Abschluss.salden2werte({
+    '2900': { soll: 0, haben: 25000 },  // Stammkapital
+    '9000': { soll: 0, haben: 25000 }   // EBK -> ignoriert
+  }, { guvVerfahren: 'GKV' });
+  eq(w.kapitalGezeichnet, 25000, 'gezeichnetes Kapital');
+  ok(!w.passiva['P.A.I'], 'P.A.I wird automatisch berechnet, nicht aggregiert');
 });
 test('SKR04: jedes Konto-pos ist eine gueltige HGB-Position', function () {
   var alle = Positionen.AKTIVA.concat(Positionen.PASSIVA);

@@ -69,6 +69,23 @@ im Journal. Invariante „richtige Seite + kein Verpuffen" ist garantiert + gete
 5. Codex/Refute-Sparring auf Design + generierte Liste VOR Integration/Deploy (R22 Datenmodell-kritisch).
 6. Deploy v2.8.0 (feat) + öffentliche Verifikation.
 
+## Codex/Refute-Sparring (R22 Datenmodell-kritisch) — Funde + Behebung
+Refute-Review (general-purpose, Refute-Prompt) fand vor Deploy:
+- **BLOCKER (F0):** Neu buchbare Kontra-Konten (Erlösschmälerungen 4700–4790, erhaltene/gewährte
+  Skonti/Boni 5700–5790) haben entgegengesetzte Saldenrichtung; `uebernehmeSalden` aggregierte GuV mit
+  `Math.abs(saldo)` → addierte statt mindern → **Bilanz-Bruch** (Skonto-Buchung kippte 1400 €).
+  → BEHOBEN: Kernlogik nach `public/shared/kontenabschluss.js` extrahiert (testbar) + vorzeichenrichtig
+  (ERTRAG −saldo, AUFWAND +saldo). Für normale Konten identisch zu Math.abs, Kontra-Konten mindern korrekt.
+  5 neue Tests (Skonto mindert Umsatz, erhaltener Skonto mindert Material, Bilanzausgleich).
+- **F1 (HOCH):** 1895 „Verb. gg. Kreditinstituten" als AKTIV/B.IV (ERPNext-Strukturfehler) → Override PASSIV/P.C.2.
+- **F2 (MITTEL):** 1181/1184/1185/1186 als A.I (ERPNext) → Override B.I.
+- **F3 (MITTEL):** EK-Default-Fallthrough in `pfadZuPos` verschleierte Fehlordnungen → jetzt `null` (unmapped, sichtbar).
+- Generator hat nun eine **OVERRIDE-Tabelle** + einen **Sanity-Check** (Klasse/Name-vs-Seite), der bei
+  künftigen Regressionen mit Exit-Code 2 bricht. Stand: 0 offene Verdachtsfälle.
+- **Akzeptierte Rest-Risiken (NIEDRIG):** (F4) Freitext-Konto-Eingabe kann ein unbekanntes Konto erzeugen —
+  `BuchungsPruefung` warnt („nicht im Kontenrahmen", durchklickbar); vorbestehend, datalist macht gültige
+  Auswahl zum Normalfall. (F5) 6280–6290 Forderungsverluste als `abschreibung` (gkv.7b, vertretbar).
+
 ## Risiken
 - ERPNext-Einzelfehler bei Zusatzkonten → gemildert durch App-Vorrang + konservatives GuV-Mapping +
   Korrigierbarkeit im Tool. Getestet: jede Seite/kat/pos ist gültig (kein Verpuffen).

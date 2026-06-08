@@ -4886,33 +4886,18 @@ function sparkline(werte) {
     '" fill="none" stroke="' + farbe + '" stroke-width="1.5" /></svg>';
 }
 function uebernehmeSalden(a) {
-  var s = kontenSalden(a);
-  var aktiva = {}, passiva = {}, guv = {};
-  Object.keys(s).forEach(function (nr) {
-    var k = SKR04.kontoFinden(nr);
-    if (!k) return;
-    var saldo = s[nr].soll - s[nr].haben;       // Aktiv: Soll-Saldo; Passiv: Haben-Saldo
-    if (nr === '2900') {                         // Gezeichnetes Kapital -> Kapitalblock
-      a.kapital = a.kapital || {};
-      a.kapital.gezeichnet = Berechnung.cent(-saldo);
-      if (!a.kapital.eingezahlt) a.kapital.eingezahlt = Berechnung.cent(-saldo);
-      return;
-    }
-    if (k.seite === 'EBK') return;               // Eröffnungsbilanzkonto: reines Verrechnungskonto
-    if (k.seite === 'AKTIV') {
-      aktiva[k.pos] = Berechnung.cent((aktiva[k.pos] || 0) + saldo);
-    } else if (k.seite === 'PASSIV') {
-      if (k.pos === 'P.A.I' || k.pos === 'P.A.V') return;   // werden automatisch berechnet
-      passiva[k.pos] = Berechnung.cent((passiva[k.pos] || 0) - saldo);
-    } else if (k.seite === 'ERTRAG' || k.seite === 'AUFWAND') {
-      var gid = SKR04.KAT_GUV[k.kat] && SKR04.KAT_GUV[k.kat][a.guvVerfahren || 'GKV'];
-      if (gid) guv[gid] = Berechnung.cent((guv[gid] || 0) + Math.abs(saldo));
-    }
-  });
+  // Reine Aggregation in shared/kontenabschluss.js (testbar). Vorzeichenrichtig,
+  // damit Kontra-Konten (Skonti/Erlösschmälerungen) ihre Kategorie korrekt mindern.
+  var w = Abschluss.salden2werte(kontenSalden(a), { guvVerfahren: a.guvVerfahren || 'GKV' });
+  if (w.kapitalGezeichnet !== null) {              // Gezeichnetes Kapital -> Kapitalblock
+    a.kapital = a.kapital || {};
+    a.kapital.gezeichnet = w.kapitalGezeichnet;
+    if (!a.kapital.eingezahlt) a.kapital.eingezahlt = w.kapitalGezeichnet;
+  }
   a.werte = a.werte || {};
-  a.werte.aktiva = aktiva;
-  a.werte.passiva = passiva;
-  a.werte.guv = guv;
+  a.werte.aktiva = w.aktiva;
+  a.werte.passiva = w.passiva;
+  a.werte.guv = w.guv;
   a.erfassungsmodus = 'BUCHHALTUNG';
 }
 

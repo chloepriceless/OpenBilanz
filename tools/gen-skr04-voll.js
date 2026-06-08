@@ -70,7 +70,7 @@ function pfadZuPos(p) {
     if (/II - Kapitalr/.test(j)) return { seite: 'PASSIV', pos: 'P.A.II' };
     if (/III - Gewinnr/.test(j)) return { seite: 'PASSIV', pos: 'P.A.III' };
     if (/IV - Gewinnvortrag/.test(j)) return { seite: 'PASSIV', pos: 'P.A.IV' };
-    return { seite: 'PASSIV', pos: 'P.A.III' };
+    return null;   // unerkannter EK-Unterpfad -> sichtbar im unmapped-Report (nicht still P.A.III)
   }
   if (/^Passiva - Verbindlichkeiten/.test(j)) {
     if (/B - R.ckstellungen.*1 - /.test(j)) return { seite: 'PASSIV', pos: 'P.B.1' };
@@ -119,6 +119,18 @@ function nrZuKat(nrS) {
 var ERTRAG_KAT = { umsatz: 1, bestand: 1, eigenleistung: 1, sonstertrag: 1,
   beteiligungsertrag: 1, finanzanlageertrag: 1, zinsertrag: 1 };
 
+/* Bekannte ERPNext-Einordnungsfehler (gegen HGB/Ground-Truth korrigiert).
+ * Sanity-Check unten verifiziert, dass danach KEINE Klasse/Name-vs-Seite-
+ * Widersprüche mehr offen sind (ausser bewusst akzeptierten Verrechnungskonten). */
+var OVERRIDE = {
+  '1181': { seite: 'AKTIV', pos: 'B.I' },    // geleistete Anz. auf Vorräte (ERPNext: A.I)
+  '1184': { seite: 'AKTIV', pos: 'B.I' },
+  '1185': { seite: 'AKTIV', pos: 'B.I' },
+  '1186': { seite: 'AKTIV', pos: 'B.I' },
+  '1895': { seite: 'PASSIV', pos: 'P.C.2' }  // Verb. gg. Kreditinstituten (ERPNext: B.IV)
+};
+var SANITY_OK = { '3695': 1 };               // bewusst akzeptiert: Anz.-Verrechnungskonto (Forderungscharakter, B.II)
+
 /* --- App-Ground-Truth: Nummern + Zuordnung --- */
 var appNr = {};
 SKR04.KONTEN.forEach(function (k) { appNr[k.nr] = k; });
@@ -138,6 +150,7 @@ leaves.forEach(function (lf) {
     var kat = nrZuKat(nr);
     if (kat) seitePos = { seite: ERTRAG_KAT[kat] ? 'ERTRAG' : 'AUFWAND', kat: kat };
   }
+  if (OVERRIDE[nr]) seitePos = { seite: OVERRIDE[nr].seite, pos: OVERRIDE[nr].pos, kat: OVERRIDE[nr].kat };
   // Ground-Truth-Vergleich (Konten, die in beiden sind)
   if (appNr[nr]) {
     var a = appNr[nr];
@@ -196,3 +209,19 @@ console.log('Ground-Truth-Diskrepanzen (App gewinnt): ' + diskrepanz.length);
 diskrepanz.forEach(function (d) { console.log('  ! ' + d); });
 console.log('6420 vorhanden? ' + (zusatz.some(function (z) { return z.nr === '6420'; }) ? 'JA' : 'NEIN') +
   '  -> ' + JSON.stringify(zusatz.filter(function (z) { return z.nr === '6420'; })));
+
+/* Sanity-Check: Klasse/Name-vs-Seite-Widersprüche (nach Override). */
+var verdacht = [];
+zusatz.forEach(function (k) {
+  var kl = k.nr[0], name = k.name, pos = k.pos || '';
+  if (SANITY_OK[k.nr]) return;
+  if (/Verbindlichk|^Verb\./i.test(name) && k.seite === 'AKTIV') verdacht.push(k.nr + ' VERB auf AKTIV: ' + name);
+  else if (/Forderung|Ausleihung/i.test(name) && k.seite === 'PASSIV') verdacht.push(k.nr + ' FORDERUNG auf PASSIV: ' + name);
+  else if (kl === '0' && !/^A\./.test(pos)) verdacht.push(k.nr + ' Kl0 pos nicht A.*: ' + pos);
+  else if (kl === '1' && k.seite === 'AKTIV' && /^A\./.test(pos)) verdacht.push(k.nr + ' Kl1 auf Anlageverm: ' + name);
+  else if (kl === '2' && k.seite !== 'PASSIV') verdacht.push(k.nr + ' Kl2 nicht PASSIV: ' + name);
+  else if (kl === '3' && k.seite !== 'PASSIV') verdacht.push(k.nr + ' Kl3 nicht PASSIV: ' + name);
+});
+console.log('Sanity-Check (Klasse/Name-vs-Seite) offene Verdachtsfälle: ' + verdacht.length);
+verdacht.forEach(function (v) { console.log('  ⚠ ' + v); });
+if (verdacht.length) { console.error('SANITY-CHECK NICHT SAUBER — Override/SANITY_OK ergänzen.'); process.exitCode = 2; }
