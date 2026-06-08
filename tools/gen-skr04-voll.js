@@ -221,6 +221,10 @@ zusatz.forEach(function (k) {
   else if (kl === '1' && k.seite === 'AKTIV' && /^A\./.test(pos)) verdacht.push(k.nr + ' Kl1 auf Anlageverm: ' + name);
   else if (kl === '2' && k.seite !== 'PASSIV') verdacht.push(k.nr + ' Kl2 nicht PASSIV: ' + name);
   else if (kl === '3' && k.seite !== 'PASSIV') verdacht.push(k.nr + ' Kl3 nicht PASSIV: ' + name);
+  // GuV-Struktur (deterministisch, false-positive-frei): Kl4 = Ertrag, Kl5/6 = Aufwand.
+  // (Kl7 ist gemischt: Finanzerträge/-aufwand/Steuern -> per Nummernkreis, hier nicht geprüft.)
+  else if (kl === '4' && k.seite !== 'ERTRAG') verdacht.push(k.nr + ' Kl4 nicht ERTRAG: ' + name);
+  else if ((kl === '5' || kl === '6') && k.seite !== 'AUFWAND') verdacht.push(k.nr + ' Kl5/6 nicht AUFWAND: ' + name);
 });
 console.log('Sanity-Check (Klasse/Name-vs-Seite) offene Verdachtsfälle: ' + verdacht.length);
 verdacht.forEach(function (v) { console.log('  ⚠ ' + v); });
