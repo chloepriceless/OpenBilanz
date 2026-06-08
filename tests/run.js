@@ -16,6 +16,7 @@ var Berechnung = require('../public/shared/berechnung.js');
 var Taxonomie  = require('../public/shared/taxonomie.js');
 var SKR04      = require('../public/shared/skr04.js');
 var Abschluss  = require('../public/shared/kontenabschluss.js');
+var Umbuchung  = require('../public/shared/umbuchung.js');
 var Steuer     = require('../public/shared/steuer.js');
 var Ustva      = require('../public/shared/ustva.js');
 var Mt940      = require('../public/shared/mt940.js');
@@ -100,6 +101,36 @@ test('§ 268 Abs. 3: inkonsistente überschuldete Bücher werden korrekt als una
   var r = Berechnung.berechne(ja).bilanz;
   ok(!r.ausgeglichen, 'inkonsistente Bücher müssen als unausgeglichen gelten');
   eq(r.differenz, -60000, 'Differenz = -60.000 (fehlende Aktiva)');
+});
+
+/* ---- Geführte Umbuchung zwischen eigenen Konten ---------------------- */
+test('Umbuchung direkt: Soll = Ziel, Haben = Quelle (Aktiv an Aktiv)', function () {
+  var r = Umbuchung.buchungen({ von: '1800', nach: '1810', betrag: 500, datum: '2026-03-01', stamp: 7 });
+  ok(r.ok, 'ok'); eq(r.buchungen.length, 1, 'eine Buchung');
+  eq(r.buchungen[0].soll, '1810', 'Soll = Ziel'); eq(r.buchungen[0].haben, '1800', 'Haben = Quelle');
+  eq(r.buchungen[0].betrag, 500, 'Betrag');
+  ok(r.buchungen[0].text.indexOf('1800') >= 0, 'Default-Text nennt Quelle');
+});
+test('Umbuchung über Geldtransit 1460: zwei Sätze, 1460 nettet auf 0', function () {
+  var r = Umbuchung.buchungen({ von: '1800', nach: '1600', betrag: 200, ueberTransit: true, stamp: 3 });
+  ok(r.ok, 'ok'); eq(r.buchungen.length, 2, 'zwei Buchungen');
+  eq(r.buchungen[0].soll, '1460', '1: Soll 1460'); eq(r.buchungen[0].haben, '1800', '1: Haben Quelle');
+  eq(r.buchungen[1].soll, '1600', '2: Soll Ziel'); eq(r.buchungen[1].haben, '1460', '2: Haben 1460');
+  // 1460-Saldo: einmal Soll (Eingang) + einmal Haben (Ausgang) = 0
+  var transitSaldo = r.buchungen.reduce(function (s, b) {
+    return s + (b.soll === '1460' ? b.betrag : 0) - (b.haben === '1460' ? b.betrag : 0);
+  }, 0);
+  eq(transitSaldo, 0, '1460 nettet auf 0');
+});
+test('Umbuchung: eigener Transitkonto-Override', function () {
+  var r = Umbuchung.buchungen({ von: '1800', nach: '1810', betrag: 50, ueberTransit: true, transitKonto: '1461', stamp: 1 });
+  eq(r.buchungen[0].soll, '1461', 'Override-Transitkonto');
+});
+test('Umbuchung: identische Konten / Betrag 0 / fehlende Konten werden abgelehnt', function () {
+  ok(!Umbuchung.buchungen({ von: '1800', nach: '1800', betrag: 100 }).ok, 'identisch abgelehnt');
+  ok(!Umbuchung.buchungen({ von: '1800', nach: '1810', betrag: 0 }).ok, 'Betrag 0 abgelehnt');
+  ok(!Umbuchung.buchungen({ von: '', nach: '1810', betrag: 100 }).ok, 'fehlende Quelle abgelehnt');
+  ok(!Umbuchung.buchungen({ von: '1800', nach: '1810', betrag: -5 }).ok, 'negativer Betrag abgelehnt');
 });
 
 /* ---- Rechenkern: GuV -------------------------------------------------- */

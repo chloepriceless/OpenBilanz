@@ -11,6 +11,17 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.12.0] - 2026-06-08
+
+### Hinzugefügt
+- **Geführte Umbuchung zwischen eigenen Konten** (Buchhaltung): Eine neue Karte „Geld umbuchen"
+  erzeugt aus „**von Konto → nach Konto + Betrag**" automatisch den korrekten Buchungssatz, ohne
+  dass man Soll/Haben kennen muss (Aktiv an Aktiv: Soll = Ziel, Haben = Quelle). Optional **über
+  Geldtransit (Konto 1460)** in zwei Schritten — sinnvoll, wenn die Überweisung an verschiedenen
+  Tagen getrennt auf beiden Kontoauszügen erscheint (1460 nettet auf 0). Die Buchungs-Erzeugung
+  liegt in einem eigenen, getesteten Modul `shared/umbuchung.js`; jede erzeugte Buchung läuft
+  zusätzlich durch die normale Buchungsprüfung.
+
 ## [2.11.1] - 2026-06-08
 
 ### Behoben

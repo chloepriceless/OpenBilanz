@@ -3179,6 +3179,25 @@ function renderBuchhaltung(m) {
     '<div id="buAutoHint" class="karte-hint" style="margin-top:8px;display:none"></div>' +
     '</div>';
 
+  /* Geführte Umbuchung zwischen eigenen Geldkonten (ohne Soll/Haben-Begriffe) */
+  html += '<div class="karte"><h2>Geld umbuchen (zwischen eigenen Konten)</h2>' +
+    '<div class="karte-hint">Übertrag zwischen eigenen Bank-/Kassenkonten: nur ' +
+    '<b>von</b> und <b>nach</b> wählen — Soll/Haben wird automatisch korrekt gebucht ' +
+    '(Aktiv an Aktiv). &bdquo;Über Geldtransit&ldquo; bucht in zwei Schritten über Konto ' +
+    '1460 — sinnvoll, wenn die Überweisung getrennt auf beiden Kontoauszügen erscheint.</div>' +
+    '<div class="gitter g3">' +
+    feldWrap('Von Konto', 'Quelle (Geld geht ab)', kontoDropdown('id="umbVon"', '')) +
+    feldWrap('Nach Konto', 'Ziel (Geld kommt an)', kontoDropdown('id="umbNach"', '')) +
+    feldWrap('Betrag (EUR)', '', '<input class="zahl" type="text" inputmode="decimal" id="umbBetrag">') +
+    feldWrap('Datum', '', '<input type="date" id="umbDatum" value="' + esc(a.stichtag || '') + '">') +
+    feldWrap('Buchungstext', 'optional', '<input id="umbText" placeholder="Umbuchung">') +
+    feldWrap('Über Geldtransit', 'Konto 1460, zwei Schritte',
+      '<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="umbTransit"> ' +
+      'über 1460 buchen</label>') +
+    '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" id="umbAdd">' +
+    'Umbuchen</button></div>' +
+    '</div></div>';
+
   /* Anfangsbestände / Eröffnungsbuchungen */
   html += eroeffnungsBox(a);
 
@@ -3564,6 +3583,34 @@ function renderBuchhaltung(m) {
     };
     rd.onerror = function () { alert('Belegdatei konnte nicht gelesen werden.'); };
     rd.readAsArrayBuffer(belegFile);
+  };
+
+  /* Geführte Umbuchung: erzeugt aus von/nach/Betrag die korrekte(n) Buchung(en) */
+  var umbAddBtn = m.querySelector('#umbAdd');
+  if (umbAddBtn) umbAddBtn.onclick = function () {
+    var r = Umbuchung.buchungen({
+      von: document.getElementById('umbVon').value,
+      nach: document.getElementById('umbNach').value,
+      betrag: Berechnung.num(document.getElementById('umbBetrag').value),
+      datum: document.getElementById('umbDatum').value,
+      text: document.getElementById('umbText').value,
+      ueberTransit: document.getElementById('umbTransit').checked,
+      stamp: Date.now()
+    });
+    if (!r.ok) { alert('Umbuchung nicht möglich:\n• ' + r.fehler.join('\n• ')); return; }
+    // Jede erzeugte Buchung zusätzlich gegen die normale Buchungsprüfung laufen lassen.
+    for (var i = 0; i < r.buchungen.length; i++) {
+      var pr = BuchungsPruefung.pruefe(r.buchungen[i], {
+        beginn: a.geschaeftsjahrVon, stichtag: a.stichtag, erlaubeEbk: false
+      });
+      if (!pr.ok) { alert('Umbuchung nicht plausibel:\n• ' + pr.fehler.join('\n• ')); return; }
+    }
+    a.buchungen.push.apply(a.buchungen, r.buchungen);
+    speichereStill().then(function () {
+      hinweisToast(r.buchungen.length === 2
+        ? 'Umbuchung über Geldtransit gebucht (2 Sätze).' : 'Umbuchung gebucht.');
+      renderBuchhaltung(m);
+    });
   };
   m.querySelectorAll('[data-del]').forEach(function (el) {
     el.onclick = function () {
