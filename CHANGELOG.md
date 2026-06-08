@@ -11,6 +11,29 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-06-08
+
+### Hinzugefügt
+- **Vollständiger SKR04-Kontenrahmen wähl- und buchbar**: Bisher stand im Buchungs-
+  Modus nur eine kuratierte Auswahl (~122 Konten) zur Verfügung — fehlende Standard-
+  Konten (z. B. **6420 Beiträge**) waren nicht wählbar, und ihr Saldo konnte „verpuffen".
+  Jetzt sind **alle ~1024 SKR04-Sachkonten** verfügbar, jeweils korrekt einer HGB-
+  Bilanzposition (§ 266) bzw. GuV-Kategorie (§ 275) zugeordnet. Die HGB-Zuordnung der
+  Zusatzkonten ist aus einer verifizierten Vorlage abgeleitet und gegen die bestehende
+  kuratierte Auswahl als Ground-Truth kalibriert (Bilanz 67/73 exakt, GuV 48/48 exakt);
+  die kuratierten Konten behalten Vorrang.
+- **Durchsuchbare Konto-Eingabe**: Soll-/Haben-Konto und die Import-Vorschauen nutzen
+  jetzt ein durchsuchbares Eingabefeld (Tippen nach **Nummer oder Name**, z. B. „6420"
+  oder „Beiträge") statt eines langen Auswahlmenüs — auch performanter bei großen
+  Kontoauszug-Importen.
+
+### Behoben
+- **Bilanz-Ausgleich bei Kontra-Konten**: Mit dem vollen Kontenrahmen wurden erstmals
+  Kontra-Konten buchbar (gewährte/erhaltene Skonti, Erlösschmälerungen, Boni). Die
+  GuV-Aggregation wurde vorzeichenrichtig korrigiert (zuvor `Math.abs`), sodass solche
+  Konten ihre Kategorie korrekt **mindern** und die Bilanz ausgeglichen bleibt. Die
+  Abschluss-Logik liegt nun in `public/shared/kontenabschluss.js` und ist testabgedeckt.
+
 ## [2.7.0] - 2026-06-08
 
 ### Hinzugefügt
