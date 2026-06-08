@@ -11,6 +11,15 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-06-08
+
+### Behoben
+- **Druck/PDF der Eröffnungsbilanz erzeugte eine leere zweite Seite.** Im Druck
+  wurde der App-Container weiterhin auf volle Viewport-Höhe gezwungen
+  (`#app{min-height:100vh}`), was zusammen mit den `@page`-Rändern (18mm) über die
+  A4-Höhe hinausragte. Im `@media print` werden `#app`/`html`/`body`/`​.main`-Höhen
+  jetzt zurückgesetzt → eine inhaltlich einseitige Bilanz druckt nur noch eine Seite.
+
 ## [2.4.0] - 2026-06-08
 
 ### Hinzugefügt
@@ -168,7 +177,8 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.4.1...HEAD
+[2.4.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.1.0...v2.2.0

@@ -237,9 +237,14 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 
 @page{size:A4;margin:18mm}
 @media print{
+  /* Leere Zusatzseite vermeiden: im Druck NICHT auf volle Viewport-Hoehe zwingen.
+   * #app{min-height:100vh} + die @page-Raender (18mm) ragten sonst ueber die
+   * A4-Hoehe hinaus und erzeugten eine leere zweite Seite. */
+  html,body{height:auto}
+  #app{display:block;min-height:0}
   .sidebar,.kopf,.zurueck,.btn,.btn-reihe,.no-print,#dialog{display:none !important}
   body{background:#fff}
-  .main{padding:0;max-width:none}
+  .main{padding:0;max-width:none;min-height:0}
   /* @page liefert A4-Format + Rand; .dok fuellt nur noch den Druckbereich */
   .dok{border:none;width:auto;min-height:0;margin:0;padding:0}
   .dok-bilanz .col:first-child{border-right:1px solid #000}
