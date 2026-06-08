@@ -1,6 +1,15 @@
 # HANDOVER — OpenBilanz (gmbh-verwaltung)
 
-**Stand: 2026-06-08 ~17:10 · HEAD `ccf0f62` · in sync · Working-Tree sauber · 245 Tests grün**
+**Stand: 2026-06-08 ~17:35 · HEAD `7170dfc` · in sync · Working-Tree sauber · 246 Tests grün**
+
+> ✅ **CODEX-VOLL-AUDIT (T-0161) ERLEDIGT + LIVE.** 1 kritischer Bug gefunden+behoben: § 268 Abs. 3
+> HGB — überschuldete GmbH (negatives EK) meldete Bilanz fälschlich unausgeglichen (negatives P.A
+> doppelt gezählt). Fix `Math.max(P.A,0)` in `summePassiva` (berechnung.js), v2.11.1 (Commit
+> `9d88867`), live verifiziert. Bestehender Test war auf das Bug-Verhalten geschrieben (inkonsistente
+> Bücher) → mitkorrigiert + Regression-Test. Rest des Rechenkerns + alle 1024 SKR04-Konten (902
+> generierte systematisch, 0 Fehlzuordnung) + §272/Bankimport/Rundung/PDF: sauber. Codex-Refute-Konsens.
+> Deliverable: `.planning/OPENBILANZ-AUDIT.md` (Commit `7170dfc`) + Report `~/Report/`. An Christin via
+> vdyofkr8 gemeldet. **Aktiver Auftrag jetzt: T2 → T3 (unten).**
 
 Frische Session: lies zuerst dieses Doc + Memory `project-open-tasks.md`. Resume-Hinweise: `check_messages` zuerst;
 an Christin meldet man via Orchestrator-Peer **vdyofkr8** (`send_message`). Pro fertigem Schritt live deployen
@@ -19,7 +28,7 @@ leichtgewichtige Tags NICHT — Stolperstein, s. Memory openbilanz-versionierung
   eingefordert erfasst, Bilanz gleicht aus. kapitalRechnen(kapital,modus) + uebernehmeSalden selbstkonsistent.
   R22-Codex fand Sticky-State/Phantom-Aktiva-Blocker → behoben. Buchungshilfe in der Kapital-Karte.
 
-## ▶▶ NÄCHSTER GROSSER AUFTRAG (Christin, Brake, KRITISCH) — CODEX-VOLL-AUDIT ◀◀
+## (HISTORIE — ERLEDIGT, s. oben) CODEX-VOLL-AUDIT (Christin, Brake, KRITISCH)
 **Auftrag (Hub/Christin 19:03–19:07 MESZ):** „Lass CODEX ausführlich über ALLE Berechnungen, Konten und Angaben
 in OpenBilanz laufen — alle Konten und Angaben müssen von Claude UND Codex genehmigt sein."
 - **4-Augen pro Position:** Codex-Refute versucht jede Buchung/Kontenzuordnung/Rechnung zu widerlegen, DU (Claude)
