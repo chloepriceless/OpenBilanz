@@ -1372,7 +1372,16 @@ function renderEditor(m) {
     kapZeile('davon eingefordert, aber noch nicht eingezahlt', 'kapital:eingefordertOffen') +
     kapZeile('davon nicht eingefordert (offen abgesetzt, § 272 Abs. 1 HGB)', 'kapital:nichtEingefordert') +
     kapZeile('= Eingefordertes Kapital (Ausweis Passiva A. I.)', 'kapital:eingefordertesKapital') +
-    '</table></div>';
+    '</table>' +
+    '<div class="box box-info" style="margin-top:10px"><b>Ausstehende Einlagen buchen (SKR04)</b>' +
+    'Beispiel GmbH-Gründung: Stammkapital 25.000 €, davon 12.500 € sofort eingezahlt, ' +
+    '12.500 € (noch) nicht eingefordert. Buchungssatz:<br>' +
+    '<span class="mono">Bank (1800) 12.500 € + Ausstehende Einlagen, nicht eingefordert ' +
+    '(2910) 12.500 € &nbsp;an&nbsp; Gezeichnetes Kapital (2900) 25.000 €</span><br>' +
+    'Konto <b>2910</b> wird offen vom gezeichneten Kapital abgesetzt (§ 272 Abs. 1 S. 2 HGB) — ' +
+    'die Bilanz weist dann nur das eingeforderte Kapital aus. Werden ausstehende Einlagen ' +
+    '<b>eingefordert</b>, aber noch nicht eingezahlt, gehören sie stattdessen gesondert unter ' +
+    'die Forderungen auf der Aktivseite (§ 272 Abs. 1 S. 3 HGB).</div></div>';
 
   /* Bilanz */
   html += '<div class="karte"><div class="karte-kopf"><div>' +
@@ -1512,11 +1521,9 @@ function zeileAuto(node, seite) {
  * (Hauptspalte = der Betrag, der in die EK-Summe einfließt). Sind alle Einlagen
  * eingefordert (nichtEingefordert == 0), genügt die normale Einzelzeile. */
 function kapitalAusweisZeilen(node) {
-  var kap = (S.aktiv && S.aktiv.kapital) || {};
-  var gez = Berechnung.cent(kap.gezeichnet);
-  var nichtEing = Berechnung.cent(gez - Berechnung.cent(kap.eingezahlt) -
-    Berechnung.cent(kap.eingefordertOffen));
-  if (nichtEing <= 0) return zeileAuto(node, 'passiva');
+  var kap = Berechnung.kapitalRechnen((S.aktiv && S.aktiv.kapital) || {},
+    S.aktiv && S.aktiv.erfassungsmodus);
+  if (kap.nichtEingefordert <= 0) return zeileAuto(node, 'passiva');
   return '<tr class="zeile-R"><td class="p-nr">' + node.nr + '</td>' +
     '<td class="p-lbl">' + esc(node.label) + '</td>' +
     '<td class="p-wert"><span class="wert-ro" data-zelle="kapital:gezeichnet">0,00</span></td></tr>' +
@@ -1625,6 +1632,9 @@ function bindeEditor(m) {
       var p = el.dataset.pfad, v = el.value;
       if (el.classList.contains('zahl') || el.type === 'number') v = Berechnung.num(v);
       setNested(S.aktiv, p, v);
+      // Direkteingabe der Kapitalangaben -> zurück in den Eingabe-Modus, damit die
+      // §272-Ableitung greift und ein zuvor gebuchtes 2910 nicht stale weiterwirkt.
+      if (p.indexOf('kapital.') === 0) S.aktiv.erfassungsmodus = 'DIREKT';
       if (p === 'groessenklasse') S.aktiv.groessenklasseAuto = false;
       if (p === 'guvVerfahren') { renderEditor(document.getElementById('main')); return; }
       aktualisiereStatus();
@@ -4966,10 +4976,19 @@ function uebernehmeSalden(a) {
   // Reine Aggregation in shared/kontenabschluss.js (testbar). Vorzeichenrichtig,
   // damit Kontra-Konten (Skonti/Erlösschmälerungen) ihre Kategorie korrekt mindern.
   var w = Abschluss.salden2werte(kontenSalden(a), { guvVerfahren: a.guvVerfahren || 'GKV' });
-  if (w.kapitalGezeichnet !== null) {              // Gezeichnetes Kapital -> Kapitalblock
+  // Kapital aus Buchungen (2900 gezeichnet / 2910 nicht eingefordert) -> SELBSTKONSISTENTER
+  // Kapitalblock, ohne Direkteingabe-Reste. Sonst erzeugen stale eingezahlt/eingefordertOffen
+  // eine falsche bzw. unausgeglichene Bilanz (eingefordertOffen würde als Phantom-Forderung
+  // auf die Aktivseite gehen). Greift auch, wenn nur 2910 (ohne 2900) gebucht wurde.
+  if (w.kapitalGezeichnet !== null || w.kapitalNichtEingefordert > 0) {
     a.kapital = a.kapital || {};
-    a.kapital.gezeichnet = w.kapitalGezeichnet;
-    if (!a.kapital.eingezahlt) a.kapital.eingezahlt = w.kapitalGezeichnet;
+    if (w.kapitalGezeichnet !== null) a.kapital.gezeichnet = w.kapitalGezeichnet;
+    var gez = Berechnung.cent(a.kapital.gezeichnet);
+    var nichtEing = w.kapitalNichtEingefordert;
+    if (nichtEing > gez) nichtEing = gez;          // nicht mehr absetzbar als der Nennbetrag
+    a.kapital.nichtEingefordert = nichtEing;        // § 272 Abs. 1: offen abgesetzt
+    a.kapital.eingefordertOffen = 0;                // im Buchungsmodell kein eigenes 2910-Forderungskonto
+    a.kapital.eingezahlt = Berechnung.cent(gez - nichtEing);   // = eingefordertes Kapital
   }
   a.werte = a.werte || {};
   a.werte.aktiva = w.aktiva;

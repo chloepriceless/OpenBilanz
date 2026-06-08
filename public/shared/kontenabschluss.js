@@ -32,13 +32,17 @@
   function salden2werte(salden, opt) {
     opt = opt || {};
     var guvVerfahren = opt.guvVerfahren || 'GKV';
-    var aktiva = {}, passiva = {}, guv = {}, kapitalGezeichnet = null;
+    var aktiva = {}, passiva = {}, guv = {}, kapitalGezeichnet = null, kapitalNichtEingefordert = 0;
     Object.keys(salden || {}).forEach(function (nr) {
       var k = SKR04.kontoFinden(nr);
       if (!k) return;                              // unbekanntes Konto -> ignorieren (s. app.js-Validierung)
       var saldo = (salden[nr].soll || 0) - (salden[nr].haben || 0);
       if (nr === '2900') {                          // Gezeichnetes Kapital -> Kapitalblock
         kapitalGezeichnet = Berechnung.cent(-saldo);
+        return;
+      }
+      if (nr === '2910') {                          // Ausstehende Einlagen, nicht eingefordert (§ 272 Abs.1)
+        kapitalNichtEingefordert = Berechnung.cent(saldo);   // Soll-Saldo -> offen vom gez. Kapital abgesetzt
         return;
       }
       if (k.seite === 'EBK') return;                // Eröffnungsbilanzkonto: reines Verrechnungskonto
@@ -53,7 +57,8 @@
         if (gid) guv[gid] = Berechnung.cent((guv[gid] || 0) + betrag);
       }
     });
-    return { aktiva: aktiva, passiva: passiva, guv: guv, kapitalGezeichnet: kapitalGezeichnet };
+    return { aktiva: aktiva, passiva: passiva, guv: guv, kapitalGezeichnet: kapitalGezeichnet,
+             kapitalNichtEingefordert: kapitalNichtEingefordert };
   }
 
   return { salden2werte: salden2werte };

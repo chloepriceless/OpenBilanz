@@ -299,6 +299,35 @@ test('Abschluss: 2900 -> kapitalGezeichnet, EBK/P.A.I/P.A.V werden übersprungen
   eq(w.kapitalGezeichnet, 25000, 'gezeichnetes Kapital');
   ok(!w.passiva['P.A.I'], 'P.A.I wird automatisch berechnet, nicht aggregiert');
 });
+test('§ 272: Konto 2910 (ausstehende Einlagen, nicht eingefordert) verpufft NICHT', function () {
+  // Gründungsbuchung: Bank 12500 + 2910 12500 an 2900 25000
+  var w = Abschluss.salden2werte({
+    '1800': { soll: 12500, haben: 0 },
+    '2910': { soll: 12500, haben: 0 },   // nicht eingeforderte ausstehende Einlagen (Soll-Saldo)
+    '2900': { soll: 0, haben: 25000 }
+  }, { guvVerfahren: 'GKV' });
+  eq(w.kapitalGezeichnet, 25000, 'gezeichnetes Kapital aus 2900');
+  eq(w.kapitalNichtEingefordert, 12500, '2910-Saldo -> nicht eingefordert (nicht verpufft)');
+  eq(w.aktiva['B.IV'], 12500, 'Bank-Einzahlung');
+});
+test('§ 272: Buchungs-Modus — gebuchtes 2910 ergibt eingefordertes Kapital + ausgeglichene Bilanz', function () {
+  var a = {
+    kapital: { gezeichnet: 25000, nichtEingefordert: 12500, eingezahlt: 12500 },
+    werte: { aktiva: { 'B.IV': 12500 }, passiva: {}, guv: {} },
+    erfassungsmodus: 'BUCHHALTUNG', guvVerfahren: 'GKV'
+  };
+  var r = Berechnung.berechne(a);
+  eq(r.bilanz.kapital.nichtEingefordert, 12500, 'nicht eingefordert aus Buchung');
+  eq(r.bilanz.kapital.eingefordertesKapital, 12500, 'eingefordertes Kapital = Nennbetrag ./. nicht eingefordert');
+  eq(r.bilanz.passiva['P.A.I'], 12500, 'P.A.I = eingefordertes Kapital');
+  eq(r.bilanz.summeAktiva, r.bilanz.summePassiva, 'Bilanz ausgeglichen');
+});
+test('§ 272: Eingabe-Modus ignoriert ein gebuchtes nichtEingefordert (kein Sticky-State)', function () {
+  // Ohne erfassungsmodus BUCHHALTUNG wird nichtEingefordert aus den Eingaben abgeleitet.
+  var k = Berechnung.kapitalRechnen(
+    { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0, nichtEingefordert: 9999 });
+  eq(k.nichtEingefordert, 0, 'voll eingezahlt -> nicht eingefordert 0, stale 9999 ignoriert');
+});
 test('SKR04: jedes Konto-pos ist eine gueltige HGB-Position', function () {
   var alle = Positionen.AKTIVA.concat(Positionen.PASSIVA);
   SKR04.KONTEN.forEach(function (k) {

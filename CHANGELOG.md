@@ -11,6 +11,23 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.11.0] - 2026-06-08
+
+### Behoben
+- **Ausstehende Einlagen buchbar (§ 272 Abs. 1 HGB)**: Das Konto **2910 „Ausstehende
+  Einlagen auf das gezeichnete Kapital, nicht eingefordert"** wurde beim Übernehmen der
+  Salden ignoriert — eine GmbH-Gründungsbuchung (Bank 12.500 € + 2910 12.500 € an
+  Gezeichnetes Kapital 2900 25.000 €) ließ die Bilanz unausgeglichen. Jetzt wird der
+  2910-Saldo korrekt als nicht eingeforderte ausstehende Einlage erfasst und offen vom
+  gezeichneten Kapital abgesetzt (eingefordertes Kapital = Nennbetrag ./. nicht eingefordert),
+  die Bilanz gleicht aus. Der Buchhaltungs-Modus bildet einen selbstkonsistenten Kapitalblock
+  (ohne Direkteingabe-Reste); die Direkteingabe der Kapitalangaben schaltet wieder auf die
+  §-272-Ableitung zurück.
+
+### Hinzugefügt
+- **Buchungshilfe für ausstehende Einlagen** in der Kapital-Karte: zeigt den korrekten
+  SKR04-Buchungssatz für die GmbH-Gründung und erklärt den Nettoausweis (§ 272 Abs. 1 S. 2/3 HGB).
+
 ## [2.10.0] - 2026-06-08
 
 ### Hinzugefügt

@@ -53,13 +53,22 @@
   }
 
   /* ---- Kapital nach § 272 Abs. 1 HGB (Nettomethode) --------------------- */
-  function kapitalRechnen(kapital) {
+  function kapitalRechnen(kapital, modus) {
     kapital = kapital || {};
     var gezeichnet = cent(kapital.gezeichnet);
     var eingezahlt = cent(kapital.eingezahlt);
     var eingefordertOffen = cent(kapital.eingefordertOffen); // eingefordert, aber nicht eingezahlt
-    var nichtEingefordert = cent(gezeichnet - eingezahlt - eingefordertOffen);
+    // Nicht eingeforderte ausstehende Einlagen (§ 272 Abs. 1 S. 2 HGB): im Buchhaltungs-
+    // Modus DIREKT aus dem gebuchten Konto 2910 (Ausstehende Einlagen, nicht eingefordert),
+    // sonst aus den Eröffnungsbilanz-Eingaben abgeleitet (gezeichnet ./. eingezahlt ./. eingefordert).
+    var nichtEingefordert;
+    if (modus === 'BUCHHALTUNG' && kapital.nichtEingefordert != null && kapital.nichtEingefordert !== '') {
+      nichtEingefordert = cent(kapital.nichtEingefordert);
+    } else {
+      nichtEingefordert = cent(gezeichnet - eingezahlt - eingefordertOffen);
+    }
     if (nichtEingefordert < 0) nichtEingefordert = 0;
+    if (nichtEingefordert > gezeichnet) nichtEingefordert = gezeichnet;
     // Eingefordertes Kapital = Nennbetrag ./. nicht eingeforderte ausstehende Einlagen
     var eingefordertesKapital = cent(gezeichnet - nichtEingefordert);
     return {
@@ -119,7 +128,7 @@
     var werte = abschluss.werte || {};
     var aktivaW = werte.aktiva || {};
     var passivaW = werte.passiva || {};
-    var kap = kapitalRechnen(abschluss.kapital);
+    var kap = kapitalRechnen(abschluss.kapital, abschluss.erfassungsmodus);
 
     // Aktiva-Baum summieren (ohne F)
     var aktivaBaum = Positionen.AKTIVA.filter(function (n) { return n.id !== 'F'; });
