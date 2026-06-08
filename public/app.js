@@ -2812,6 +2812,46 @@ function renderBwa(m) {
   };
 }
 
+/* === Aufklappbares, durchsuchbares Konto-Dropdown über den vollen SKR04 =====
+ * Ein natives <select> (aufklappbar + Typeahead) statt eines reinen Suchfelds.
+ * LAZY befüllt: initial nur die vorausgewählte Option, die volle Liste (~1024
+ * Konten) wird erst beim Öffnen injiziert — so entsteht kein DOM-Bloat, wenn
+ * viele Felder gleichzeitig gerendert werden (z.B. eine Zeile je Bankumsatz). */
+function kontoOptionenHtml() {
+  return SKR04.alleKonten().map(function (k) {
+    return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
+  }).join('');
+}
+function kontoDropdown(attrs, vorNr) {
+  var opt;
+  if (vorNr) {
+    var k = SKR04.kontoFinden(vorNr);
+    opt = '<option value="' + esc(vorNr) + '" selected>' +
+      esc(vorNr + ' – ' + (k ? k.name : '?')) + '</option>';
+  } else {
+    opt = '<option value="">— Konto wählen —</option>';
+  }
+  return '<select data-konto-dd="1" ' + (attrs || '') + '>' + opt + '</select>';
+}
+function bindeKontoDropdowns() {
+  if (window.__kontoDdBound) return;
+  window.__kontoDdBound = true;
+  var fuelle = function (el) {
+    if (!el || el.tagName !== 'SELECT' || el.getAttribute('data-konto-dd') !== '1' ||
+        el.dataset.kfilled === '1') return;
+    var cur = el.value;                     // vorausgewähltes Konto erhalten
+    var leer = cur ? '' : '<option value="">— Konto wählen —</option>';
+    el.innerHTML = leer + kontoOptionenHtml();
+    el.value = cur || '';                   // leeres Feld bleibt auf "— Konto wählen —"
+    el.dataset.kfilled = '1';
+  };
+  // mousedown feuert vor dem Öffnen des nativen Dropdowns; focusin fängt Tastatur-Fokus.
+  document.addEventListener('mousedown', function (e) {
+    if (e.target && e.target.tagName === 'SELECT') fuelle(e.target);
+  }, true);
+  document.addEventListener('focusin', function (e) { fuelle(e.target); });
+}
+
 /* parseERechnung (XRechnung / ZUGFeRD): siehe Importe.parseERechnung in
  * shared/importe.js. */
 /* Zeigt die geparste E-Rechnung und bietet die Übernahme als Buchung an. */
@@ -2874,8 +2914,8 @@ function eRechnungVorschau(m, a, kontoOpt, parsed) {
     '<tr><td>Bruttobetrag</td><td class="rechts mono">' + geld(r.brutto) + '</td></tr>' +
     '</tbody></table>' + warnBox + posBlock +
     '<div class="gitter g2" style="margin-top:10px">' +
-    feldWrap('Aufwandskonto', 'Soll-Konto für den Nettobetrag (tippen zum Suchen)',
-      '<input type="text" list="skr04-konten" id="erKonto" value="6300" autocomplete="off">') +
+    feldWrap('Aufwandskonto', 'Soll-Konto für den Nettobetrag (aufklappen oder tippen)',
+      kontoDropdown('id="erKonto"', '6300')) +
     '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" ' +
     'id="erUebernehmen">Als Eingangsrechnung buchen</button></div></div>';
   box.querySelector('#erUebernehmen').onclick = function () {
@@ -2926,7 +2966,7 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
     feldWrap('Ziel-Bankkonto', 'der Auszug wird auf dieses Konto gebucht',
       '<select id="impBankkonto">' + bankOpt + '</select>') +
     '<table class="liste"><thead><tr><th></th><th>Datum</th><th>Partner</th>' +
-    '<th>Verwendungszweck</th><th class="rechts">Betrag</th><th>Gegenkonto</th>' +
+    '<th>Verwendungszweck</th><th class="rechts">Betrag</th><th>Gegenkonto</th><th></th>' +
     '</tr></thead><tbody>';
   tx.forEach(function (t, i) {
     var vor = t.kontoHint || Importe.bankKontoVorschlag(t.zweck + ' ' + t.partner, t.eingang,
@@ -2936,12 +2976,20 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
       '<td>' + esc(t.partner || '') + '</td>' +
       '<td>' + esc(String(t.zweck || '').slice(0, 70)) + '</td>' +
       '<td class="rechts mono">' + (t.eingang ? '+' : '−') + geld(t.betrag) + '</td>' +
-      '<td><input type="text" list="skr04-konten" class="camtKonto" data-i="' + i +
-      '" value="' + esc(vor) + '" autocomplete="off" style="width:130px"></td></tr>';
+      '<td>' + kontoDropdown('class="camtKonto" data-i="' + i + '" style="width:170px"', vor) + '</td>' +
+      '<td><span class="btn btn-sm camtDel" data-i="' + i +
+      '" title="Diese Buchung entfernen (wird nicht übernommen)">&times;</span></td></tr>';
   });
   h += '</tbody></table><div class="btn-reihe"><button class="btn btn-pri" ' +
     'id="camtUebernehmen">Ausgewählte Buchungen übernehmen</button></div>';
   box.innerHTML = h;
+  // Einzelne Importzeile vor dem Übernehmen entfernen (z.B. Doppelbuchung rausnehmen).
+  box.querySelectorAll('.camtDel').forEach(function (btn) {
+    btn.onclick = function () {
+      var row = btn.closest('tr');
+      if (row && row.parentNode) row.parentNode.removeChild(row);
+    };
+  });
   box.querySelector('#camtUebernehmen').onclick = function () {
     var n = 0, stamp = Date.now();
     var bankKonto = (box.querySelector('#impBankkonto') || {}).value || '1800';
@@ -3059,9 +3107,7 @@ function renderBuchhaltung(m) {
   var kontoOpt = SKR04.alleKonten().map(function (k) {
     return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
   }).join('');
-  // Eine globale Datalist für ALLE Konto-Eingaben (durchsuchbar nach Nr. ODER Name).
-  // Nur EINMAL im DOM -> kein 1000-Optionen-<select> je Feld/Importzeile (Performance).
-  var kontenDatalist = '<datalist id="skr04-konten">' + kontoOpt + '</datalist>';
+  bindeKontoDropdowns();   // delegierter Lazy-Befüll-Handler für aufklappbare Konto-Dropdowns
   var vorlagen = Vorlagen.sortiert((S.unternehmen && S.unternehmen.eigeneVorlagen) || []);
   var vorlageOpts = vorlagen.length
     ? '<select id="buVorlage"><option value="">— Vorlage anwenden —</option>' +
@@ -3077,12 +3123,10 @@ function renderBuchhaltung(m) {
       esc(a.stichtag || '') + '">') +
     feldWrap('Betrag (EUR)', '', '<input class="zahl" type="text" inputmode="decimal" id="buBetrag">') +
     feldWrap('Buchungstext', '', '<input id="buText">') +
-    feldWrap('Soll-Konto', 'tippen zum Suchen (Nr. oder Name)',
-      kontenDatalist + '<input type="text" list="skr04-konten" id="buSoll" ' +
-      'autocomplete="off" placeholder="z. B. 6420 oder Beiträge">') +
-    feldWrap('Haben-Konto', 'tippen zum Suchen (Nr. oder Name)',
-      '<input type="text" list="skr04-konten" id="buHaben" ' +
-      'autocomplete="off" placeholder="z. B. 1800 oder Bank">') +
+    feldWrap('Soll-Konto', 'aufklappen oder Nr./Name tippen',
+      kontoDropdown('id="buSoll"', '')) +
+    feldWrap('Haben-Konto', 'aufklappen oder Nr./Name tippen',
+      kontoDropdown('id="buHaben"', '')) +
     (vorlageOpts ? feldWrap('Vorlage', vorlagen.length + ' vorhanden', vorlageOpts) : '') +
     feldWrap('Beleg', 'optional, nur Hash & Name werden gespeichert',
       '<input type="file" id="buBeleg">') +
