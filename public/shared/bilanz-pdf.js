@@ -110,6 +110,12 @@
           push(k.nr, k.label, kap.gezeichnet, 'R');
           push(null, 'Nicht eingeforderte ausstehende Einlagen', -kap.nichtEingefordert, 'davon');
           push(null, 'Eingefordertes Kapital', kap.eingefordertesKapital, 'davon');
+          // Aufgliederung des eingeforderten Kapitals (informativ): wie viel ist
+          // tatsächlich eingezahlt und wie viel eingefordert, aber noch nicht eingezahlt.
+          push(null, 'davon eingezahlt', kap.eingezahlt || 0, 'davon');
+          if (kap.eingefordertOffen > 0) {
+            push(null, 'davon eingefordert, noch nicht eingezahlt', kap.eingefordertOffen, 'davon');
+          }
           return;
         }
         if (!dzSichtbar(werte[k.id])) return;

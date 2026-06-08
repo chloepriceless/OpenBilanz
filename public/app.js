@@ -1533,6 +1533,15 @@ function kapitalAusweisZeilen(node) {
     '<tr class="zeile-R"><td class="p-nr"></td>' +
     '<td class="p-lbl">Eingefordertes Kapital <span class="reg">&middot; § 272 Abs. 1 HGB</span></td>' +
     '<td class="p-wert"><span class="wert-ro" data-zelle="kapital:eingefordertesKapital">0,00</span></td></tr>' +
+    '<tr class="zeile-N"><td class="p-nr"></td>' +
+    '<td class="p-lbl"><span class="sub">davon eingezahlt</span></td>' +
+    '<td class="p-wert"><span class="wert-ro" data-zelle="kapital:eingezahlt">0,00</span></td></tr>' +
+    (kap.eingefordertOffen > 0
+      ? '<tr class="zeile-N"><td class="p-nr"></td>' +
+        '<td class="p-lbl"><span class="sub">davon eingefordert, noch nicht eingezahlt ' +
+        '<span class="reg">&middot; § 272 Abs. 1 S. 3 HGB</span></span></td>' +
+        '<td class="p-wert"><span class="wert-ro" data-zelle="kapital:eingefordertOffen">0,00</span></td></tr>'
+      : '') +
     erklRow(node.id);
 }
 function autoHinweis(id) {

@@ -2378,7 +2378,7 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
   // mock r: passiver §272-Pfad (Stammkapital 25000, davon 12500 nicht eingefordert)
   var rPassiv = { bilanz: {
     aktiva: { 'B': 12500, 'B.IV': 12500 }, passiva: { 'P.A': 12500 },
-    kapital: { gezeichnet: 25000, nichtEingefordert: 12500, eingefordertesKapital: 12500, eingefordertOffen: 0 },
+    kapital: { gezeichnet: 25000, eingezahlt: 12500, nichtEingefordert: 12500, eingefordertesKapital: 12500, eingefordertOffen: 0 },
     summeAktiva: 12500, summePassiva: 12500
   }, guv: { werte: {} } };
 
@@ -2392,6 +2392,9 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
     ok(labels.indexOf('Eingefordertes Kapital') >= 0, '§272: eingefordertes Kapital');
     var davon = zp.filter(function (z) { return z.label === 'Nicht eingeforderte ausstehende Einlagen'; })[0];
     ok(davon && davon.betrag < 0, '§272: Absetzung negativ');
+    ok(labels.indexOf('davon eingezahlt') >= 0, '§272: davon eingezahlt sichtbar');
+    var eingez = zp.filter(function (z) { return z.label === 'davon eingezahlt'; })[0];
+    eq(eingez.betrag, 12500, 'davon eingezahlt = 12.500 im Ausweis');
     eq(zp[zp.length - 1].betragText, '12.500,00 EUR', 'deutsche Geldformatierung');
   });
 

@@ -11,6 +11,18 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.13.0] - 2026-06-08
+
+### Hinzugefügt
+- **Gezeichnetes Kapital — vollständige Aufgliederung im Bilanz-Ausweis und PDF**: Der
+  Eigenkapital-Ausweis (Bildschirm-Bilanz und vollständiges PDF) zeigt jetzt — zusätzlich zur
+  §-272-Nettomethode (Gezeichnetes Kapital ./. nicht eingeforderte ausstehende Einlagen =
+  Eingefordertes Kapital) — die informative Zeile **„davon eingezahlt"** sowie, falls vorhanden,
+  **„davon eingefordert, noch nicht eingezahlt"** (§ 272 Abs. 1 S. 3 HGB). Beispiel GmbH-Gründung
+  25.000 € → 12.500 € eingezahlt + 12.500 € nicht eingefordert ist damit auch im Ausweis/PDF
+  vollständig sichtbar (bisher nur in der Eingabe-Karte). Die Aufgliederung ist rein informativ
+  (Memo-Zeilen) und verändert die Bilanzsummen nicht.
+
 ## [2.12.0] - 2026-06-08
 
 ### Hinzugefügt
