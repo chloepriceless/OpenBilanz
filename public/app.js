@@ -2837,7 +2837,7 @@ function eRechnungVorschau(m, a, kontoOpt, parsed) {
       'doppelte Aufwand- und Vorsteuer-Buchungen erzeugen — bitte stattdessen die ' +
       'vorhandene Buchung prüfen.</div>';
   }
-  var aufwOpt = kontoOpt.replace('value="6300"', 'value="6300" selected');
+  // Aufwandskonto: durchsuchbarer Datalist-Input (Default 6300) statt <select>.
   var profilZeile = r.profil
     ? '<tr><td>Profil</td><td>' + esc(r.profil) + '</td></tr>' : '';
   var warnBox = '';
@@ -2874,8 +2874,8 @@ function eRechnungVorschau(m, a, kontoOpt, parsed) {
     '<tr><td>Bruttobetrag</td><td class="rechts mono">' + geld(r.brutto) + '</td></tr>' +
     '</tbody></table>' + warnBox + posBlock +
     '<div class="gitter g2" style="margin-top:10px">' +
-    feldWrap('Aufwandskonto', 'Soll-Konto für den Nettobetrag',
-      '<select id="erKonto">' + aufwOpt + '</select>') +
+    feldWrap('Aufwandskonto', 'Soll-Konto für den Nettobetrag (tippen zum Suchen)',
+      '<input type="text" list="skr04-konten" id="erKonto" value="6300" autocomplete="off">') +
     '<div style="display:flex;align-items:flex-end"><button class="btn btn-pri" ' +
     'id="erUebernehmen">Als Eingangsrechnung buchen</button></div></div>';
   box.querySelector('#erUebernehmen').onclick = function () {
@@ -2931,13 +2931,13 @@ function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
   tx.forEach(function (t, i) {
     var vor = t.kontoHint || Importe.bankKontoVorschlag(t.zweck + ' ' + t.partner, t.eingang,
       (S.unternehmen && S.unternehmen.kontierungsregeln) || []);
-    var sel = kontoOpt.replace('value="' + vor + '"', 'value="' + vor + '" selected');
     h += '<tr><td><input type="checkbox" class="camtChk" data-i="' + i + '" checked></td>' +
       '<td class="mono">' + datumDe(t.datum) + '</td>' +
       '<td>' + esc(t.partner || '') + '</td>' +
       '<td>' + esc(String(t.zweck || '').slice(0, 70)) + '</td>' +
       '<td class="rechts mono">' + (t.eingang ? '+' : '−') + geld(t.betrag) + '</td>' +
-      '<td><select class="camtKonto" data-i="' + i + '">' + sel + '</select></td></tr>';
+      '<td><input type="text" list="skr04-konten" class="camtKonto" data-i="' + i +
+      '" value="' + esc(vor) + '" autocomplete="off" style="width:130px"></td></tr>';
   });
   h += '</tbody></table><div class="btn-reihe"><button class="btn btn-pri" ' +
     'id="camtUebernehmen">Ausgewählte Buchungen übernehmen</button></div>';
@@ -3059,6 +3059,9 @@ function renderBuchhaltung(m) {
   var kontoOpt = SKR04.alleKonten().map(function (k) {
     return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
   }).join('');
+  // Eine globale Datalist für ALLE Konto-Eingaben (durchsuchbar nach Nr. ODER Name).
+  // Nur EINMAL im DOM -> kein 1000-Optionen-<select> je Feld/Importzeile (Performance).
+  var kontenDatalist = '<datalist id="skr04-konten">' + kontoOpt + '</datalist>';
   var vorlagen = Vorlagen.sortiert((S.unternehmen && S.unternehmen.eigeneVorlagen) || []);
   var vorlageOpts = vorlagen.length
     ? '<select id="buVorlage"><option value="">— Vorlage anwenden —</option>' +
@@ -3074,8 +3077,12 @@ function renderBuchhaltung(m) {
       esc(a.stichtag || '') + '">') +
     feldWrap('Betrag (EUR)', '', '<input class="zahl" type="text" inputmode="decimal" id="buBetrag">') +
     feldWrap('Buchungstext', '', '<input id="buText">') +
-    feldWrap('Soll-Konto', '', '<select id="buSoll">' + kontoOpt + '</select>') +
-    feldWrap('Haben-Konto', '', '<select id="buHaben">' + kontoOpt + '</select>') +
+    feldWrap('Soll-Konto', 'tippen zum Suchen (Nr. oder Name)',
+      kontenDatalist + '<input type="text" list="skr04-konten" id="buSoll" ' +
+      'autocomplete="off" placeholder="z. B. 6420 oder Beiträge">') +
+    feldWrap('Haben-Konto', 'tippen zum Suchen (Nr. oder Name)',
+      '<input type="text" list="skr04-konten" id="buHaben" ' +
+      'autocomplete="off" placeholder="z. B. 1800 oder Bank">') +
     (vorlageOpts ? feldWrap('Vorlage', vorlagen.length + ' vorhanden', vorlageOpts) : '') +
     feldWrap('Beleg', 'optional, nur Hash & Name werden gespeichert',
       '<input type="file" id="buBeleg">') +
