@@ -14,8 +14,8 @@
   else root.Version = api;
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  var APP = '2.4.1';
-  var COMMIT = 'faa2400';
+  var APP = '2.5.0';
+  var COMMIT = 'd7260e9';
   return {
     app: APP,
     commit: COMMIT,

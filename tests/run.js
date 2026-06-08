@@ -42,6 +42,7 @@ var Belegnummern = require('../public/shared/belegnummern.js');
 var MandantenMigration = require('../public/shared/mandanten-migration.js');
 var ImportProtokoll = require('../public/shared/import-protokoll.js');
 var Store = require('../lib/store.js');
+var UnterschriftPdf = require('../public/shared/unterschrift-pdf.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -2145,6 +2146,39 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
       eq(r[1].length, 1, 'firma2 sieht nur eigenen');
       eq(r[2], null, 'Quergriff auf fremden Abschluss -> null');
     });
+  });
+})();
+
+/* ---- Unterschriften-PDF (AcroForm via pdf-lib, optional) -------------- */
+(function () {
+  var PL = null;
+  try { PL = require('pdf-lib'); } catch (e) { PL = null; }
+  if (!PL) {
+    test('Unterschriften-PDF: übersprungen (pdf-lib nicht installiert)', function () {
+      ok(true, 'optional: `npm install` aktiviert die AcroForm-Tests');
+    });
+    return;
+  }
+  test('Unterschriften-PDF: erzeugt gültiges PDF mit ausfüllbaren Feldern', function () {
+    return UnterschriftPdf.erzeuge(
+      { name: 'Muster GmbH', geschaeftsfuehrerText: 'Anna Admin, Bob Boss' },
+      { art: 'EROEFFNUNGSBILANZ', stichtag: '2024-01-01' }
+    ).then(function (bytes) {
+      ok(bytes && bytes.length > 800, 'PDF-Bytes erzeugt');
+      return PL.PDFDocument.load(bytes);
+    }).then(function (doc) {
+      var namen = doc.getForm().getFields().map(function (f) { return f.getName(); });
+      ok(namen.indexOf('ort') >= 0, 'Feld ort vorhanden');
+      ok(namen.indexOf('datum') >= 0, 'Feld datum vorhanden');
+      ok(namen.indexOf('unterschrift_1') >= 0, 'Unterschriftsfeld GF 1');
+      ok(namen.indexOf('unterschrift_2') >= 0, 'Unterschriftsfeld GF 2 (zweiter GF)');
+    });
+  });
+  test('Unterschriften-PDF: gfNamen + titelFuer', function () {
+    eq(UnterschriftPdf.gfNamen({ geschaeftsfuehrerText: 'A, B' }).length, 2, 'zwei GF');
+    eq(UnterschriftPdf.gfNamen({}).length, 1, 'Fallback: ein (leeres) Feld');
+    eq(UnterschriftPdf.titelFuer({ art: 'EROEFFNUNGSBILANZ', stichtag: '2024-01-01' }),
+      'Eröffnungsbilanz zum 2024-01-01', 'Titel EB');
   });
 })();
 

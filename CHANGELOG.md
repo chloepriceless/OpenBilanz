@@ -11,6 +11,17 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-06-08
+
+### Hinzugefügt
+- **Ausfüllbares Unterschriften-PDF** (AcroForm): neuer Knopf „Unterschriften-PDF
+  (ausfüllbar)" in der Druckansicht erzeugt ein einseitiges PDF mit interaktiven
+  Formularfeldern für **Ort, Datum und Unterschrift(en) der Geschäftsführer** —
+  direkt im PDF ausfüllbar/unterschreibbar, kein Drucken-und-Handschrift nötig.
+  Modul `public/shared/unterschrift-pdf.js` (pdf-lib, browser-vendored); die
+  Formularfelder sind per Node-Test (pdf-lib) verifiziert. Geschäftsführer-Namen
+  kommen aus den Stammdaten (ein Unterschriftsfeld je Geschäftsführer).
+
 ## [2.4.1] - 2026-06-08
 
 ### Behoben
@@ -177,7 +188,8 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.4.1...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.4.1...v2.5.0
 [2.4.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.2.0...v2.3.0

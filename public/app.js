@@ -1803,12 +1803,30 @@ function renderDruck(m) {
   var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>' +
     '<div class="btn-reihe no-print" style="margin-bottom:14px">' +
     '<button class="btn btn-pri" id="btnDrucken">Drucken / als PDF speichern</button>' +
+    '<button class="btn" id="btnUnterschrift">Unterschriften-PDF (ausfüllbar)</button>' +
     (istJA ? '<button class="btn" id="btnStbPaket">Steuerberater-Paket als ZIP</button>' : '') +
     '</div>';
   html += '<div class="dok" id="dok">' + dokInhalt(a, u, r, null) + '</div>';
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
   m.querySelector('#btnDrucken').onclick = function () { window.print(); };
+  var btnUs = m.querySelector('#btnUnterschrift');
+  if (btnUs) btnUs.onclick = function () {
+    if (typeof UnterschriftPdf === 'undefined') { alert('PDF-Modul nicht verfügbar.'); return; }
+    btnUs.disabled = true;
+    UnterschriftPdf.erzeuge(u, a).then(function (bytes) {
+      var blob = new Blob([bytes], { type: 'application/pdf' });
+      var url = URL.createObjectURL(blob);
+      var aEl = document.createElement('a');
+      aEl.href = url; aEl.download = 'unterschriften_' + (a.id || 'eroeffnungsbilanz') + '.pdf';
+      document.body.appendChild(aEl); aEl.click(); aEl.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      btnUs.disabled = false;
+    }).catch(function (e) {
+      btnUs.disabled = false;
+      alert('Unterschriften-PDF konnte nicht erzeugt werden: ' + (e && e.message || e));
+    });
+  };
   var btnPaket = m.querySelector('#btnStbPaket');
   if (btnPaket) btnPaket.onclick = function () { erzeugeSteuerberaterPaket(a, u, r); };
 
