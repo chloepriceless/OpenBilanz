@@ -2182,6 +2182,83 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
   });
 })();
 
+/* ---- Vollständiges Bilanz-PDF (bilanz-pdf.js, T-0153) ----------------- */
+(function () {
+  var BilanzPdf = require('../public/shared/bilanz-pdf.js');
+  // mock r: passiver §272-Pfad (Stammkapital 25000, davon 12500 nicht eingefordert)
+  var rPassiv = { bilanz: {
+    aktiva: { 'B': 12500, 'B.IV': 12500 }, passiva: { 'P.A': 12500 },
+    kapital: { gezeichnet: 25000, nichtEingefordert: 12500, eingefordertesKapital: 12500, eingefordertOffen: 0 },
+    summeAktiva: 12500, summePassiva: 12500
+  }, guv: { werte: {} } };
+
+  test('Bilanz-PDF Extraktor: Summen konsistent + §272-Passivpfad', function () {
+    var za = BilanzPdf.bilanzZeilen('aktiva', rPassiv);
+    var zp = BilanzPdf.bilanzZeilen('passiva', rPassiv);
+    eq(za[za.length - 1].betrag, 12500, 'Summe Aktiva == r.bilanz.summeAktiva');
+    eq(zp[zp.length - 1].betrag, 12500, 'Summe Passiva == r.bilanz.summePassiva');
+    var labels = zp.map(function (z) { return z.label; });
+    ok(labels.indexOf('Nicht eingeforderte ausstehende Einlagen') >= 0, '§272: Absetzung sichtbar');
+    ok(labels.indexOf('Eingefordertes Kapital') >= 0, '§272: eingefordertes Kapital');
+    var davon = zp.filter(function (z) { return z.label === 'Nicht eingeforderte ausstehende Einlagen'; })[0];
+    ok(davon && davon.betrag < 0, '§272: Absetzung negativ');
+    eq(zp[zp.length - 1].betragText, '12.500,00 EUR', 'deutsche Geldformatierung');
+  });
+
+  test('Bilanz-PDF Extraktor: §272-Aktivpfad (eingefordertes offenes Kapital)', function () {
+    var rAkt = { bilanz: {
+      aktiva: { 'B': 25000, 'B.II': 12500, 'B.IV': 12500 }, passiva: { 'P.A': 25000 },
+      kapital: { gezeichnet: 25000, nichtEingefordert: 0, eingefordertesKapital: 25000, eingefordertOffen: 12500 },
+      summeAktiva: 25000, summePassiva: 25000
+    }, guv: { werte: {} } };
+    var labels = BilanzPdf.bilanzZeilen('aktiva', rAkt).map(function (z) { return z.label; });
+    ok(labels.indexOf('davon eingefordertes, noch nicht eingezahltes Kapital') >= 0, '§272 aktiv: davon-Zeile');
+  });
+
+  test('Bilanz-PDF Extraktor: anhangAbsaetze + guvZeilen', function () {
+    var k = BilanzPdf.anhangAbsaetze({ groessenklasse: 'KLEINST', anhang: {} });
+    ok(/Angaben unter der Bilanz/.test(k.titel), 'Kleinst: Angaben unter der Bilanz');
+    eq(BilanzPdf.anhangAbsaetze({ groessenklasse: 'KLEIN', anhang: { arbeitnehmer: 5 } }).titel,
+      'Anhang', 'nicht-Kleinst: Anhang');
+    var g = BilanzPdf.guvZeilen({ guvVerfahren: 'GKV' }, { guv: { werte: { 'gkv.1': 1000 } } });
+    ok(g.length > 0 && g.some(function (x) { return x.ebene === 'summe'; }), 'GuV: Summen markiert');
+  });
+
+  test('Bilanz-PDF: gfNamen verträgt String UND Array (echte Persistenzform)', function () {
+    eq(BilanzPdf.gfNamen({ geschaeftsfuehrerText: 'Anna, Bob' }).length, 2, 'String-Form: 2 GF');
+    eq(BilanzPdf.gfNamen({ geschaeftsfuehrer: ['Anna', 'Bob'] }).length, 2, 'Array-Form: 2 GF');
+    eq(BilanzPdf.gfNamen({}).length, 1, 'Fallback: ein (leeres) Unterschriftsfeld');
+    eq(BilanzPdf.geld(-12500), '-12.500,00', 'Geldformat negativ deutsch');
+  });
+
+  var PL2 = null;
+  try { PL2 = require('pdf-lib'); } catch (e) { PL2 = null; }
+  if (!PL2) {
+    test('Bilanz-PDF (AcroForm): übersprungen (pdf-lib nicht installiert)', function () {
+      ok(true, 'optional: `npm install` aktiviert den Voll-PDF-Test');
+    });
+    return;
+  }
+  test('Bilanz-PDF: gültiges PDF mit Bilanz-Inhalt + ausfüllbaren Feldern', function () {
+    return BilanzPdf.erzeuge(
+      { name: 'Muster GmbH', plz: '12345', ort: 'Musterstadt', hrNummer: 'HRB 1',
+        geschaeftsfuehrerText: 'Anna Admin, Bob Boss' },
+      { art: 'EROEFFNUNGSBILANZ', stichtag: '2024-01-01', groessenklasse: 'KLEINST', anhang: {} },
+      rPassiv
+    ).then(function (bytes) {
+      ok(bytes && bytes.length > 2000, 'PDF-Bytes (mit Bilanz) erzeugt');
+      return PL2.PDFDocument.load(bytes);
+    }).then(function (doc) {
+      var namen = doc.getForm().getFields().map(function (f) { return f.getName(); });
+      ok(namen.indexOf('ort') >= 0, 'Feld ort');
+      ok(namen.indexOf('datum') >= 0, 'Feld datum');
+      ok(namen.indexOf('unterschrift_1') >= 0, 'Unterschrift GF1');
+      ok(namen.indexOf('unterschrift_2') >= 0, 'Unterschrift GF2');
+      ok(doc.getPageCount() >= 1, 'mind. 1 Seite');
+    });
+  });
+})();
+
 /* ---- Lauf ------------------------------------------------------------- */
 /* Sequenziell laufen lassen, async-Tests (Promise-Rückgabewert) werden
  * abgewartet, ohne dass synchrone Tests darauf umgeschrieben werden müssen. */

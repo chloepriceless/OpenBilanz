@@ -1801,30 +1801,36 @@ function renderDruck(m) {
   var r = Berechnung.berechne(a);
   var istJA = a.art === 'JAHRESABSCHLUSS';
   var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>' +
-    '<div class="btn-reihe no-print" style="margin-bottom:14px">' +
-    '<button class="btn btn-pri" id="btnDrucken">Drucken / als PDF speichern</button>' +
-    '<button class="btn" id="btnUnterschrift">Unterschriften-PDF (ausfüllbar)</button>' +
+    '<div class="btn-reihe no-print" style="margin-bottom:6px">' +
+    '<button class="btn btn-pri" id="btnVollPdf">Vollständiges PDF (ausfüllbar)</button>' +
+    '<button class="btn" id="btnDrucken">Drucken (Browser)</button>' +
     (istJA ? '<button class="btn" id="btnStbPaket">Steuerberater-Paket als ZIP</button>' : '') +
-    '</div>';
+    '</div>' +
+    '<div class="no-print" style="margin-bottom:14px;font-size:12px;color:#666;line-height:1.5">' +
+    'Das <b>vollständige PDF</b> enthält die komplette ' + (istJA ? 'Bilanz, GuV und Anhang' : 'Bilanz') +
+    ' und ausfüllbare Felder für Ort, Datum und Unterschrift — <b>ohne gestempeltes Datum</b>, ' +
+    'also rückwirkend zum Stichtag ausfüllbar. Beim „Drucken (Browser)" blendet der Browser oben ' +
+    'Datum/URL ein (im Druckdialog unter „Kopf- und Fußzeilen" abschaltbar).</div>';
   html += '<div class="dok" id="dok">' + dokInhalt(a, u, r, null) + '</div>';
   m.innerHTML = html;
   m.querySelector('[data-z]').onclick = function () { setView('editor'); };
   m.querySelector('#btnDrucken').onclick = function () { window.print(); };
-  var btnUs = m.querySelector('#btnUnterschrift');
-  if (btnUs) btnUs.onclick = function () {
-    if (typeof UnterschriftPdf === 'undefined') { alert('PDF-Modul nicht verfügbar.'); return; }
-    btnUs.disabled = true;
-    UnterschriftPdf.erzeuge(u, a).then(function (bytes) {
+  var btnPdf = m.querySelector('#btnVollPdf');
+  if (btnPdf) btnPdf.onclick = function () {
+    if (typeof BilanzPdf === 'undefined') { alert('PDF-Modul nicht verfügbar.'); return; }
+    btnPdf.disabled = true;
+    BilanzPdf.erzeuge(u, a, r).then(function (bytes) {
       var blob = new Blob([bytes], { type: 'application/pdf' });
       var url = URL.createObjectURL(blob);
       var aEl = document.createElement('a');
-      aEl.href = url; aEl.download = 'unterschriften_' + (a.id || 'eroeffnungsbilanz') + '.pdf';
+      aEl.href = url;
+      aEl.download = (istJA ? 'jahresabschluss_' : 'eroeffnungsbilanz_') + (a.id || 'openbilanz') + '.pdf';
       document.body.appendChild(aEl); aEl.click(); aEl.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
-      btnUs.disabled = false;
+      btnPdf.disabled = false;
     }).catch(function (e) {
-      btnUs.disabled = false;
-      alert('Unterschriften-PDF konnte nicht erzeugt werden: ' + (e && e.message || e));
+      btnPdf.disabled = false;
+      alert('PDF konnte nicht erzeugt werden: ' + (e && e.message || e));
     });
   };
   var btnPaket = m.querySelector('#btnStbPaket');

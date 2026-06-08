@@ -11,6 +11,33 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-06-08
+
+### Hinzugefügt
+- **Vollständiges, ausfüllbares Bilanz-PDF** (AcroForm): der direkte PDF-Export in
+  der Druckansicht („Vollständiges PDF (ausfüllbar)") erzeugt jetzt das KOMPLETTE
+  Dokument — Kopf, Bilanz in Kontoform (Aktiva/Passiva mit allen Positionen, den
+  §272-Sonderausweisen und Summen), GuV (beim Jahresabschluss), Anhang/Angaben und
+  Unterschriftsblock — PLUS interaktive Formularfelder für **Ort, Datum und
+  Unterschrift(en) der Geschäftsführung**. Neues Modul `public/shared/bilanz-pdf.js`
+  (pdf-lib) mit reinem, Node-getestetem Daten-Extraktor (beide §272-Pfade) und
+  visuell gegen den Druck-Soll verifiziert.
+
+### Behoben
+- **Kein gestempeltes Erstell-/Heute-Datum mehr im erzeugten PDF.** Das Datum ist
+  ein ausfüllbares Feld, damit der Abschluss rückwirkend zum Stichtag unterzeichnet
+  werden kann. (Die Datums-/URL-Kopfzeile beim Browser-Druck „Drucken (Browser)"
+  stammt vom Browser selbst und ist im Druckdialog unter „Kopf- und Fußzeilen"
+  abschaltbar — das vollständige PDF ist davon nicht betroffen.)
+- PDF-Texterzeugung gegen seltene, nicht darstellbare Steuerzeichen (z. B. aus
+  fehldekodierten Copy-Paste-Eingaben) gehärtet; lange Firmennamen werden im Kopf
+  passend skaliert.
+
+### Geändert
+- Der frühere Knopf „Unterschriften-PDF (ausfüllbar)" (nur Felder, ohne Bilanz) ist
+  durch „Vollständiges PDF (ausfüllbar)" ersetzt — der direkt erzeugte PDF enthält
+  jetzt immer die komplette Bilanz samt der ausfüllbaren Felder.
+
 ## [2.5.0] - 2026-06-08
 
 ### Hinzugefügt
