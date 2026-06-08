@@ -11,6 +11,21 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-06-08
+
+### Hinzugefügt
+- **Bankimport: Buchung vor dem Übernehmen entfernen**: Jede Zeile der CAMT.053-/
+  Kontoauszug-Vorschau hat jetzt einen **Löschen-Button (×)**, um einzelne Umsätze
+  vor dem Übernehmen herauszunehmen (z. B. wenn sich zwei Buchungen überschneiden).
+
+### Behoben
+- **Bankimport: aufklappbares Konto-Dropdown zurück**: Mit dem vollen SKR04 (v2.8.0)
+  war die Gegenkonto-Auswahl im Import nur noch ein Suchfeld ohne sichtbares Dropdown.
+  Jetzt wieder ein **aufklappbares Auswahlmenü über den vollen SKR04** (vorausgefüllt
+  mit dem Kontierungs-Vorschlag, aber aufklapp- und änderbar; Tippen springt zum Konto).
+  Die volle Kontenliste wird erst beim Öffnen geladen — auch bei vielen Importzeilen
+  flüssig. Gilt einheitlich für Buchungsmaske und Import-Vorschauen.
+
 ## [2.8.0] - 2026-06-08
 
 ### Hinzugefügt
