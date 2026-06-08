@@ -11,6 +11,20 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-06-08
+
+### Hinzugefügt
+- **Gezeichnetes Kapital: vollständige Aufgliederung nach § 272 Abs. 1 HGB am Bildschirm**:
+  Die Bilanz zeigt das gezeichnete Kapital jetzt im **offenen Nettoausweis** — Nennbetrag,
+  davon offen abgesetzt die **nicht eingeforderten ausstehenden Einlagen**, Restgröße als
+  **Eingefordertes Kapital** in der Hauptspalte. Beispiel GmbH-Gründung: Gezeichnetes Kapital
+  25.000 € ./. nicht eingeforderte Einlagen 12.500 € = Eingefordertes Kapital 12.500 €. Die
+  Kapital-Eingabekarte führt dieselbe Aufgliederung auf (gezeichnet, davon eingezahlt, davon
+  eingefordert/unbezahlt, davon nicht eingefordert, eingefordertes Kapital). Bisher war dieser
+  offene Ausweis nur im PDF, am Bildschirm fehlte die Position „davon nicht eingefordert".
+  Verifiziert gegen § 272 Abs. 1 HGB; eingeforderte, noch nicht eingezahlte Einlagen bleiben
+  gesondert unter den Forderungen (Aktiva, § 272 Abs. 1 S. 3 HGB).
+
 ## [2.9.0] - 2026-06-08
 
 ### Hinzugefügt

@@ -1367,7 +1367,10 @@ function renderEditor(m) {
       erklFeld('kapital.eingefordertOffen', 'davon eingefordert, aber unbezahlt') +
       '</div>' : '') +
     '<table class="pos-tab" style="margin-top:10px">' +
-    kapZeile('Nicht eingeforderte ausstehende Einlagen (offen abgesetzt)', 'kapital:nichtEingefordert') +
+    kapZeile('Gezeichnetes Kapital (Nennbetrag)', 'kapital:gezeichnet') +
+    kapZeile('davon eingezahlt', 'kapital:eingezahlt') +
+    kapZeile('davon eingefordert, aber noch nicht eingezahlt', 'kapital:eingefordertOffen') +
+    kapZeile('davon nicht eingefordert (offen abgesetzt, § 272 Abs. 1 HGB)', 'kapital:nichtEingefordert') +
     kapZeile('= Eingefordertes Kapital (Ausweis Passiva A. I.)', 'kapital:eingefordertesKapital') +
     '</table></div>';
 
@@ -1463,8 +1466,12 @@ function bilanzSeite(seite) {
     if (b.kinder && b.kinder.length) {
       rows.push(zeileSum(b, seite));
       b.kinder.forEach(function (k) {
-        rows.push(b.auto || k.auto ? zeileAuto(k, seite) : zeileInput(k, seite));
-        if (seite === 'aktiva' && k.id === 'B.II') rows.push(hinweisBII());
+        if (seite === 'passiva' && k.id === 'P.A.I') {
+          rows.push(kapitalAusweisZeilen(k));     // § 272 Abs. 1 HGB: offener Nettoausweis
+        } else {
+          rows.push(b.auto || k.auto ? zeileAuto(k, seite) : zeileInput(k, seite));
+          if (seite === 'aktiva' && k.id === 'B.II') rows.push(hinweisBII());
+        }
       });
     } else if (b.auto) {
       rows.push(zeileAuto(b, seite));
@@ -1498,6 +1505,28 @@ function zeileAuto(node, seite) {
     '<td class="p-lbl">' + esc(node.label) + autoHinweis(node.id) + '</td>' +
     '<td class="p-wert"><span class="wert-ro" data-zelle="' + seite + ':' + node.id +
     '">0,00</span></td></tr>' + erklRow(node.id);
+}
+/* § 272 Abs. 1 HGB — Gezeichnetes Kapital mit offener Absetzung der nicht
+ * eingeforderten ausstehenden Einlagen. Nettomethode: Nennbetrag, davon offen
+ * abgesetzt die nicht eingeforderten Einlagen, Restgröße = eingefordertes Kapital
+ * (Hauptspalte = der Betrag, der in die EK-Summe einfließt). Sind alle Einlagen
+ * eingefordert (nichtEingefordert == 0), genügt die normale Einzelzeile. */
+function kapitalAusweisZeilen(node) {
+  var kap = (S.aktiv && S.aktiv.kapital) || {};
+  var gez = Berechnung.cent(kap.gezeichnet);
+  var nichtEing = Berechnung.cent(gez - Berechnung.cent(kap.eingezahlt) -
+    Berechnung.cent(kap.eingefordertOffen));
+  if (nichtEing <= 0) return zeileAuto(node, 'passiva');
+  return '<tr class="zeile-R"><td class="p-nr">' + node.nr + '</td>' +
+    '<td class="p-lbl">' + esc(node.label) + '</td>' +
+    '<td class="p-wert"><span class="wert-ro" data-zelle="kapital:gezeichnet">0,00</span></td></tr>' +
+    '<tr class="zeile-N"><td class="p-nr"></td>' +
+    '<td class="p-lbl"><span class="sub">abzüglich nicht eingeforderte ausstehende Einlagen</span></td>' +
+    '<td class="p-wert"><span class="wert-ro" data-zelle="kapital:nichtEingefordertNeg">0,00</span></td></tr>' +
+    '<tr class="zeile-R"><td class="p-nr"></td>' +
+    '<td class="p-lbl">Eingefordertes Kapital <span class="reg">&middot; § 272 Abs. 1 HGB</span></td>' +
+    '<td class="p-wert"><span class="wert-ro" data-zelle="kapital:eingefordertesKapital">0,00</span></td></tr>' +
+    erklRow(node.id);
 }
 function autoHinweis(id) {
   if (id === 'P.A.I') return ' <span class="sub">(aus Kapitalangaben)</span>';
@@ -1650,7 +1679,11 @@ function aktualisiereStatus() {
     else if (z.indexOf('aktiva:') === 0) wert = r.bilanz.aktiva[z.slice(7)] || 0;
     else if (z.indexOf('passiva:') === 0) wert = r.bilanz.passiva[z.slice(8)] || 0;
     else if (z.indexOf('guv:') === 0) wert = r.guv.werte[z.slice(4)] || 0;
+    else if (z === 'kapital:gezeichnet') wert = r.bilanz.kapital.gezeichnet;
+    else if (z === 'kapital:eingezahlt') wert = r.bilanz.kapital.eingezahlt;
+    else if (z === 'kapital:eingefordertOffen') wert = r.bilanz.kapital.eingefordertOffen;
     else if (z === 'kapital:nichtEingefordert') wert = r.bilanz.kapital.nichtEingefordert;
+    else if (z === 'kapital:nichtEingefordertNeg') wert = -r.bilanz.kapital.nichtEingefordert;
     else if (z === 'kapital:eingefordertesKapital') wert = r.bilanz.kapital.eingefordertesKapital;
     el.textContent = geld(wert);
   });
