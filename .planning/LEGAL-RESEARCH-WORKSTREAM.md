@@ -57,9 +57,19 @@ Konkrete Urteils-Ziele Welle 1 (mit Primärquelle bundesfinanzhof.de/juris verif
 - **§3a UStG:** BFH/EuGH zum Leistungsort sonstiger Leistungen (B2B/B2C, elektronische Leistungen, MOSS/OSS).
 - **E-Rechnung:** überwiegend BMF-Verwaltungsanweisung (wenig Rspr.) → Schreiben + ggf. erste FG-Fälle.
 
+## Scope-Ergänzung + Quellen (Hub/Orchestrator 2026-06-09 15:42, bestätigt)
+- **Scope erweitert:** zusätzlich **GmbHG (Kapital/Einlagen — §5/§7/§9 Mindest-/Einzahlung, ausstehende
+  Einlagen, §30/§31 Kapitalerhaltung)** und **§§238 ff. HGB (Buchführungspflicht)**.
+- **Gemeinfreie Primärquellen (verbindlich, kein Kommentar-/DATEV-Copy):**
+  `gesetze-im-internet.de` (Normen), **`rechtsprechung-im-internet.de`** (BFH-/Bundesgerichts-Urteile,
+  amtlich), `dejure.org` (Norm + Rspr.-Nachweise). EuGH: `curia.europa.eu`. Eigene Zusammenfassungen.
+- **Modell/Kosten:** Sparmodus/„MiniMax", kostenbewusst, **parallel/nachgelagert** zur OpenBilanz-Arbeit
+  (kein Opus-Grind; Web-Fetch der Primärquellen + sorgfältige juristische Einordnung; Bulk economical).
+
 ## Themen-Backlog (mein Scope — Reihenfolge mit Bizzi/Christin schärfen)
-1. HGB-Bilanzrecht: §§242, 264–274 (Ansatz/Ausweis/Bewertung), §272 (Kapital/ausstehende Einlagen),
-   §268 Abs.3 (Fehlbetrag) — Norm + Leitentscheidungen.
+1. HGB-Bilanzrecht: §§238 ff. (Buchführungspflicht), §§242, 264–274 (Ansatz/Ausweis/Bewertung),
+   §272 (Kapital/ausstehende Einlagen), §268 Abs.3 (Fehlbetrag) — Norm + Leitentscheidungen.
+1b. GmbHG: §5/§7/§9 (Stammkapital/Einlagen/Differenzhaftung), §30/§31 (Kapitalerhaltung) + BGH/BFH-Rspr.
 2. AO/GoBD: §§140–148 AO (Buchführungspflicht/Aufbewahrung §147), GoBD-BMF-Schreiben, E-Rechnung-Pflicht
    (Wachstumschancengesetz) — Verwaltungsanweisungen + Rechtsprechung.
 3. UStG: Kleinunternehmer §19, Vorsteuer §15, USt-VA §18 — BFH-Rechtsprechung.
