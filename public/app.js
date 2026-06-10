@@ -366,6 +366,11 @@ function boot() {
       setView('start');
     }
     pruefeMigrationHinweis();   // Welle 7: nach v1->v2-IDB-Migration einmalig Backup empfehlen
+  }).catch(function (e) {
+    // Startfehler (z.B. IndexedDB nicht öffenbar / Schema-Blockade) sichtbar machen
+    // statt mit leerer Seite stehenzubleiben.
+    fehlerToast('Daten konnten beim Start nicht geladen werden: ' + ((e && e.message) || e));
+    setView('start');
   });
   if (Store.modus === 'website' && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function () {});
@@ -1658,6 +1663,13 @@ function speichereStill() {
     S.abschluesse = st.abschluesse || [];
     renderNav();
     return nachSpeichern();
+  }).catch(function (e) {
+    // Speichern fehlgeschlagen (z.B. IndexedDB-Quota überschritten): klar melden,
+    // statt still weiterzulaufen. Bewusst GESCHLUCKT - die aufrufende Re-Render-
+    // Kette läuft mit dem In-Memory-Stand weiter (Daten liegen noch im Speicher),
+    // statt die UI im alten Zustand einzufrieren. Der Nutzer wird zum Backup geraten.
+    fehlerToast('Speichern fehlgeschlagen — Ihre letzte Änderung wurde evtl. nicht ' +
+      'dauerhaft gespeichert. Bitte erstellen Sie ein Backup. (' + ((e && e.message) || e) + ')');
   });
 }
 
@@ -1686,6 +1698,10 @@ function aktualisiereStatus() {
     Store.ladeAbschluss(a.vorjahrId).then(function (v) {
       S.vorjahrLaedt = null;
       if (v && !v.fehler) { S.vorjahr = v; if (S.aktiv === a) aktualisiereStatus(); }
+    }, function () {
+      // Bei Ladefehler das Lade-Flag zurücksetzen, sonst bleibt der Vorjahres-
+      // vergleich dauerhaft leer (Flag === vorjahrId verhindert jeden Retry).
+      S.vorjahrLaedt = null;
     });
   }
   var pr = Berechnung.pruefe(a, vj);
@@ -2907,7 +2923,7 @@ function bindeKontoDropdowns() {
 /* parseERechnung (XRechnung / ZUGFeRD): siehe Importe.parseERechnung in
  * shared/importe.js. */
 /* Zeigt die geparste E-Rechnung und bietet die Übernahme als Buchung an. */
-function eRechnungVorschau(m, a, kontoOpt, parsed) {
+function eRechnungVorschau(m, a, parsed) {
   var box = m.querySelector('#erVorschau');
   if (!box) return;
   if (parsed.fehler) {
@@ -2998,7 +3014,7 @@ function eRechnungVorschau(m, a, kontoOpt, parsed) {
 /* parseCamt (CAMT.053), parseIbkrFlex (Interactive Brokers), bankKontoVorschlag
  * und isoDat: siehe shared/importe.js (Modul Importe). */
 /* Rendert die Vorschau-Tabelle des Bankimports und bindet die Übernahme. */
-function camtVorschau(m, a, kontoOpt, parsed, quelle, boxId) {
+function camtVorschau(m, a, parsed, quelle, boxId) {
   quelle = quelle || 'IMP';
   var box = m.querySelector(boxId || '#camtVorschau');
   if (!box) return;
@@ -3156,9 +3172,6 @@ function renderBuchhaltung(m) {
 
   /* Erfassungsformular */
   SKR04.setEigene((S.unternehmen && S.unternehmen.eigeneKonten) || []);
-  var kontoOpt = SKR04.alleKonten().map(function (k) {
-    return '<option value="' + k.nr + '">' + k.nr + ' &ndash; ' + esc(k.name) + '</option>';
-  }).join('');
   bindeKontoDropdowns();   // delegierter Lazy-Befüll-Handler für aufklappbare Konto-Dropdowns
   var vorlagen = Vorlagen.sortiert((S.unternehmen && S.unternehmen.eigeneVorlagen) || []);
   var vorlageOpts = vorlagen.length
@@ -3899,7 +3912,7 @@ function renderBuchhaltung(m) {
     if (!f) return;
     var rd = new FileReader();
     rd.onload = function () {
-      camtVorschau(m, a, kontoOpt, Mt940.parse(rd.result), 'MT940', '#mt940Vorschau');
+      camtVorschau(m, a, Mt940.parse(rd.result), 'MT940', '#mt940Vorschau');
     };
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
     rd.readAsText(f);
@@ -3931,7 +3944,7 @@ function renderBuchhaltung(m) {
     if (!f) return;
     var rd = new FileReader();
     rd.onload = function () {
-      camtVorschau(m, a, kontoOpt, Importe.parseCamt(rd.result), 'CAMT', '#camtVorschau');
+      camtVorschau(m, a, Importe.parseCamt(rd.result), 'CAMT', '#camtVorschau');
     };
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
     rd.readAsText(f);
@@ -3942,7 +3955,7 @@ function renderBuchhaltung(m) {
     if (!f) return;
     var rd = new FileReader();
     rd.onload = function () {
-      camtVorschau(m, a, kontoOpt, Importe.parseIbkrFlex(rd.result), 'IBKR', '#ibkrVorschau');
+      camtVorschau(m, a, Importe.parseIbkrFlex(rd.result), 'IBKR', '#ibkrVorschau');
     };
     rd.onerror = function () { alert('Die Datei konnte nicht gelesen werden.'); };
     rd.readAsText(f);
@@ -3975,7 +3988,7 @@ function renderBuchhaltung(m) {
         ]).then(function (res) {
           var parsed = res[0] || {};
           parsed.dateiHash = res[1];
-          eRechnungVorschau(m, a, kontoOpt, parsed);
+          eRechnungVorschau(m, a, parsed);
         });
       };
       rd.readAsArrayBuffer(f);
@@ -3984,7 +3997,7 @@ function renderBuchhaltung(m) {
         var parsed = Importe.parseERechnung(rd.result) || {};
         Belege.sha256Hex(rd.result).then(function (h) {
           parsed.dateiHash = h;
-          eRechnungVorschau(m, a, kontoOpt, parsed);
+          eRechnungVorschau(m, a, parsed);
         });
       };
       rd.readAsText(f);
@@ -6534,4 +6547,13 @@ function fehlerToast(e) {
 }
 
 /* ---- Los ---------------------------------------------------------------- */
+/* Sicherheitsnetz: jede NICHT abgefangene Promise-Ablehnung (IndexedDB-Quota/
+ * Blockade beim Laden/Speichern, Snapshot-Import, XBRL-Erzeugung, AfA-/Eröffnungs-
+ * übernahme) sichtbar machen, statt sie still scheitern zu lassen. Bei
+ * Buchführungsdaten darf ein Fehler nie lautlos bleiben. */
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', function (ev) {
+    fehlerToast(ev && ev.reason);
+  });
+}
 boot();
