@@ -11,6 +11,18 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.14.0] - 2026-06-10
+
+### Hinzugefügt
+- **Durchsuchbares SKR04-Konten-Glossar**: Das Glossar erklärt jetzt auch die SKR04-Konten —
+  je Konto eine **eigene** kurze Praxiserklärung (wofür, wann buchen, worauf achten), gestützt
+  auf die Rechtsgrundlagen (HGB/UStG/AO/GmbHG); **keine übernommenen Beschreibungstexte**
+  (nur Kontonummern und amtliche Kurzbezeichnungen sind Fakten). Etappe 1 deckt die **64
+  häufigsten Konten** einer kleinen/vermögensverwaltenden GmbH ab (`shared/skr04-glossar.js`,
+  getestet, erweiterbar). Über die Glossar-Suche ist der **gesamte Kontenrahmen (1024 Konten)**
+  nach Nummer, Name und Erklärtext durchsuchbar; jedes Konto zeigt seine Bilanz-/GuV-Zuordnung
+  (§ 266/§ 275 HGB) aus den Kontenrahmen-Daten.
+
 ## [2.13.1] - 2026-06-10
 
 Härtung aus einem vollständigen Code-Review (Sicherheit, Robustheit, Aufräumen). Keine
@@ -365,7 +377,8 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.1...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.0...HEAD
+[2.14.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.1...v2.14.0
 [2.13.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.0...v2.13.1
 [2.13.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.12.0...v2.13.0
 [2.12.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.11.1...v2.12.0

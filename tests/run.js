@@ -331,6 +331,31 @@ test('Closing.pruefeJaReadiness: Bilanz-ausgeglichen-Punkt nur mit werte', funct
   var ohne = Closing.pruefeJaReadiness({ buchungen: [] });
   ok(!ohne.some(function (x) { return x.titel === 'Bilanz ausgeglichen'; }), 'ohne werte -> kein Punkt');
 });
+/* ---- SKR04-Konten-Glossar (eigene Erklärtexte) ----------------------- */
+test('SKR04Glossar: jede Glossar-Nummer existiert im Kontenrahmen', function () {
+  var G = require('../public/shared/skr04-glossar.js');
+  var nrs = G.nummern();
+  ok(nrs.length >= 40, 'Etappe 1: mindestens 40 Konten erklärt (sind ' + nrs.length + ')');
+  var fehlend = nrs.filter(function (n) { return !SKR04.kontoFinden(n); });
+  eq(fehlend.length, 0, 'verwaiste Glossar-Nummern: ' + fehlend.join(','));
+});
+test('SKR04Glossar: Texte substanziell, API liefert null für Unbekanntes', function () {
+  var G = require('../public/shared/skr04-glossar.js');
+  var zuKurz = G.nummern().filter(function (n) { return (G.erklaerung(n) || '').length < 40; });
+  eq(zuKurz.length, 0, 'zu kurze Texte: ' + zuKurz.join(','));
+  ok(G.hatErklaerung('1460'), 'Geldtransit hat Erklärung');
+  ok(/§ 272/.test(G.erklaerung('2910')), '2910 nennt § 272 (ausstehende Einlagen)');
+  ok(/§ 146/.test(G.erklaerung('1600')), 'Kasse nennt § 146 AO (Kassensturz)');
+  eq(G.erklaerung('9999'), null, 'unbekanntes Konto -> null');
+  eq(G.hatErklaerung('9999'), false, 'hatErklaerung false');
+});
+test('SKR04Glossar: kein Konto doppelt, Kernkonten der GmbH abgedeckt', function () {
+  var G = require('../public/shared/skr04-glossar.js');
+  var kern = ['1800', '1600', '1460', '2900', '2910', '1406', '3806', '4400', '6300', '7600', '7610', '9000'];
+  var fehlt = kern.filter(function (n) { return !G.hatErklaerung(n); });
+  eq(fehlt.length, 0, 'Kernkonten ohne Erklärung: ' + fehlt.join(','));
+});
+
 test('Closing.hatKonto/summeKonto: Saldo korrekt, Storno ignoriert', function () {
   var bu = [{ soll: '1800', haben: '4400', betrag: 100 },
             { soll: '6300', haben: '1800', betrag: 30, storniert: true }];

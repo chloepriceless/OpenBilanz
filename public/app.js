@@ -5559,12 +5559,24 @@ var GLOSSAR = [
 ];
 function renderGlossar(m) {
   var html = '<div class="kopf"><h1>Glossar</h1><p>Kurz erklärt: die HGB-, Steuer- ' +
-    'und E-Bilanz-Begriffe, die in OpenBilanz vorkommen.</p></div>';
-  html += '<div class="karte">' + feldWrap('Suche', 'Begriff oder Paragraf',
-    '<input id="glsSuche" placeholder="z. B. Rückstellung oder § 266">') + '</div>';
+    'und E-Bilanz-Begriffe sowie die SKR04-Konten, die in OpenBilanz vorkommen.</p></div>';
+  html += '<div class="karte">' + feldWrap('Suche', 'Begriff, Paragraf oder Konto (Nr./Name)',
+    '<input id="glsSuche" placeholder="z. B. Rückstellung, § 266 oder 1460">') + '</div>';
   html += '<div id="glsListe"></div>';
   m.innerHTML = html;
   var inp = document.getElementById('glsSuche');
+
+  /* SKR04-Konten-Glossar: Zuordnungs-Label aus den Kontenrahmen-Daten ableiten
+   * (faktisch), Erklärtext aus dem eigenen Konten-Glossar (skr04-glossar.js). */
+  function kontoZuordnung(k) {
+    if (k.seite === 'EBK') return 'Eröffnungsbilanzkonto (Verrechnungskonto)';
+    if (k.seite === 'AKTIV' || k.seite === 'PASSIV') {
+      return 'Bilanz ' + (k.seite === 'AKTIV' ? 'Aktiva' : 'Passiva') +
+        (k.pos ? ' · Posten ' + k.pos : '') + ' (§ 266 HGB)';
+    }
+    var kat = SKR04.KAT_GUV[k.kat];
+    return 'GuV · ' + (kat && kat.label ? kat.label : k.kat) + ' (§ 275 HGB)';
+  }
   function zeichne() {
     var q = inp.value.trim().toLowerCase();
     var gruppen = [], idx = {};
@@ -5582,6 +5594,32 @@ function renderGlossar(m) {
       });
       h += '</div>';
     });
+    /* Konten-Sektion: ohne Suchbegriff nur die Konten MIT eigener Erklärung
+     * (übersichtlich); mit Suchbegriff ALLE Konten des vollen SKR04 durchsuchen
+     * (Nr, Name, Erklärtext), Treffer gedeckelt — hält das DOM klein. */
+    var hatGlossar = typeof SKR04Glossar !== 'undefined';
+    var konten = SKR04.alleKonten().filter(function (k) {
+      var erkl = hatGlossar ? SKR04Glossar.erklaerung(k.nr) : null;
+      if (!q) return !!erkl;
+      return (k.nr + ' ' + k.name + ' ' + (erkl || '')).toLowerCase().indexOf(q) >= 0;
+    });
+    var MAX = 80, gesamt = konten.length;
+    if (konten.length > MAX) konten = konten.slice(0, MAX);
+    if (konten.length) {
+      h += '<div class="karte"><h2>SKR04-Konten</h2>' +
+        '<div class="karte-hint">' + (q
+          ? gesamt + ' Konto/Konten gefunden' + (gesamt > MAX ? ' — die ersten ' + MAX + ' angezeigt, Suche verfeinern' : '')
+          : 'Die häufigsten Konten mit Erklärung — über die Suche ist der gesamte Kontenrahmen (' +
+            SKR04.alleKonten().length + ' Konten) durchsuchbar.') + '</div>';
+      konten.forEach(function (k) {
+        var erkl = hatGlossar ? SKR04Glossar.erklaerung(k.nr) : null;
+        h += '<div style="margin-bottom:9px"><b class="mono">' + esc(k.nr) + '</b> &nbsp;<b>' +
+          esc(k.name) + '</b>' +
+          '<div class="karte-hint">' + esc(kontoZuordnung(k)) +
+          (erkl ? '<br>' + esc(erkl) : '') + '</div></div>';
+      });
+      h += '</div>';
+    }
     document.getElementById('glsListe').innerHTML = h ||
       '<div class="box box-info">Kein Begriff gefunden.</div>';
   }
