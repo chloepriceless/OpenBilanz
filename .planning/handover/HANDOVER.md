@@ -2,8 +2,9 @@
 
 **Stand: 2026-06-10 (abends) · HEAD `3a8ec33` (v2.15.0) · Working-Tree sauber · 277 Tests grün**
 
-> ✅ **KOMPLETT-REVIEW + NEUE FÄLLE (Christin-Auftrag) ERLEDIGT, v2.15.0 committet (3 Commits
-> `8b412e4`/`efc19ce`/`3a8ec33`, noch nicht gepusht/deployt):**
+> ✅ **KOMPLETT-REVIEW + NEUE FÄLLE (Christin-Auftrag) ERLEDIGT, v2.15.0 — committet, getaggt,
+> gepusht (origin/main in sync) und auf openbilanz.de DEPLOYT (rsync + Container-Restart,
+> live verifiziert: version.js 2.15.0, Fälle 6d/6e/6f im app.js):**
 > 1. **EB-/Übernahme-Automatik — 2 echte Bugs gefunden & behoben** (`public/app.js`,
 >    `eroeffnungsPlan`): (a) Vorjahres-Jahresergebnis ging beim Saldenvortrag verloren
 >    (P.A.V wird nie in werte.passiva gespeichert) → jetzt 9000 an 2970 bzw. 2978 an 9000;
@@ -29,8 +30,7 @@
 >    inkl. Herstellungskosten (§ 255 HGB, 0700→0240, 4820 Eigenleistungen, § 9-Option).
 >    + 4 neue Glossar-Einträge. Rechtsgrundlagen per 2. Recherche-Agent verifiziert.
 > 5. **Textreview:** Sie→Du vereinheitlicht (~20 Stellen), außer/ausser, Typografie.
-> **Offen/Nächste Schritte:** Deploy auf Hetzner steht aus (siehe Memory
-> openbilanz-deploy-hetzner); README-Feature-Liste prüfen ob 6d-6f erwähnt werden sollen
+> **Offen/Nächste Schritte:** README-Feature-Liste prüfen ob 6d-6f erwähnt werden sollen
 > (🟡-Regel beachten); CONTRIBUTING.md-ASCII-Fließtext ist Grenzfall (nicht angefasst).
 
 > ✅ **RE-REVIEW (Christin) ERLEDIGT, v2.14.3 live:** Delta v2.13.1→v2.14.2 regressionsfrei
