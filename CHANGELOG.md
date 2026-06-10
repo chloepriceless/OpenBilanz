@@ -11,6 +11,32 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.14.3] - 2026-06-10
+
+Ergebnis eines Re-Reviews (Delta-Code v2.13.1→v2.14.2 + fachliche Prüfung aller 65
+Konten-Glossar-Texte durch ein zweites Augenpaar). Der Code war sauber (keine Regressionen;
+UStVA-Zahllast-Äquivalenz und Konflikt-Warnung tiefgeprüft) — korrigiert wurden 9 Glossar-
+Texte und 3 Code-Kleinigkeiten.
+
+### Behoben (Konten-Glossar, fachliche Präzisierungen)
+- **0135 Software**: Steuerlich gilt seit BMF-Schreiben 22.02.2022 eine Nutzungsdauer von
+  1 Jahr für Standardsoftware als zulässig (Wahlrecht) — der pauschale Hinweis „üblich
+  3 Jahre" war überholt und hätte Steuervorteile verschenkt.
+- **7000 Beteiligungserträge**: § 8b-KStG-Logik richtig herum erklärt — grundsätzlich 95 %
+  steuerfrei, ABER Streubesitz unter 10 % voll steuerpflichtig (§ 8b Abs. 4 KStG);
+  GewSt-15 %-Grenze ergänzt.
+- **7600 Körperschaftsteuer**: konkreter Absenkungspfad benannt (15 % bis 2027, ab 2028
+  jährlich −1 Punkt bis 10 % ab 2032).
+- **0670/6260 GWG**: Wahlrechte sauber getrennt (Sofortabschreibung § 6 Abs. 2 vs.
+  Sammelposten § 6 Abs. 2a EStG; steuerliches Wahlrecht vs. Handelsrecht).
+- **2910** (Gründungsbuchung nur bei Teileinzahlung), **2920** (nur Gesellschafter-
+  Zuzahlungen, keine Drittzuschüsse), **1600** (tägliche Aufzeichnung + Kassensturz
+  sauber getrennt), **3730** (Anmeldungszeitraum monatlich/vierteljährlich/jährlich).
+
+### Geändert
+- Glossar-Render: Kontenliste wird je Eingabe nur noch einmal aufgebaut (Performance).
+- Fristen-Kommentar präzisiert (unbekannter Größenklassen-Wert → strengere 3 Monate).
+
 ## [2.14.2] - 2026-06-10
 
 Nacharbeit: die letzten offenen Review-/Audit-Findings umgesetzt.
@@ -413,7 +439,8 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.2...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.3...HEAD
+[2.14.3]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.2...v2.14.3
 [2.14.2]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.1...v2.14.2
 [2.14.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.0...v2.14.1
 [2.14.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.1...v2.14.0

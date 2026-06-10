@@ -107,8 +107,9 @@
       }
       // Jahresabschluss aufstellen (§ 264 Abs. 1 HGB): kleine und Kleinst-
       // Kapitalgesellschaften 6 Monate (Satz 4), mittelgroße/große 3 Monate
-      // (Satz 3) nach dem Abschlussstichtag. Ohne Einstufung: 6 Monate
-      // (Zielgruppe des Tools ist die kleine GmbH).
+      // (Satz 3) nach dem Abschlussstichtag. Ohne Einstufung (undefined): 6 Monate
+      // (Zielgruppe des Tools ist die kleine GmbH); ein UNBEKANNTER Klassenwert
+      // (Fremd-Import) fällt bewusst auf die strengeren 3 Monate.
       var istKlein = !a.groessenklasse || a.groessenklasse === 'KLEINST' ||
                      a.groessenklasse === 'KLEIN';
       var aufstellung = addMonate(stichtag, istKlein ? 6 : 3);

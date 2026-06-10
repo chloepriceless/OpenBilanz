@@ -5601,7 +5601,8 @@ function renderGlossar(m) {
      * (übersichtlich); mit Suchbegriff ALLE Konten des vollen SKR04 durchsuchen
      * (Nr, Name, Erklärtext), Treffer gedeckelt — hält das DOM klein. */
     var hatGlossar = typeof SKR04Glossar !== 'undefined';
-    var konten = SKR04.alleKonten().filter(function (k) {
+    var alleK = SKR04.alleKonten();           // einmal aufbauen (läuft je Tastendruck)
+    var konten = alleK.filter(function (k) {
       var erkl = hatGlossar ? SKR04Glossar.erklaerung(k.nr) : null;
       if (!q) return !!erkl;
       return (k.nr + ' ' + k.name + ' ' + (erkl || '')).toLowerCase().indexOf(q) >= 0;
@@ -5613,7 +5614,7 @@ function renderGlossar(m) {
         '<div class="karte-hint">' + (q
           ? gesamt + ' Konto/Konten gefunden' + (gesamt > MAX ? ' — die ersten ' + MAX + ' angezeigt, Suche verfeinern' : '')
           : 'Die häufigsten Konten mit Erklärung — über die Suche ist der gesamte Kontenrahmen (' +
-            SKR04.alleKonten().length + ' Konten) durchsuchbar.') + '</div>';
+            alleK.length + ' Konten) durchsuchbar.') + '</div>';
       konten.forEach(function (k) {
         var erkl = hatGlossar ? SKR04Glossar.erklaerung(k.nr) : null;
         h += '<div style="margin-bottom:9px"><b class="mono">' + esc(k.nr) + '</b> &nbsp;<b>' +

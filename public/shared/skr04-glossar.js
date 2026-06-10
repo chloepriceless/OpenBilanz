@@ -24,8 +24,10 @@
   var TEXTE = {
     /* ===== Geldkonten ==================================================== */
     '1600': 'Bargeldbestand der GmbH. Jede Bareinnahme und -ausgabe läuft über dieses Konto; ' +
-      'der Saldo muss jederzeit dem gezählten Kassenbestand entsprechen (Kassensturzfähigkeit, ' +
-      '§ 146 Abs. 1 AO). Ein Haben-Saldo (negative Kasse) ist ein klassischer Buchführungsmangel.',
+      'Kasseneinnahmen und -ausgaben sind TÄGLICH aufzuzeichnen (§ 146 Abs. 1 AO), und der ' +
+      'Saldo muss jederzeit dem gezählten Bestand entsprechen (Kassensturzfähigkeit, gestützt ' +
+      'auf § 146 AO / § 238 HGB). Ein Haben-Saldo (negative Kasse) ist ein klassischer ' +
+      'Buchführungsmangel.',
     '1800': 'Geschäftskonto der GmbH bei der Bank. Soll-Buchung = Geldeingang, Haben-Buchung = ' +
       'Geldausgang. Der Saldo soll dem Kontoauszug entsprechen — Grundlage des Bankimports.',
     '1460': 'Verrechnungskonto für Geld, das zwischen eigenen Konten unterwegs ist (z. B. ' +
@@ -39,11 +41,13 @@
       'unverändert, solange das Stammkapital nicht erhöht oder herabgesetzt wird (§ 272 Abs. 1 HGB).',
     '2910': 'Noch nicht eingeforderte ausstehende Einlagen auf das Stammkapital (Soll-Saldo). ' +
       'Sie werden offen vom gezeichneten Kapital abgesetzt — die Bilanz zeigt nur das ' +
-      'eingeforderte Kapital (Nettomethode, § 272 Abs. 1 S. 2 HGB). Typische Gründungsbuchung: ' +
-      'Bank + 2910 an 2900.',
-    '2920': 'Zuzahlungen der Gesellschafter über das Stammkapital hinaus, z. B. ein Agio oder ' +
-      'freiwillige Zuschüsse (§ 272 Abs. 2 HGB). Erhöht das Eigenkapital, ohne das Stammkapital ' +
-      'zu verändern.',
+      'eingeforderte Kapital (Nettomethode, § 272 Abs. 1 S. 2 HGB). Typische Gründungsbuchung ' +
+      'bei TEILeinzahlung: Bank (eingezahlter Betrag) + 2910 (noch nicht eingeforderter Rest) ' +
+      'an 2900 — bei Volleinzahlung entfällt 2910.',
+    '2920': 'Zuzahlungen der GESELLSCHAFTER über das Stammkapital hinaus — ein Agio bei der ' +
+      'Anteilsausgabe oder andere freiwillige Gesellschafter-Zuzahlungen (§ 272 Abs. 2 Nr. 1 ' +
+      'und 4 HGB). Zuschüsse DRITTER (z. B. Fördermittel) gehören NICHT hierher, sondern in ' +
+      'die Erträge. Erhöht das Eigenkapital, ohne das Stammkapital zu verändern.',
     '2970': 'Noch nicht verwendeter Gewinn aus Vorjahren. Bleibt stehen, bis die Gesellschafter' +
       'versammlung über die Verwendung beschließt — Ausschüttung, Rücklage oder erneuter ' +
       'Vortrag (§ 29 GmbHG).',
@@ -58,9 +62,12 @@
       'steuerliche Rücklagen (z. B. § 6b EStG) mit dem Steuerberater abstimmen.',
 
     /* ===== Anlagevermögen =============================================== */
-    '0135': 'Gekaufte Software und Lizenzen mit mehrjähriger Nutzung. Wird aktiviert und über ' +
-      'die Nutzungsdauer abgeschrieben (üblich 3 Jahre). Selbst entwickelte Software gehört ' +
-      'nicht hierher (Aktivierungswahlrecht auf 0143, § 248 Abs. 2 HGB).',
+    '0135': 'Gekaufte Software und Lizenzen. Wird aktiviert und über die Nutzungsdauer ' +
+      'abgeschrieben — steuerlich darf für Standardsoftware seit dem BMF-Schreiben vom ' +
+      '22.02.2022 eine Nutzungsdauer von nur 1 Jahr angesetzt werden (Wahlrecht; faktisch ' +
+      'Sofortabschreibung); handelsrechtlich und bei Individualsoftware gilt die tatsächliche ' +
+      'Nutzungsdauer (bisher oft 3 Jahre). Selbst entwickelte Software gehört nicht hierher ' +
+      '(Aktivierungswahlrecht auf 0143, § 248 Abs. 2 HGB).',
     '0500': 'Betriebs- und Geschäftsausstattung: Möbel, Geräte, Werkstatt- und Ladeneinrichtung. ' +
       'Aktivieren und über die Nutzungsdauer abschreiben (§ 253 Abs. 3 HGB).',
     '0520': 'Firmenfahrzeuge (Pkw) im Anlagevermögen. Anschaffungskosten aktivieren, Nutzungs' +
@@ -68,8 +75,11 @@
       '1-%-Regel bzw. Fahrtenbuch denken.',
     '0650': 'Schreibtische, Regale, Bürotechnik und vergleichbare Einrichtung. Aktivieren und ' +
       'abschreiben; Gegenstände bis 800 € netto können sofort auf 6260 abgeschrieben werden.',
-    '0670': 'Geringwertige Wirtschaftsgüter (Anschaffung bis 800 € netto, § 6 Abs. 2 EStG) — ' +
-      'wahlweise hier sammeln oder direkt als Sofortaufwand auf 6260 buchen.',
+    '0670': 'Geringwertige Wirtschaftsgüter bis 800 € netto (§ 6 Abs. 2 EStG): Regelfall ist ' +
+      'die SOFORT-Abschreibung als Aufwand auf 6260 (keine Aktivierung). Dieses Aktivkonto ' +
+      'wird nur genutzt, wenn GWG ausnahmsweise aktiviert und planmäßig abgeschrieben werden. ' +
+      'Daneben existiert das separate Sammelposten-Wahlrecht (§ 6 Abs. 2a EStG, 250–1.000 € ' +
+      'netto, pauschal 5 Jahre) — das ist ein eigenes Verfahren, nicht dieses Konto.',
     '0820': 'Anteile an anderen Unternehmen, die dauerhaft gehalten werden, um Einfluss oder ' +
       'Erträge zu erzielen (§ 271 Abs. 1 HGB). Kern der Beteiligungs-/Holding-GmbH; Erträge ' +
       'daraus laufen auf 7000.',
@@ -126,8 +136,9 @@
     '3700': 'Geschuldete Steuern, die bereits fällig oder angemeldet sind — v. a. die ' +
       'Umsatzsteuer-Zahllast nach Voranmeldung und einbehaltene Abzugsteuern. Abgrenzung: ' +
       'noch UNGEWISSE Steuern gehören als Rückstellung auf 3020/3030/3040.',
-    '3730': 'Einbehaltene Lohn- und Kirchensteuer der Beschäftigten, die die GmbH bis zum ' +
-      '10. des Folgemonats ans Finanzamt abführt (§ 41a EStG).',
+    '3730': 'Einbehaltene Lohn- und Kirchensteuer der Beschäftigten, abzuführen bis zum 10. ' +
+      'nach Ablauf des Anmeldungszeitraums (§ 41a EStG) — je nach Vorjahres-Lohnsteuersumme ' +
+      'monatlich, vierteljährlich oder jährlich.',
     '3740': 'Einbehaltene und Arbeitgeber-Anteile zur Sozialversicherung, fällig an die ' +
       'Krankenkassen (drittletzter Bankarbeitstag des Monats).',
     '3806': 'Auf Ausgangsrechnungen ausgewiesene Umsatzsteuer 19 % (§ 12 Abs. 1 UStG) — ' +
@@ -146,8 +157,11 @@
     '4860': 'Miet- und Pachterlöse aus Grundbesitz — das Erlöskonto der Vermietungs-GmbH. ' +
       'Bei ausschließlicher Verwaltung eigenen Grundbesitzes an die erweiterte ' +
       'Grundstückskürzung denken (§ 9 Nr. 1 S. 2 GewStG).',
-    '7000': 'Dividenden und Gewinnanteile aus Beteiligungen (Konto 0820). Bei Beteiligungen ' +
-      'ab 10 % sind sie körperschaftsteuerlich zu 95 % steuerfrei (§ 8b KStG).',
+    '7000': 'Dividenden und Gewinnanteile aus Beteiligungen (Konto 0820). Für eine GmbH ' +
+      'grundsätzlich zu 95 % körperschaftsteuerfrei (§ 8b Abs. 1, 5 KStG) — ABER: Liegt die ' +
+      'Beteiligung zu Jahresbeginn unter 10 %, sind die Dividenden als Streubesitz VOLL ' +
+      'steuerpflichtig (§ 8b Abs. 4 KStG). Für die Gewerbesteuer gilt eine eigene ' +
+      '15-%-Grenze (§ 9 Nr. 2a GewStG).',
     '7100': 'Zinsen aus Bankguthaben, Darlehen und Verzugszinsen (GuV-Finanzergebnis).',
 
     /* ===== Aufwendungen (Klasse 5/6/7) ================================== */
@@ -161,8 +175,10 @@
       'Arbeitslosenversicherung) und Umlagen — Personalnebenkosten.',
     '6220': 'Planmäßige Abschreibung der Sachanlagen über die Nutzungsdauer ' +
       '(§ 253 Abs. 3 HGB); steuerlich nach den amtlichen AfA-Tabellen.',
-    '6260': 'Sofortabschreibung geringwertiger Wirtschaftsgüter bis 800 € netto im Jahr ' +
-      'der Anschaffung (§ 6 Abs. 2 EStG) — statt Aktivierung und mehrjähriger AfA.',
+    '6260': 'Sofortabschreibung geringwertiger Wirtschaftsgüter bis 800 € netto im Jahr der ' +
+      'Anschaffung — ein STEUERLICHES Wahlrecht (§ 6 Abs. 2 EStG), das bei kleinen Beträgen ' +
+      'regelmäßig auch handelsrechtlich übernommen wird (Wesentlichkeit) — statt Aktivierung ' +
+      'und mehrjähriger AfA.',
     '6300': 'Auffangkonto für betriebliche Aufwendungen ohne spezielleres Konto (Hosting, ' +
       'Software-Abos, Kleinmaterial). Besser spezifische Konten nutzen, wo vorhanden — ' +
       'das hält BWA und GuV aussagekräftig.',
@@ -189,10 +205,11 @@
     '7300': 'Zinsen und ähnliche Aufwendungen für Darlehen, Kontokorrent und ' +
       'Gesellschafterdarlehen (GuV-Finanzergebnis). Bei hohen Zinslasten die ' +
       'Zinsschranke und die gewerbesteuerliche Hinzurechnung (§ 8 Nr. 1 GewStG) beachten.',
-    '7600': 'Körperschaftsteuer-Aufwand des Geschäftsjahres (15 % bis 2027, danach stufenweise ' +
-      'sinkend). Buchung meist gegen die Rückstellung 3020/3040. KSt ist keine ' +
-      'Betriebsausgabe im steuerlichen Sinn (§ 10 Nr. 2 KStG) — die Korrektur erfolgt ' +
-      'außerbilanziell.',
+    '7600': 'Körperschaftsteuer-Aufwand des Geschäftsjahres. Satz: 15 % bis VZ 2027, ab 2028 ' +
+      'jährlich ein Prozentpunkt weniger bis 10 % ab 2032 (§ 23 Abs. 1 KStG i. d. F. des ' +
+      'steuerlichen Investitionssofortprogramms 2025). Buchung meist gegen die Rückstellung ' +
+      '3020/3040. KSt ist keine Betriebsausgabe im steuerlichen Sinn (§ 10 Nr. 2 KStG) — ' +
+      'die Korrektur erfolgt außerbilanziell.',
     '7608': 'Solidaritätszuschlag: 5,5 % auf die festgesetzte Körperschaftsteuer.',
     '7610': 'Gewerbesteuer-Aufwand (Messzahl 3,5 % × Hebesatz der Gemeinde). Wie die KSt ' +
       'steuerlich nicht abziehbar (§ 4 Abs. 5b EStG); Rückstellung auf 3030.',
