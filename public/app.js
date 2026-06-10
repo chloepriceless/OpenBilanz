@@ -2904,9 +2904,10 @@ function kontoDropdown(attrs, vorNr) {
   }
   return '<select data-konto-dd="1" ' + (attrs || '') + '>' + opt + '</select>';
 }
+var kontoDdGebunden = false;   // Einmal-Bindung der delegierten Dropdown-Handler
 function bindeKontoDropdowns() {
-  if (window.__kontoDdBound) return;
-  window.__kontoDdBound = true;
+  if (kontoDdGebunden) return;
+  kontoDdGebunden = true;
   var fuelle = function (el) {
     if (!el || el.tagName !== 'SELECT' || el.getAttribute('data-konto-dd') !== '1' ||
         el.dataset.kfilled === '1') return;

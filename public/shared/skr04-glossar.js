@@ -50,6 +50,12 @@
     '2978': 'Aufgelaufene, noch nicht ausgeglichene Verluste aus Vorjahren (Soll-Saldo, mindert ' +
       'das Eigenkapital). Übersteigen Verluste das gesamte Eigenkapital, entsteht der „nicht ' +
       'durch Eigenkapital gedeckte Fehlbetrag" (§ 268 Abs. 3 HGB).',
+    '2980': 'ACHTUNG, Altfall-Konto: Der „Sonderposten mit Rücklageanteil" (§ 247 Abs. 3, ' +
+      '§ 273 HGB a. F.) ist mit dem BilMoG 2009 für neue Sachverhalte ABGESCHAFFT - er darf ' +
+      'handelsrechtlich nicht mehr neu gebildet werden, nur bestehende Alt-Posten durften ' +
+      'fortgeführt werden. OpenBilanz ordnet das Konto mangels eigenem § 266-Posten den ' +
+      'sonstigen Rückstellungen zu (Ausweis-Näherung). Im Zweifel nicht bebuchen, sondern ' +
+      'steuerliche Rücklagen (z. B. § 6b EStG) mit dem Steuerberater abstimmen.',
 
     /* ===== Anlagevermögen =============================================== */
     '0135': 'Gekaufte Software und Lizenzen mit mehrjähriger Nutzung. Wird aktiviert und über ' +

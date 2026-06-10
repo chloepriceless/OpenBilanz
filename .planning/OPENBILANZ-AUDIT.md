@@ -71,12 +71,16 @@ openbilanz.de (berechnung.js Math.max-Fix Z.170, version.js 2.11.1).
   Posten weitgehend abgeschafft, eine moderne GmbH nutzt sie selten; im HGB-§266-Positionenbaum gibt
   es keinen eigenen Posten dafür → P.B.3 ist pragmatische Notlösung. **Keine Korrektur** (kein
   sauberes HGB-Ziel, obsolet). Als bekannte Grenze dokumentiert.
+  → ✅ FLANKIERT v2.14.2: Konten-Glossar-Eintrag 2980 erklärt die Rechtslage (BilMoG-Abschaffung,
+  Altfall-Konto, Ausweis-Näherung, StB-Abstimmung empfohlen).
 - **NIEDRIG · baumSummen (berechnung.js:40-47):** Gibt der Nutzer einen römischen Posten UND ein
   Kind ein, gewinnt das Kind (Parent-Direktwert verfällt). Bilanztechnisch konsistent (beidseitig),
   dokumentiertes Designverhalten — kein Korrektheitsfehler, ggf. künftig Eingabe-Warnung erwägen.
+  → ✅ UMGESETZT v2.14.2: `pruefe()` warnt jetzt bei Eltern-/Unterposten-Eingabekonflikt (+ Test).
 - **NIEDRIG · 2910 Wiring (app.js:4983) nur bei `kapitalNichtEingefordert>0`:** ein (untypischer)
   Haben-Saldo auf 2910 würde ignoriert; asymmetrisch zur 2900-Behandlung (null-Sentinel).
   Praxisirrelevant (2910 hat per Definition Soll-Saldo).
+  → ✅ UMGESETZT v2.14.2: BuchungsPruefung warnt bei Haben-Buchung auf 2910 (+ Test).
 - **NIEDRIG · skr04-voll.js 2906/2907 (Rückständige fällige Einzahlungen + Gegenkonto) → P.A.I:**
   statistische „vermerkt"-Konten, netten paarweise auf 0; nur bei Einzelbuchung verzerrend.
 - **HINWEIS (kein Fehler) · UKV-Mapping:** material/personal/abschreibung→ukv.2, bestand/eigen-

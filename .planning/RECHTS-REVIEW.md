@@ -65,11 +65,20 @@ Rechts-Dimension.
    Differenzierung nach `groessenklasse` (Default ohne Einstufung: 6 Monate), Paragraph-Angabe
    nennt den einschlägigen Satz. 1 Test.
 
-## Bewusst nicht geändert
-- **§ 10d-Befristung (70 % bis VZ 2027):** Code entspricht der herrschenden Lesart; das exakte
-  Ende ließ sich nur [LIKELY] belegen (Sekundärquellen konsistent, § 52 Abs. 18b EStG im Abruf
-  unvollständig). Beobachten; kein Handlungsbedarf.
-- **GoBD-10-Tage-Orientierung:** bewusst nicht hart kodiert (keine gesetzliche Frist).
+## Nacharbeit 2026-06-10 (alle offenen Findings umgesetzt, v2.14.2)
+- **§ 10d nachverifiziert (WebFetch Primärquelle):** Aktueller Normtext § 10d Abs. 2 EStG = **70 %
+  [VERIFIED]**, ohne Befristung im Normtext; § 52 Abs. 18b: „erstmals VZ 2024" [VERIFIED]. Die
+  60 %-Rückkehr ab VZ 2028 ist im Änderungsgesetz angelegt, im abrufbaren Normtext (noch) nicht
+  sichtbar → bleibt [LIKELY]. Code für alle real anstehenden VZ korrekt; Kommentar in steuer.js
+  dokumentiert den Verifikationsstand + Wiedervorlage bei VZ-2028-Abschlüssen.
+- **2910-Haben-Asymmetrie (T-0161 NIEDRIG):** BuchungsPruefung warnt jetzt bei Haben-Buchung auf
+  2910 (Konto führt Soll-Saldo; Haben nur bei Einforderung/Auflösung richtig). + Test.
+- **baumSummen-Datenverlust (T-0161 NIEDRIG):** `pruefe()` meldet jetzt, wenn ein direkt erfasster
+  Oberposten-Wert durch belegte Unterposten verdrängt wird (vorher stiller Verfall). + Test.
+- **Sonderposten mit Rücklageanteil 2980 (T-0161 MITTEL-NIEDRIG):** Struktur bleibt (kein eigener
+  § 266-Posten existiert; P.B.3 = dokumentierte Ausweis-Näherung), aber das Konten-Glossar erklärt
+  jetzt die Rechtslage (BilMoG-Abschaffung, Altfall, StB-Abstimmung).
+- **GoBD-10-Tage-Orientierung:** weiterhin bewusst nicht hart kodiert (keine gesetzliche Frist).
 
 **Quellen:** gesetze-im-internet.de (§§ 267/267a/264/257/268/272/325 HGB, Art. 93/95 EGHGB,
 §§ 5/7 GmbHG, §§ 23/8b KStG, §§ 8/9/10a/11 GewStG, §§ 10d/52 EStG, §§ 12/16/19/20 UStG,

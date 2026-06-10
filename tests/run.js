@@ -331,6 +331,34 @@ test('Closing.pruefeJaReadiness: Bilanz-ausgeglichen-Punkt nur mit werte', funct
   var ohne = Closing.pruefeJaReadiness({ buchungen: [] });
   ok(!ohne.some(function (x) { return x.titel === 'Bilanz ausgeglichen'; }), 'ohne werte -> kein Punkt');
 });
+/* ---- Review-Nacharbeiten: neue Plausibilitäts-Warnungen ---------------- */
+test('BuchungsPruefung: 2910 im Haben löst Hinweis aus (§ 272: Konto führt Soll-Saldo)', function () {
+  var pr = BuchungsPruefung.pruefe({ datum: '2026-01-05', betrag: 1000, soll: '1800', haben: '2910' }, {});
+  ok(pr.ok, 'weiche Warnung, kein harter Fehler');
+  ok(pr.warnungen.some(function (w) { return w.indexOf('2910 im Haben') >= 0; }), '2910-Haben-Hinweis');
+  var pr2 = BuchungsPruefung.pruefe({ datum: '2026-01-05', betrag: 1000, soll: '2910', haben: '2900' }, {});
+  ok(!pr2.warnungen.some(function (w) { return w.indexOf('2910 im Haben') >= 0; }),
+     '2910 im Soll (Normalfall Gründung) ohne diesen Hinweis');
+});
+test('Prüfung: direkt erfasster Oberposten-Wert + belegte Unterposten wird gemeldet', function () {
+  // B.II direkt 5.000 erfasst UND B.II.1 mit 300 belegt -> baumSummen nimmt die
+  // Kindersumme (300), die 5.000 verfallen still. Seit Review-Nacharbeit: Warnung.
+  var eb = { art: 'EROEFFNUNGSBILANZ', kapital: { gezeichnet: 25000, eingezahlt: 25000,
+    eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.II': 5000, 'B.II.1': 300, 'B.IV': 24700 }, passiva: {}, guv: {} } };
+  var p = Berechnung.pruefe(eb);
+  ok(p.meldungen.some(function (m) {
+    return m.text.indexOf('B.II') >= 0 && m.text.indexOf('ignoriert') >= 0;
+  }), 'Konflikt-Warnung für B.II');
+  // Gegenprobe: ohne Doppel-Eingabe keine solche Warnung
+  var eb2 = { art: 'EROEFFNUNGSBILANZ', kapital: { gezeichnet: 25000, eingezahlt: 25000,
+    eingefordertOffen: 0 },
+    werte: { aktiva: { 'B.IV': 25000 }, passiva: {}, guv: {} } };
+  ok(!Berechnung.pruefe(eb2).meldungen.some(function (m) {
+    return m.text.indexOf('ignoriert') >= 0;
+  }), 'keine Konflikt-Warnung ohne Doppel-Eingabe');
+});
+
 /* ---- Fristen: Aufstellungsfrist nach Größenklasse (§ 264 Abs. 1 HGB) -- */
 test('Fristen: Aufstellung 6 Monate (kleine KapG) vs. 3 Monate (mittelgroße)', function () {
   function aufstellungsFrist(groessenklasse) {

@@ -167,6 +167,10 @@
     if (zvE < 0) zvE = 0;
     // Verlustvortrag § 10d EStG (i. V. m. § 8 Abs. 1 KStG) - Mindestbesteuerung
     // mit der für den VZ geltenden Quote (70 % VZ 2024-2027, sonst 60 %).
+    // Rechtsstand verifiziert 2026-06-10: aktueller Normtext § 10d Abs. 2 = 70 %
+    // (erstmals VZ 2024, § 52 Abs. 18b EStG, Wachstumschancengesetz); die Rückkehr
+    // auf 60 % ab VZ 2028 ist im Änderungsgesetz angelegt, steht aber noch nicht
+    // im abrufbaren Normtext - bei VZ-2028-Abschlüssen Rechtsstand erneut prüfen.
     var kstQuote = mindestbestQuoteKSt(vz);
     var vvKst = verlustabzug(zvE, verlustvortrag, kstQuote);
     if (vvKst.abzug > 0) {

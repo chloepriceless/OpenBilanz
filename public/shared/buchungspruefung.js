@@ -77,6 +77,15 @@
       w.push('Konto 9000 (Eroeffnungsbilanzkonto) gehoert nur in Eroeffnungsbuchungen');
     }
 
+    // 2910 (ausstehende Einlagen, nicht eingefordert) fuehrt einen SOLL-Saldo
+    // (§ 272 Abs. 1 S. 2 HGB: offene Absetzung vom gezeichneten Kapital). Eine
+    // HABEN-Buchung ist nur bei Einforderung/Einzahlung der Einlagen oder als
+    // Korrektur richtig - sonst meist eine Verwechslung mit 2900.
+    if (String(b.haben) === '2910') {
+      w.push('Konto 2910 im Haben: nur richtig, wenn ausstehende Einlagen eingefordert/' +
+        'eingezahlt werden (Auflösung der offenen Absetzung) - sonst Buchungsrichtung prüfen');
+    }
+
     return { ok: f.length === 0, fehler: f, warnungen: w };
   }
 

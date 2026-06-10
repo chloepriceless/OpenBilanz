@@ -266,6 +266,30 @@
               'Prüfen Sie eine mögliche Überschuldung.' });
     }
 
+    // Eingabe-Konflikt Eltern-/Unterposten: baumSummen verwirft einen direkt auf
+    // einem Oberposten erfassten Wert, sobald ein Unterposten belegt ist (die
+    // Summe der Kinder hat Vorrang). Das soll nicht still passieren - der Nutzer
+    // bekommt einen Hinweis, welcher Wert ignoriert wird.
+    function findeEingabeKonflikte(baum, werteRoh, seite) {
+      (baum || []).forEach(function (k) {
+        if (!k.kinder || !k.kinder.length) return;
+        var direkt = cent(num((werteRoh || {})[k.id]));
+        var kindBelegt = k.kinder.some(function (kid) {
+          return Math.abs(cent(num((werteRoh || {})[kid.id]))) >= 0.005;
+        });
+        if (Math.abs(direkt) >= 0.005 && kindBelegt) {
+          meldungen.push({ stufe: 'warnung',
+            text: 'Position ' + k.id + ' (' + seite + '): Der direkt erfasste Wert ' +
+                  kap0(direkt) + ' EUR wird ignoriert, weil Unterposten belegt sind - ' +
+                  'es zählt die Summe der Unterposten. Bitte den Betrag auf die ' +
+                  'Unterposten verteilen oder die Eingabe auf der Oberposition leeren.' });
+        }
+        findeEingabeKonflikte(k.kinder, werteRoh, seite);
+      });
+    }
+    findeEingabeKonflikte(Positionen.AKTIVA, abschluss.werte && abschluss.werte.aktiva, 'Aktiva');
+    findeEingabeKonflikte(Positionen.PASSIVA, abschluss.werte && abschluss.werte.passiva, 'Passiva');
+
     /* --- erweiterte Plausibilitätsprüfungen --------------------------- */
     var istJA = abschluss.art === 'JAHRESABSCHLUSS';
     var verf = r.guv.verfahren;

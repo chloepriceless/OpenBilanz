@@ -11,6 +11,24 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.14.2] - 2026-06-10
+
+Nacharbeit: die letzten offenen Review-/Audit-Findings umgesetzt.
+
+### Behoben / Hinzugefügt
+- **Eingabe-Konflikt Oberposten/Unterposten wird gemeldet**: Wer einen Wert direkt auf einem
+  Oberposten (z. B. B.II) erfasst UND zugleich Unterposten belegt, verlor den Oberposten-Wert
+  bisher stillschweigend (die Summe der Unterposten hat Vorrang). Die Plausibilitätsprüfung
+  warnt jetzt und nennt den ignorierten Betrag.
+- **Buchungsprüfung 2910**: Eine Haben-Buchung auf „Ausstehende Einlagen, nicht eingefordert"
+  (Konto führt einen Soll-Saldo, § 272 Abs. 1 HGB) löst jetzt einen Hinweis aus — sie ist nur
+  bei Einforderung/Auflösung richtig, sonst meist eine Verwechslung mit 2900.
+- **Konten-Glossar 2980**: warnender Eintrag zum „Sonderposten mit Rücklageanteil"
+  (BilMoG-Altfall-Konto, Ausweis-Näherung, Abstimmung mit dem Steuerberater empfohlen).
+- **§ 10d EStG nachverifiziert** (Primärquelle): aktueller Normtext = 70 % (ab VZ 2024) ohne
+  Befristung im Text; Verifikationsstand + Wiedervorlage-Hinweis im Code dokumentiert.
+  Details: `.planning/RECHTS-REVIEW.md` (Nacharbeit).
+
 ## [2.14.1] - 2026-06-10
 
 Ergebnis eines vollständigen **rechtlichen Reviews** (28 Rechtswerte gegen die Gesetzes-
@@ -395,7 +413,8 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.1...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.2...HEAD
+[2.14.2]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.1...v2.14.2
 [2.14.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.0...v2.14.1
 [2.14.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.1...v2.14.0
 [2.13.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.0...v2.13.1
