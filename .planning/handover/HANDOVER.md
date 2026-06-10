@@ -1,6 +1,16 @@
 # HANDOVER — OpenBilanz (gmbh-verwaltung)
 
-**Stand: 2026-06-08 ~18:55 · HEAD `7eaf48b` · in sync · Working-Tree sauber · 250 Tests grün**
+**Stand: 2026-06-10 · HEAD `7837502` (v2.13.1) · in sync · Working-Tree sauber · 265 Tests grün**
+
+> ✅ **KOMPLETT-REVIEW (Christin-Auftrag 2026-06-10) DURCHGEFÜHRT + ALLE FUNDE GEFIXT, live v2.13.1.**
+> 3 Review-Subagenten (Security/Architektur/Tests-Doku). Behoben: Pfad-Traversal (`lib/store.js`
+> sicher), Content-Disposition-Header-Injection (`server.js` sendText), SHA-256-Pin (setup-pdf-lib.sh);
+> globales `unhandledrejection`-Netz + boot/speichereStill-`.catch` + vorjahrLaedt-Deadlock; Dead-Code
+> (kontoOpt, unterschrift-pdf-Load); DRITTQUELLEN (ERPNext-GPLv3 + vendored Libs) + CHANGELOG-Footer;
+> 13 neue Tests (CAMT/IBKR-Parser via DOMParser-Shim, obz-Krypto, bankKontoVorschlag, closing).
+> BEWUSST OFFEN (NIEDRIG/kein Bug): `window.__kontoDdBound`-Flag (korrekt, nur Stil); store-idb-Test nur
+> mit fake-indexeddb (Migration ist abgedeckt); setup-taxonomie/pyodide ohne Hash-Pin (große amtliche
+> Multi-File-Assets). Server-Security-Fixes betreffen Selbst-Hoster (Git), nicht die statische Website.
 
 > Heute zusätzlich (nach Audit): **T2** geführte Umbuchung (v2.12.0, `shared/umbuchung.js`). **4 Christin-
 > Requests** (HUB-REQUESTS.md) verify-first abgearbeitet: Bankimport-Dropdown+Löschen (bereits live v2.9.0),
