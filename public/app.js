@@ -571,11 +571,11 @@ function pruefeMigrationHinweis() {
     if (!flag) return;
     Store.setMeta('mandantenMigrationHinweis', null);   /* nur einmal zeigen */
     dialog('<h3>Daten aktualisiert</h3>' +
-      '<p>OpenBilanz unterstützt jetzt mehrere Mandanten. Ihre vorhandenen Daten wurden ' +
+      '<p>OpenBilanz unterstützt jetzt mehrere Mandanten. Deine vorhandenen Daten wurden ' +
       'automatisch dem Mandanten &bdquo;Standard&ldquo; zugeordnet &ndash; es geht nichts ' +
       'verloren.</p>' +
       '<div class="box box-warn"><b>Empfehlung</b>Diese Aktualisierung der Browser-Datenbank ' +
-      'lässt sich technisch nicht rückgängig machen. Exportieren Sie zur Sicherheit jetzt ' +
+      'lässt sich technisch nicht rückgängig machen. Exportiere zur Sicherheit jetzt ' +
       'einmal ein Backup (.obz).</div>' +
       '<div class="btn-reihe"><button class="btn btn-pri" id="mhExport">Backup exportieren</button>' +
       '<button class="btn" id="mhSpaeter">Später</button></div>');
@@ -629,13 +629,13 @@ function renderStart(m) {
   var loeschbar = !!(S.unternehmen && S.unternehmen.loeschenAktiv);
   var html = '';
   html += '<div class="kopf"><h1>' + esc((S.unternehmen && S.unternehmen.name) || 'OpenBilanz') +
-          '</h1><p>Erstellen Sie Eröffnungsbilanz und Jahresabschluss Ihrer GmbH ' +
+          '</h1><p>Erstelle Eröffnungsbilanz und Jahresabschluss deiner GmbH ' +
           'selbst &ndash; nach HGB, inklusive E-Bilanz für das Finanzamt.</p></div>';
 
   if (!eb.length) {
     html += '<div class="box box-info"><b>Erster Schritt: Eröffnungsbilanz</b>' +
             'Jede GmbH muss zu Beginn ihres Handelsgewerbes eine Eröffnungsbilanz ' +
-            'aufstellen (§ 242 Abs. 1 HGB). Legen Sie hier als Erstes Ihre ' +
+            'aufstellen (§ 242 Abs. 1 HGB). Lege hier als Erstes deine ' +
             'Eröffnungsbilanz an.</div>';
   }
   html += '<div class="kachel-reihe">';
@@ -698,7 +698,7 @@ function renderStart(m) {
 
   if (S.abschluesse.length) {
     html += '<div class="karte" style="margin-top:18px"><h2>Ihre Abschlüsse</h2>' +
-            '<div class="karte-hint">Klicken Sie einen Eintrag zum Bearbeiten an.</div>' +
+            '<div class="karte-hint">Klicke einen Eintrag zum Bearbeiten an.</div>' +
             '<table class="liste"><thead><tr><th>Bezeichnung</th><th>Art</th>' +
             '<th>Stichtag</th><th>Größe</th><th>Status</th><th></th></tr></thead><tbody>';
     S.abschluesse.forEach(function (a) {
@@ -844,7 +844,7 @@ function renderStammdaten(m) {
   }
   var html = '';
   html += '<div class="kopf"><h1>Unternehmensdaten</h1>' +
-          '<p>Stammdaten Ihrer GmbH. Sie erscheinen auf allen Bilanzen, im Anhang und ' +
+          '<p>Stammdaten deiner GmbH. Sie erscheinen auf allen Bilanzen, im Anhang und ' +
           'in der E-Bilanz.</p></div>';
   html += '<div class="karte"><h2>Firma</h2><div class="gitter g2">';
   html += f('name', 'Firmenname', 'vollständig lt. Handelsregister');
@@ -1011,7 +1011,7 @@ function dialogNeuerAbschluss(vorgabeArt) {
   var u = S.unternehmen;
   var jahr = new Date().getFullYear();
   var html = '<h3>Neuen Abschluss anlegen</h3>' +
-    '<p class="karte-hint">Wählen Sie die Art des Abschlusses.</p>' +
+    '<p class="karte-hint">Wähle die Art des Abschlusses.</p>' +
     '<div class="gitter" style="gap:11px">' +
     feldWrap('Art', '', '<select id="naArt">' +
       '<option value="EROEFFNUNGSBILANZ">Eröffnungsbilanz (zur Gründung)</option>' +
@@ -1315,7 +1315,7 @@ function renderEditor(m) {
       '(Aktiva) und woher das Geld stammt (Passiva) — beide Seiten ergeben denselben ' +
       'Betrag. Bei der typischen Bargründung ist sie kurz: auf der Aktivseite das ' +
       'eingezahlte Stammkapital als Bankguthaben, auf der Passivseite das gezeichnete ' +
-      'Kapital. Zu jeder Position finden Sie unten — wenn „Erklärungen" aktiv ist — ' +
+      'Kapital. Zu jeder Position findest du unten — wenn „Erklärungen" aktiv ist — ' +
       'was gefordert wird und ein Beispiel.</div>';
   }
 
@@ -1392,7 +1392,7 @@ function renderEditor(m) {
   /* Bilanz */
   html += '<div class="karte"><div class="karte-kopf"><div>' +
     '<h2>Bilanz <span class="reg">&middot; § 266 HGB</span></h2>' +
-    '<div class="karte-hint">Tragen Sie die Beträge je Position ein. Summen und ' +
+    '<div class="karte-hint">Trage die Beträge je Position ein. Summen und ' +
     'Bilanzgleichung werden automatisch berechnet.</div></div>' +
     (istEB ? '<label class="checkz" style="align-items:center;white-space:nowrap">' +
       '<input type="checkbox" id="chkErkl"' + (S.erklaerungen ? ' checked' : '') +
@@ -1418,7 +1418,7 @@ function renderEditor(m) {
       '<span class="reg">&middot; § 265 Abs. 2 HGB</span></h2>' +
       '<div class="karte-hint">Δ-Übersicht zwischen Vorjahr und aktuellem Abschluss. ' +
       'Wesentliche Abweichungen sind im Anhang zu erläutern.</div>' +
-      '<div id="vergleichBox"><i>Verknüpfen Sie unter „Eckdaten" einen Vorjahres-' +
+      '<div id="vergleichBox"><i>Verknüpfe unter „Eckdaten" einen Vorjahres-' +
       'Abschluss, dann erscheint hier die Δ-Tabelle.</i></div></div>';
   }
 
@@ -1669,8 +1669,8 @@ function speichereStill() {
     // statt still weiterzulaufen. Bewusst GESCHLUCKT - die aufrufende Re-Render-
     // Kette läuft mit dem In-Memory-Stand weiter (Daten liegen noch im Speicher),
     // statt die UI im alten Zustand einzufrieren. Der Nutzer wird zum Backup geraten.
-    fehlerToast('Speichern fehlgeschlagen — Ihre letzte Änderung wurde evtl. nicht ' +
-      'dauerhaft gespeichert. Bitte erstellen Sie ein Backup. (' + ((e && e.message) || e) + ')');
+    fehlerToast('Speichern fehlgeschlagen — deine letzte Änderung wurde evtl. nicht ' +
+      'dauerhaft gespeichert. Bitte erstelle ein Backup. (' + ((e && e.message) || e) + ')');
   });
 }
 
@@ -1741,7 +1741,7 @@ function aktualisiereVergleichBox() {
   if (!box) return;
   var a = S.aktiv, vj = (S.vorjahr && S.vorjahr.id === a.vorjahrId) ? S.vorjahr : null;
   if (!a.vorjahrId) {
-    box.innerHTML = '<i>Verknüpfen Sie unter „Eckdaten" einen Vorjahres-Abschluss, ' +
+    box.innerHTML = '<i>Verknüpfe unter „Eckdaten" einen Vorjahres-Abschluss, ' +
       'dann erscheint hier die Δ-Tabelle.</i>';
     return;
   }
@@ -2472,7 +2472,9 @@ function renderSteuer(m) {
     'gewerbesteuerliche Hinzurechnungen. Leer lassen, wenn nicht zutreffend.</div>' +
     '<div class="gitter g2">';
   html += sf('verlustvortrag', 'Verlustvortrag aus Vorjahren (EUR)',
-    '§ 10d EStG / § 10a GewStG, mit Mindestbesteuerung');
+    'körperschaftsteuerlich (§ 10d EStG), mit Mindestbesteuerung');
+  html += sf('verlustvortragGewSt', 'Gewerbeverlust aus Vorjahren (EUR)',
+    '§ 10a GewStG — eigener Topf; leer = Wert wie KSt-Vortrag');
   html += sf('vga', 'Verdeckte Gewinnausschüttung (EUR)', '§ 8 Abs. 3 KStG');
   html += sf('zinsaufwand', 'Entgelte für Schulden / Zinsaufwand (EUR)',
     '§ 8 Nr. 1a GewStG — zu 100 %');
@@ -3145,7 +3147,7 @@ function renderBuchhaltung(m) {
   a.buchungen.forEach(function (b, i) { if (!b.id) b.id = 'B-leg-' + i; });
   var html = '<span class="zurueck" data-z="editor">&larr; zurück zum Editor</span>';
   html += '<div class="kopf"><h1>Buchhaltung &ndash; ' + esc(a.bezeichnung) + '</h1>' +
-    '<p>Erfassen Sie Buchungssätze nach dem Kontenrahmen SKR04. Aus den Kontensalden ' +
+    '<p>Erfasse Buchungssätze nach dem Kontenrahmen SKR04. Aus den Kontensalden ' +
     'lassen sich Bilanz und GuV automatisch befüllen.</p></div>';
 
   html += '<div class="box box-info"><b>Hinweis</b>Dieser Modus ist die Grundlage für die ' +
@@ -4070,14 +4072,14 @@ function renderKunden(m) {
   }
   var html = '';
   html += '<div class="kopf"><h1>Kunden &amp; Rechnungs-Angaben</h1>' +
-          '<p>Diese Angaben erscheinen auf Ihren Ausgangsrechnungen ' +
+          '<p>Diese Angaben erscheinen auf deinen Ausgangsrechnungen ' +
           'und in den erzeugten XRechnungs-Dateien.</p></div>';
 
   /* --- Eigene Rechnungs-Angaben ------------------------------------------ */
   html += '<div class="karte"><h2>Eigene Rechnungs-Angaben</h2>' +
           '<div class="karte-hint">Was leer bleibt, wird aus den ' +
           '<a href="#" data-z-stammdaten>Unternehmensdaten</a> ' +
-          'übernommen. Wenn Sie hier explizit etwas eintragen, hat das auf der ' +
+          'übernommen. Wenn du hier explizit etwas einträgst, hat das auf der ' +
           'Rechnung Vorrang.</div>';
   html += '<div class="gitter g2">';
   html += ev('name',            'Name auf der Rechnung',  'optional, sonst Firmenname');
@@ -4121,7 +4123,7 @@ function renderKunden(m) {
   /* --- Kundenliste ------------------------------------------------------- */
   html += '<div class="karte"><h2>Kunden</h2>' +
           '<div class="karte-hint">Liste der Rechnungs-Adressaten. Neue Kunden ' +
-          'werden direkt im Rechnungs-Editor anlegbar; hier können Sie sie ' +
+          'werden direkt im Rechnungs-Editor anlegbar; hier kannst du sie ' +
           'pflegen oder löschen. Beim Versenden einer Rechnung wird der ' +
           'aktuelle Kundendatensatz als Snapshot mit der Rechnung eingefroren.</div>';
   if (!u.kunden.length) {
@@ -4800,7 +4802,7 @@ function eroeffnungsPlan(quelle) {
   var plan = [], warn = [];
   var aktiva = (quelle.werte && quelle.werte.aktiva) || {};
   var passiva = (quelle.werte && quelle.werte.passiva) || {};
-  var kap = Berechnung.kapitalRechnen(quelle.kapital);
+  var kap = Berechnung.kapitalRechnen(quelle.kapital, quelle.erfassungsmodus);
 
   function zeile(soll, haben, betrag, text) {
     plan.push({ soll: soll, haben: haben, betrag: Berechnung.cent(betrag), text: text });
@@ -4808,6 +4810,21 @@ function eroeffnungsPlan(quelle) {
   /* Gezeichnetes Kapital (Nennbetrag) -> Konto 2900 */
   if (kap.gezeichnet >= 0.005) {
     zeile('9000', '2900', kap.gezeichnet, 'Eröffnungsbuchung: Gezeichnetes Kapital');
+  }
+  /* Nicht eingeforderte ausstehende Einlagen -> Konto 2910 (§ 272 Abs. 1 HGB).
+   * Ohne diese Buchung würde "Salden übernehmen" später das volle gezeichnete
+   * Kapital als eingefordert ansetzen (salden2werte liest 2900/2910) und die
+   * Bilanz ginge um die ausstehenden Einlagen nicht auf. */
+  if (kap.nichtEingefordert >= 0.005) {
+    zeile('2910', '9000', kap.nichtEingefordert,
+      'Eröffnungsbuchung: Ausstehende Einlagen, nicht eingefordert');
+  }
+  /* Eingefordertes, noch nicht eingezahltes Kapital hat im vereinfachten
+   * Buchungsmodell kein Standardkonto -> manuell nachbuchen (Hinweis). */
+  if (kap.eingefordertOffen >= 0.005) {
+    warn.push('Eingefordertes, noch nicht eingezahltes Kapital (' +
+      kap.eingefordertOffen.toFixed(2).replace('.', ',') +
+      ' EUR) — als Forderung gegen Gesellschafter manuell gegen 9000 buchen');
   }
   /* Aktiv-Positionen: Soll Sachkonto / Haben EBK */
   Object.keys(aktiva).forEach(function (id) {
@@ -4828,6 +4845,19 @@ function eroeffnungsPlan(quelle) {
     if (v >= 0) zeile('9000', k, v, 'Eröffnungsbuchung: ' + posLabel(id));
     else        zeile(k, '9000', -v, 'Eröffnungsbuchung: ' + posLabel(id));
   });
+  /* Jahresergebnis des Quell-Abschlusses: P.A.V steht nie in werte.passiva
+   * (wird live aus der GuV gerechnet) und würde sonst beim Vortrag verloren
+   * gehen - die Bilanz des neuen Jahres ginge um genau das Vorjahresergebnis
+   * nicht auf. Vortrag auf 2970 (Gewinn) bzw. 2978 (Verlust); eine spätere
+   * Ausschüttung wird im neuen Jahr gegen 2970 gebucht. */
+  if (quelle.art === 'JAHRESABSCHLUSS') {
+    var erg = Berechnung.cent(Berechnung.rechneGuv(quelle).jahresergebnis);
+    if (erg >= 0.005) {
+      zeile('9000', '2970', erg, 'Eröffnungsbuchung: Gewinnvortrag (Jahresergebnis Vorjahr)');
+    } else if (erg <= -0.005) {
+      zeile('2978', '9000', -erg, 'Eröffnungsbuchung: Verlustvortrag (Jahresergebnis Vorjahr)');
+    }
+  }
   return { plan: plan, warn: warn, kapital: {
     gezeichnet: kap.gezeichnet, eingezahlt: kap.eingezahlt,
     eingefordertOffen: kap.eingefordertOffen } };
@@ -4903,6 +4933,23 @@ function eroeffnungsVorschauHtml(quelle) {
       '<td>' + esc(p.text) + '</td></tr>';
   });
   h += '</tbody></table>';
+  /* Plausibilität: das EBK 9000 muss nach vollständigem Vortrag aufgehen
+   * (Summe Soll = Summe Haben). Eine Differenz heißt: es fehlen Bestände
+   * (z. B. nicht übertragbare Positionen) - früh warnen statt später eine
+   * unausgeglichene Bilanz zu hinterlassen. */
+  var ebkSoll = 0, ebkHaben = 0;
+  res.plan.forEach(function (p) {
+    if (p.soll === '9000') ebkSoll += p.betrag;
+    if (p.haben === '9000') ebkHaben += p.betrag;
+  });
+  var ebkDiff = Berechnung.cent(ebkSoll - ebkHaben);
+  if (Math.abs(ebkDiff) >= 0.01) {
+    h += '<div class="box box-warn" style="margin-top:10px"><b>Eröffnungsbilanzkonto ' +
+      'geht nicht auf</b>Die geplanten Buchungen lassen auf Konto 9000 eine Differenz ' +
+      'von ' + geld(ebkDiff) + ' EUR. Meist fehlen nicht automatisch übertragbare ' +
+      'Positionen (siehe unten) &ndash; diese nach der Übernahme manuell gegen 9000 ' +
+      'nachbuchen, sonst geht die Bilanz nicht auf.</div>';
+  }
   if (res.warn.length) {
     h += '<div class="box box-warn" style="margin-top:10px"><b>Nicht automatisch ' +
       'übertragbar</b>Für diese Positionen gibt es kein Standardkonto &ndash; bitte ' +
@@ -5013,7 +5060,10 @@ function monatsTrend(a) {
     perKonto[konto][key] = (perKonto[konto][key] || 0) + betrag;
   }
   a.buchungen.forEach(function (b) {
-    if (!b.datum || b.storniert) return;
+    // Storno-PAAR komplett ignorieren: nur das Original (storniert) zu
+    // ueberspringen, die Gegenbuchung (stornoVon) aber zu zaehlen, wuerde
+    // den Trend um den Stornobetrag verfaelschen.
+    if (!b.datum || b.storniert || b.stornoVon) return;
     var key = String(b.datum).slice(0, 7);
     add(b.soll, key, +b.betrag || 0);   // Soll-Seite: +
     add(b.haben, key, -(+b.betrag || 0)); // Haben-Seite: -
@@ -5081,8 +5131,8 @@ function renderFristen(m) {
   // Lebende Fristen-Uebersicht aus dem aktuellen Datenbestand
   var liveFristen = Fristen.naechsteFristen(S.unternehmen, S.abschluesse);
   if (liveFristen.length) {
-    html += '<div class="karte"><h2>Aktuelle Fristen (aus Ihren Daten)</h2>' +
-      '<div class="karte-hint">Berechnet aus den Stichtagen Ihrer angelegten ' +
+    html += '<div class="karte"><h2>Aktuelle Fristen (aus deinen Daten)</h2>' +
+      '<div class="karte-hint">Berechnet aus den Stichtagen deiner angelegten ' +
       'Abschlüsse — rot = verstrichen, gelb = innerhalb 30 Tagen, grün = > 30 Tage.</div>' +
       '<table class="liste"><thead><tr><th>Frist</th><th>Datum</th>' +
       '<th class="rechts">Resttage</th><th>Grundlage</th><th>Pflicht</th>' +
@@ -5146,7 +5196,7 @@ function renderFristen(m) {
     fr('6 Jahre', 'Empfangene und abgesandte Handels-/Geschäftsbriefe.') +
     '</tbody></table></div>';
 
-  html += '<div class="box box-info"><b>Wichtiger Hinweis</b>Dieses Tool unterstützt Sie ' +
+  html += '<div class="box box-info"><b>Wichtiger Hinweis</b>Dieses Tool unterstützt dich ' +
     'bei der Erstellung der Bilanzen, ersetzt aber keine Steuer- oder Rechtsberatung. ' +
     'Bei komplexen Sachverhalten (Sacheinlagen, latente Steuern, Bewertungsfragen) ziehen ' +
     'Sie im Zweifel fachlichen Rat hinzu.</div>';
@@ -5211,7 +5261,7 @@ function renderHilfe(m) {
     'Standardfall: 25.000 € Stammkapital gezeichnet, 12.500 € auf die Bank eingezahlt, ' +
     'die zweite Hälfte noch ausstehend und nicht eingefordert. Im Kapitalblock: ' +
     '<i>Gezeichnetes Kapital</i> 25.000, <i>davon eingezahlt</i> 12.500, <i>davon ' +
-    'eingefordert aber unbezahlt</i> 0. Unter Aktiva <i>B.IV Kassenbestand/Bank</i> ' +
+    'eingefordert, aber unbezahlt</i> 0. Unter Aktiva <i>B.IV Kassenbestand/Bank</i> ' +
     '12.500. Die nicht eingeforderten 12.500 € werden offen vom gezeichneten Kapital ' +
     'abgesetzt (Nettomethode, § 272 Abs. 1 HGB) — die Bilanzsumme beträgt 12.500 €.',
     null);
@@ -5220,10 +5270,16 @@ function renderHilfe(m) {
     'Eine Jahresabschluss-Buchhaltung beginnt nicht bei null: die Bestände der ' +
     'Eröffnungsbilanz (bzw. des Vorjahres) werden zu Jahresbeginn als Eröffnungs' +
     'buchungen gegen das Eröffnungsbilanzkonto <b>9000</b> übernommen. In der ' +
-    'Buchhaltung macht das die Karte „Anfangsbestände“ automatisch. Schema:',
+    'Buchhaltung macht das die Karte „Anfangsbestände“ automatisch — inklusive ' +
+    'Vorjahresergebnis (auf 2970/2978) und nicht eingeforderter ausstehender ' +
+    'Einlagen (auf 2910). Nach vollständigem Vortrag geht das Konto 9000 auf ' +
+    'null auf. Schema:',
     [['Sachkonto', '9000', 'jeder Aktiv-Bestand (Bank, Anlagen, Forderungen …)'],
      ['9000', 'Sachkonto', 'jeder Passiv-Bestand (Verbindlichkeiten, Rückstellungen …)'],
      ['9000', '2900', 'gezeichnetes Kapital (Nennbetrag) ins neue Jahr'],
+     ['2910', '9000', 'nicht eingeforderte ausstehende Einlagen (§ 272 Abs. 1 HGB)'],
+     ['9000', '2970', 'Jahresüberschuss des Vorjahres als Gewinnvortrag'],
+     ['2978', '9000', 'Jahresfehlbetrag des Vorjahres als Verlustvortrag'],
      ['1800', '9000', 'Beispiel: Bankguthaben 12.500 € ins neue Jahr']]);
 
   html += fall('3. Anlagevermögen &amp; Abschreibung',
@@ -5334,7 +5390,7 @@ function renderHilfe(m) {
     'Bilanzstichtag bewertet — und zwar abhängig von der <b>Restlaufzeit</b>:<br>' +
     '<b>≤ 1 Jahr (§ 256a Satz 2 HGB):</b> zwingend zum Devisenkassamittelkurs am ' +
     'Stichtag — auch nach oben. Realisations- und Imparitätsprinzip sind hier ' +
-    'ausser Kraft.<br>' +
+    'außer Kraft.<br>' +
     '<b>> 1 Jahr:</b> es gelten die allgemeinen Bewertungsprinzipien — Vermögen ' +
     'nach Niederstwertprinzip (nur abwerten), Schulden nach Höchstwertprinzip ' +
     '(nur aufwerten).<br>' +
@@ -5371,6 +5427,105 @@ function renderHilfe(m) {
      ['1800', '1361', 'Margin-Rückzahlung bei Glattstellung der Position'],
      ['6300', '3070', 'Drohverlustrückstellung am Stichtag (offener Verlust droht)']]);
 
+  html += fall('6d. Bitcoin-Mining — eigener Strom &amp; Strom vom Gesellschafter',
+    'Mining durch eine GmbH ist stets gewerblich; geminte Coins sind Betriebs' +
+    'vermögen und gehen zum <b>Marktkurs im Zugangszeitpunkt</b> als Betriebs' +
+    'einnahme zu (BMF-Schreiben vom 06.03.2025 zu Kryptowerten; Tageskurs eines ' +
+    'marktgängigen Kursportals dokumentieren). Den Bestand am besten auf einem ' +
+    'eigenen Unterkonto zu 1300 „Sonstige Vermögensgegenstände“ führen ' +
+    '(Stammdaten → Eigene Konten); handelsrechtlich ist auch ein vorsichtigerer ' +
+    'Ansatz zu Herstellungskosten vertretbar — im Zweifel fachlichen Rat einholen.<br>' +
+    '<b>Umsatzsteuer:</b> Block-Rewards und Transaktionsgebühren sind mangels ' +
+    'identifizierbarem Leistungsempfänger <b>nicht steuerbar</b> (BMF vom ' +
+    '27.02.2018); der spätere Umtausch in Euro ist steuerfrei nach § 4 Nr. 8 ' +
+    'Buchst. b UStG (EuGH „Hedqvist“). Folge: Vorsteuer aus Strom und Hardware ' +
+    'ist beim reinen Mining regelmäßig <b>nicht abziehbar</b> (§ 15 UStG).<br>' +
+    '<b>Eigener Strom</b> (z. B. aus der eigenen PV-Anlage, Abschnitt 6e): kein ' +
+    'gesonderter Buchungssatz — die Kosten stecken bereits in AfA und Betriebs' +
+    'kosten der Anlage; einen „Innenumsatz“ gibt es nicht.<br>' +
+    '<b>Strom von einer Privatperson</b> (typisch: das Rig steht beim Gesell' +
+    'schafter): nur mit <b>im Voraus</b> geschlossener, schriftlicher und fremd' +
+    'üblicher Vereinbarung — kWh-genau per Zwischenzähler, marktüblicher Preis. ' +
+    'Beim beherrschenden Gesellschafter gilt das Rückwirkungsverbot; ohne saubere ' +
+    'Abrechnung droht eine verdeckte Gewinnausschüttung (§ 8 Abs. 3 KStG). Die ' +
+    'Privatperson rechnet ohne USt-Ausweis ab (i. d. R. Kleinunternehmer, § 19 ' +
+    'UStG); wer nachhaltig gegen Entgelt liefert, wird selbst Unternehmer im ' +
+    'Sinne des UStG.<br>' +
+    '<b>Keine Haltefrist-Steuerfreiheit:</b> die 1-Jahres-Frist des § 23 EStG ' +
+    'gilt nur für Privatpersonen — bei der GmbH unterliegen alle Veräußerungs' +
+    'gewinne voll der KSt und GewSt.',
+    [['0400', '1800', 'Mining-Hardware gekauft (aktiviert; AfA über die Nutzungsdauer)'],
+     ['6220', '0400', 'AfA Mining-Hardware (1-Jahres-Regel für Computerhardware nicht gesichert — vgl. Abschnitt 4)'],
+     ['1300', '4830', 'geminte Coins zum Tageskurs des Zugangs (Ertrag, nicht umsatzsteuerbar)'],
+     ['6325', '3500', 'Stromabrechnung des Gesellschafters (Zwischenzähler, fremdüblicher Preis)'],
+     ['3500', '1800', 'Stromabrechnung an den Gesellschafter ausgezahlt'],
+     ['1800', '1300', 'Coins verkauft — Erlös bis zur Höhe des Buchwerts (steuerfrei § 4 Nr. 8b UStG)'],
+     ['1800', '4906', 'Kursgewinn über dem Buchwert beim Verkauf'],
+     ['6905', '1300', 'Kursverlust unter dem Buchwert beim Verkauf'],
+     ['6300', '1300', 'Abwertung zum Stichtag (strenges Niederstwertprinzip, § 253 Abs. 4 HGB)']]);
+
+  html += fall('6e. Stromverkauf &amp; PV-Einspeisung',
+    'Liefert die GmbH Strom — Einspeisung ins Netz, Verkauf an Mieter oder ' +
+    'Dritte —, ist das eine gewöhnliche Lieferung zu <b>19 % USt</b>. Der ' +
+    'Nullsteuersatz des § 12 Abs. 3 UStG gilt nur für Kauf und Installation der ' +
+    'PV-<i>Anlage</i>, nicht für den gelieferten Strom. Die EEG-Einspeise' +
+    'vergütung des Netzbetreibers ist Entgelt (19 % bei Regelbesteuerung) und ' +
+    'kommt meist als Gutschrift; die <b>Marktprämie</b> aus der Direktvermarktung ' +
+    'ist dagegen ein echter, nicht steuerbarer Zuschuss (BMF vom 31.03.2025).<br>' +
+    '<b>Eigenverbrauch</b> durch die GmbH selbst (z. B. fürs Mining, Abschnitt ' +
+    '6d): kein Buchungssatz, kein Leistungsaustausch.<br>' +
+    '<b>Stromsteuer:</b> Anlagen bis 2 MW mit Verbrauch/Lieferung im räumlichen ' +
+    'Zusammenhang sind regelmäßig befreit (§ 9 Abs. 1 Nr. 3 StromStG). An die ' +
+    'Registrierung im Marktstammdatenregister denken.<br>' +
+    '<b>Gewerbesteuer:</b> bei einer Immobilien-GmbH mit erweiterter Grundstücks' +
+    'kürzung ist Stromlieferung aus erneuerbaren Energien/Ladestationen nur bis ' +
+    '<b>20 %</b> der Einnahmen unschädlich (§ 9 Nr. 1 Satz 3 Buchst. b GewStG) — ' +
+    'darüber geht die Kürzung komplett verloren.',
+    [['0400', '1800', 'PV-Anlage angeschafft (aktiviert; Lieferung/Installation 0 % USt, § 12 Abs. 3 UStG)'],
+     ['6220', '0400', 'AfA PV-Anlage (Nutzungsdauer 20 Jahre)'],
+     ['1200', '4400', 'Stromlieferung/Einspeisung abgerechnet — Nettobetrag (19 % USt)'],
+     ['1200', '3806', 'Umsatzsteuer 19 % auf die Stromlieferung'],
+     ['1800', '1200', 'Gutschrift des Netzbetreibers geht auf der Bank ein'],
+     ['1800', '4830', 'Marktprämie aus Direktvermarktung (echter Zuschuss, nicht steuerbar)']]);
+
+  html += fall('6f. Vermietung an andere Unternehmen — Herstellung &amp; laufender Betrieb',
+    '<b>Objekt selbst errichten:</b> die Kosten der Erstellung sind keine ' +
+    'sofortigen Betriebsausgaben, sondern <b>Herstellungskosten</b> (§ 255 ' +
+    'Abs. 2 HGB) — Pflicht sind Einzelkosten (Material, Fertigung) plus ' +
+    'angemessene Gemeinkosten, Wahlrechte bestehen für allgemeine Verwaltungs' +
+    'kosten und Bauzeitzinsen (§ 255 Abs. 3 HGB); steuerlich sind die Wahl-' +
+    'Gemeinkosten einzubeziehen (R 6.3 EStR). Während der Bauphase alles auf ' +
+    '0700 „Anlagen im Bau“ sammeln — <b>vor Fertigstellung gibt es keine AfA</b>. ' +
+    'Arbeiten eigene Mitarbeiter mit, neutralisiert das Konto 4820 „Andere ' +
+    'aktivierte Eigenleistungen“ den Personalaufwand: er bleibt in der GuV ' +
+    'stehen, der Gegenwert wandert ins Anlagevermögen. Mit Fertigstellung auf ' +
+    '0240 „Geschäftsbauten“ umbuchen (bewegliche Mietobjekte: 0400/0500); ab ' +
+    'dann Gebäude-AfA 3 % linear (§ 7 Abs. 4 EStG). Spätere Instandhaltung ist ' +
+    'sofort Aufwand; nachträgliche Herstellungskosten (Erweiterung, wesentliche ' +
+    'Verbesserung) werden wieder aktiviert.<br>' +
+    '<b>Abrechnung der Miete:</b> Grundstücks-/Gebäudevermietung ist umsatz' +
+    'steuerfrei (§ 4 Nr. 12 UStG) — dann gibt es aber keinen Vorsteuerabzug aus ' +
+    'den Baukosten. Bei Vermietung an Unternehmer kann zur USt <b>optiert</b> ' +
+    'werden (§ 9 Abs. 1 und 2 UStG; bei Grundstücken nur, wenn der Mieter aus' +
+    'schließlich vorsteuerunschädliche Umsätze ausführt): dann 19 % USt auf die ' +
+    'Miete und voller Vorsteuerabzug. Vermietung <b>beweglicher</b> Sachen ' +
+    '(Maschinen, Server, Fahrzeuge) fällt nicht unter § 4 Nr. 12 — immer 19 %. ' +
+    'Nebenkosten-Umlagen teilen als Nebenleistung das Schicksal der Miete.<br>' +
+    '<b>Gewerbesteuer:</b> die reine Immobilien-GmbH kann die erweiterte ' +
+    'Grundstückskürzung nutzen (§ 9 Nr. 1 Satz 2 GewStG, siehe Glossar) — ' +
+    'Vermietung beweglicher Sachen oder zu viel Stromverkauf (Abschnitt 6e) ' +
+    'gefährdet sie.',
+    [['0700', '3300', 'Baurechnung während der Errichtung — Anlagen im Bau (keine AfA)'],
+     ['1406', '3300', 'Vorsteuer aus Baukosten — nur bei USt-Option abziehbar'],
+     ['0700', '4820', 'Eigenleistungen aktiviert (eigenes Personal auf der Baustelle)'],
+     ['0240', '0700', 'Fertigstellung: Umbuchung auf Geschäftsbauten — AfA beginnt'],
+     ['6221', '0240', 'Gebäude-AfA 3 % linear (§ 7 Abs. 4 EStG)'],
+     ['1200', '4860', 'Mietrechnung an die Mieter-Firma — ohne Option steuerfrei (§ 4 Nr. 12 UStG)'],
+     ['1200', '3806', 'Umsatzsteuer 19 % auf die Miete — nur bei Option (§ 9 UStG)'],
+     ['1200', '4400', 'Vermietung beweglicher Sachen (Maschine, Server) — immer 19 % USt'],
+     ['1800', '1200', 'Mieteingang auf der Bank'],
+     ['6345', '1800', 'laufende Instandhaltung des Mietobjekts (sofort Aufwand)']]);
+
   html += fall('7. Jahresabschluss abschließen',
     'Sind alle Buchungen erfasst, in der Buchhaltung „Salden in Bilanz/GuV übernehmen“ ' +
     'klicken — die Kontensalden füllen Bilanz und GuV. Anschließend „Buchungen ' +
@@ -5395,9 +5550,11 @@ function renderHilfe(m) {
   html += '<div class="box box-info"><b>Empfangs-Pflicht seit 1.1.2025</b>' +
     'Jede inlandsansässige GmbH muss eingehende B2B-Rechnungen im strukturierten ' +
     'XRechnungs- oder ZUGFeRD-Format annehmen können. Eine reine PDF ohne XML genügt ' +
-    'als Eingangsrechnung im B2B-Inland nicht mehr — Lieferanten dürfen sie weiterhin ' +
-    'schicken (Übergangsfristen bis 31.12.2027), bis dahin gilt die alte ' +
-    'PDF/Papier-Form aber als legitimer Beleg.</div>';
+    'als Eingangsrechnung im B2B-Inland nicht mehr — Lieferanten dürfen sie übergangsweise ' +
+    'weiter schicken, und zwar gestaffelt: <b>alle</b> Aussteller bis 31.12.2026, danach ' +
+    'nur noch Aussteller mit Vorjahresumsatz ≤ 800.000 € bis 31.12.2027. Wer darüber ' +
+    'liegt, muss ab 1.1.2027 selbst E-Rechnungen versenden; bis zum jeweiligen ' +
+    'Fristende gilt die alte PDF/Papier-Form als legitimer Beleg.</div>';
 
   html += fall('9. Kunden &amp; eigene Rechnungs-Angaben pflegen',
     'Bevor du die erste Ausgangsrechnung schreibst, einmalig im Menü <b>Stammdaten → ' +
@@ -5408,7 +5565,7 @@ function renderHilfe(m) {
     'Felder, die leer bleiben, werden automatisch aus den Unternehmensdaten gezogen.<br>' +
     '<b>(b) Rechnungsnummernkreis</b> — das Schema (z. B. <span class="mono">RE-{JAHR}-{NR:04}</span>) ' +
     'und die nächste Nummer. Der Zähler setzt beim Jahreswechsel automatisch zurück. ' +
-    'Wichtig: §14 UStG verlangt eine einmalig vergebene Rechnungsnummer — manuell ' +
+    'Wichtig: § 14 UStG verlangt eine einmalig vergebene Rechnungsnummer — manuell ' +
     'reinpfuschen erst, wenn du wirklich verstehst was du tust.<br>' +
     '<b>(c) Kundenliste</b> — pro Kunde Name, Anschrift, Land (ISO-2: DE/AT/FR/…), ' +
     'USt-IdNr. (Pflicht bei § 13b oder innergemeinschaftlichen Geschäften), E-Mail. ' +
@@ -5517,6 +5674,10 @@ var GLOSSAR = [
     e: 'Vorsichtsgebot: Vermögensgegenstände sind höchstens mit den Anschaffungskosten, bei niedrigerem Wert mit diesem anzusetzen (§ 253 HGB).' },
   { g: 'Bilanz & Jahresabschluss', t: 'Abschreibung (AfA)',
     e: 'Verteilung der Anschaffungs- oder Herstellungskosten eines Anlageguts als Aufwand über seine Nutzungsdauer.' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Herstellungskosten',
+    e: 'Kosten der Herstellung eines Vermögensgegenstands (§ 255 Abs. 2 HGB): Einzelkosten plus angemessene Gemeinkosten sind Pflicht, allgemeine Verwaltungskosten und Bauzeitzinsen Wahlrecht. Sie werden aktiviert und über die AfA verteilt — kein sofortiger Aufwand.' },
+  { g: 'Bilanz & Jahresabschluss', t: 'Anlagen im Bau',
+    e: 'Noch nicht fertiggestellte Anlagegüter (SKR04-Konto 0700). Die Herstellungskosten werden hier gesammelt; die AfA beginnt erst mit der Fertigstellung.' },
   { g: 'Bilanz & Jahresabschluss', t: 'Anlagenspiegel',
     e: 'Übersicht über die Entwicklung des Anlagevermögens (Zugänge, Abgänge, Abschreibungen); Pflichtangabe ab der kleinen GmbH (§ 284 Abs. 3 HGB).' },
   { g: 'Bilanz & Jahresabschluss', t: 'Vorjahresspalte',
@@ -5540,7 +5701,11 @@ var GLOSSAR = [
   { g: 'Steuern', t: 'Kapitalertragsteuer',
     e: '25 % Abgeltungsteuer (zzgl. Solidaritätszuschlag), die die GmbH bei einer Gewinnausschüttung einbehält und ans Finanzamt abführt.' },
   { g: 'Steuern', t: 'Erweiterte Grundstückskürzung',
-    e: 'Verwaltet eine GmbH ausschließlich eigenen Grundbesitz, bleibt der Grundstücksertrag praktisch gewerbesteuerfrei (§ 9 Nr. 1 Satz 2 GewStG).' },
+    e: 'Verwaltet eine GmbH ausschließlich eigenen Grundbesitz, bleibt der Grundstücksertrag praktisch gewerbesteuerfrei (§ 9 Nr. 1 Satz 2 GewStG). Unschädlich daneben: Strom aus erneuerbaren Energien/Ladestationen bis 20 % und übrige Nebeneinnahmen bis 5 % der Einnahmen (§ 9 Nr. 1 Satz 3 GewStG).' },
+  { g: 'Steuern', t: 'Option zur Umsatzsteuer (§ 9 UStG)',
+    e: 'Verzicht auf die Steuerfreiheit der Grundstücksvermietung (§ 4 Nr. 12 UStG): möglich nur bei Vermietung an Unternehmer, bei Grundstücken nur, wenn der Mieter ausschließlich vorsteuerunschädliche Umsätze ausführt — öffnet im Gegenzug den Vorsteuerabzug aus Bau- und laufenden Kosten.' },
+  { g: 'Steuern', t: 'Kryptowerte & Mining',
+    e: 'Bei einer GmbH sind geminte Coins stets Betriebsvermögen und gehen zum Marktkurs des Zugangs als Betriebseinnahme zu (BMF-Schreiben vom 06.03.2025). Block-Rewards sind nicht umsatzsteuerbar (BMF vom 27.02.2018), der Tausch in Euro ist steuerfrei (§ 4 Nr. 8b UStG).' },
   { g: 'Steuern', t: 'Anrechenbare ausländische Quellensteuer',
     e: 'Im Ausland auf Dividenden einbehaltene Steuer, die unter Voraussetzungen auf die deutsche Körperschaftsteuer angerechnet wird (§ 26 KStG).' },
   { g: 'E-Bilanz, Buchhaltung & GoBD', t: 'E-Bilanz',

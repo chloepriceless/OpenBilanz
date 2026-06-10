@@ -17,12 +17,15 @@ zugelassenen Formate sind:
   eingebettet ist. Sieht für das menschliche Auge aus wie eine
   „normale" PDF, ist aber maschinenlesbar.
 
-> Eine reine PDF ohne XML genügt im B2B-Inland nicht mehr (Übergangsfristen
-> bis 31.12.2027). Im B2B-Inland reicht **XRechnung alleine** rechtlich
+> Eine reine PDF ohne XML genügt im B2B-Inland nicht mehr. Übergangsfristen
+> für den **Versand** gelten gestaffelt: alle Aussteller bis 31.12.2026,
+> danach nur noch Aussteller mit Vorjahresumsatz ≤ 800.000 € bis 31.12.2027.
+> Im B2B-Inland reicht **XRechnung alleine** rechtlich
 > aus — ZUGFeRD-Hybrid ist freiwilliger Komfort.
 
 Die **Empfangs-Pflicht** trifft jede inlandsansässige GmbH bereits seit
-Anfang 2025. Die **Versand-Pflicht** kommt stufenweise (alle ab 2028).
+Anfang 2025. Die **Versand-Pflicht** kommt stufenweise: ab 1.1.2027 für
+Aussteller mit Vorjahresumsatz über 800.000 €, ab 1.1.2028 für alle.
 
 ---
 
@@ -81,7 +84,7 @@ Vorrang.
 |---|---|---|
 | Name auf der Rechnung | ja (oder aus Stammdaten) | Vollständige Firma laut Handelsregister |
 | Straße / PLZ / Ort | ja (oder aus Stammdaten) | Vollständige Geschäftsanschrift |
-| Steuernummer **oder** USt-IdNr. | §14 UStG-Pflicht | mindestens eines, am besten beides |
+| Steuernummer **oder** USt-IdNr. | § 14 UStG-Pflicht | mindestens eines, am besten beides |
 | USt-IdNr. | Pflicht bei §13b / EU | Form: `DE` + 9 Ziffern. Wird live geprüft (DE/AT/NL/IT mit Prüfziffer) |
 | Registergericht + HR-Nummer | für die Fußzeile | z. B. HRB 38120, AG Leipzig |
 | Ansprechpartner / Telefon / E-Mail | optional | landet im Contact-Block der XML |
