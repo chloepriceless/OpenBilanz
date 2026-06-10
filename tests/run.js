@@ -331,6 +331,21 @@ test('Closing.pruefeJaReadiness: Bilanz-ausgeglichen-Punkt nur mit werte', funct
   var ohne = Closing.pruefeJaReadiness({ buchungen: [] });
   ok(!ohne.some(function (x) { return x.titel === 'Bilanz ausgeglichen'; }), 'ohne werte -> kein Punkt');
 });
+/* ---- Fristen: Aufstellungsfrist nach Größenklasse (§ 264 Abs. 1 HGB) -- */
+test('Fristen: Aufstellung 6 Monate (kleine KapG) vs. 3 Monate (mittelgroße)', function () {
+  function aufstellungsFrist(groessenklasse) {
+    var f = Fristen.naechsteFristen({}, [{ id: 'A-1', art: 'JAHRESABSCHLUSS',
+      stichtag: '2025-12-31', groessenklasse: groessenklasse }], '2026-01-15');
+    return f.filter(function (x) { return x.art === 'aufstellung'; })[0];
+  }
+  eq(aufstellungsFrist('KLEIN').frist, '2026-06-30', 'kleine KapG: 6 Monate (S. 4)');
+  eq(aufstellungsFrist('KLEINST').frist, '2026-06-30', 'Kleinst: 6 Monate');
+  eq(aufstellungsFrist(undefined).frist, '2026-06-30', 'ohne Einstufung: 6 Monate (Default kleine GmbH)');
+  eq(aufstellungsFrist('MITTEL').frist, '2026-03-31', 'mittelgroße KapG: 3 Monate (S. 3)');
+  eq(aufstellungsFrist('GROSS').frist, '2026-03-31', 'große KapG: 3 Monate');
+  ok(/S\. 3/.test(aufstellungsFrist('MITTEL').paragraph), 'Paragraph nennt Satz 3');
+});
+
 /* ---- SKR04-Konten-Glossar (eigene Erklärtexte) ----------------------- */
 test('SKR04Glossar: jede Glossar-Nummer existiert im Kontenrahmen', function () {
   var G = require('../public/shared/skr04-glossar.js');
@@ -870,18 +885,34 @@ test('UStVA: Kleinunternehmer § 19 - keine USt, kein Vorsteuerabzug', function 
   eq(u.kz83, 0, 'keine Zahllast');
   ok(u.hinweise.length >= 1, 'Hinweis zur Kleinunternehmerregelung');
 });
-test('UStVA: § 13b - geschuldete Steuer und Vorsteuer heben sich auf', function () {
+test('UStVA: § 13b - amtliche Kennzahlen: Kz 84 = Bemessungsgrundlage, Kz 85 = Steuer, Kz 67 = Vorsteuer', function () {
+  // Rechts-Review 2026-06-10: der amtliche UStVA-Vordruck führt die BEMESSUNGS-
+  // GRUNDLAGE der § 13b-Leistungsbezüge in Kz 84, die STEUER darauf in Kz 85 und
+  // die abziehbare § 13b-Vorsteuer GETRENNT in Kz 67 (Kz 66 = nur allg. Vorsteuer).
   var u = Ustva.berechne([], null, null, { rc13b: { netto19: 1000 } });
-  eq(u.kz84, 190, 'Kz 84 = 19 % von 1.000');
-  eq(u.kz66, 190, '§ 13b-Steuer zugleich als Vorsteuer abziehbar');
+  eq(u.kz84, 1000, 'Kz 84 = Bemessungsgrundlage (netto) 1.000');
+  eq(u.kz85, 190, 'Kz 85 = Steuer 19 % von 1.000');
+  eq(u.kz66, 0, 'Kz 66 nur allgemeine Vorsteuer (hier keine)');
+  eq(u.kz67, 190, 'Kz 67 = § 13b-Steuer als Vorsteuer abziehbar');
   eq(u.kz83, 0, 'netto Null bei voller Abzugsberechtigung');
 });
 test('UStVA: § 13b zusätzlich zur eigenen Umsatzsteuer', function () {
   var bu = [{ datum: '2026-01-10', soll: '1800', haben: '4400', betrag: 10000 }];
   var u = Ustva.berechne(bu, null, null, { rc13b: { netto19: 2000 } });
   eq(u.ust19, 1900, 'eigene USt 19 %');
-  eq(u.kz84, 380, '§ 13b-Steuer 19 % von 2.000');
-  eq(u.kz83, 1900, 'Zahllast = eigene USt (1900 + 380 - 380)');
+  eq(u.kz84, 2000, 'Kz 84 = Bemessungsgrundlage 2.000');
+  eq(u.kz85, 380, 'Kz 85 = § 13b-Steuer 19 % von 2.000');
+  eq(u.kz83, 1900, 'Zahllast = eigene USt (1900 + 380 - 0 - 380)');
+});
+test('UStVA: § 13b mit allgemeiner Vorsteuer — Kz 66/67 getrennt, Zahllast korrekt', function () {
+  var bu = [
+    { datum: '2026-01-10', soll: '1800', haben: '4400', betrag: 10000 },
+    { datum: '2026-01-12', soll: '1406', haben: '1800', betrag: 570 }
+  ];
+  var u = Ustva.berechne(bu, null, null, { rc13b: { netto19: 1000 } });
+  eq(u.kz66, 570, 'Kz 66 = nur allgemeine Vorsteuer');
+  eq(u.kz67, 190, 'Kz 67 = § 13b-Vorsteuer getrennt');
+  eq(u.kz83, 1330, 'Zahllast 1900 + 190 - 570 - 190');
 });
 test('UStVA: steuerfreie Umsätze ohne Vorsteuerabzug melden Kz 48 + Hinweis', function () {
   var u = Ustva.berechne([], null, null, { steuerfrei: { ohneVorsteuer: 12000 } });

@@ -105,14 +105,20 @@
         });
         return;
       }
-      // Jahresabschluss aufstellen: 6 Monate nach Stichtag (kleine GmbH § 264 Abs. 1 S. 4 HGB)
-      var aufstellung = addMonate(stichtag, 6);
+      // Jahresabschluss aufstellen (§ 264 Abs. 1 HGB): kleine und Kleinst-
+      // Kapitalgesellschaften 6 Monate (Satz 4), mittelgroße/große 3 Monate
+      // (Satz 3) nach dem Abschlussstichtag. Ohne Einstufung: 6 Monate
+      // (Zielgruppe des Tools ist die kleine GmbH).
+      var istKlein = !a.groessenklasse || a.groessenklasse === 'KLEINST' ||
+                     a.groessenklasse === 'KLEIN';
+      var aufstellung = addMonate(stichtag, istKlein ? 6 : 3);
       liste.push({
         titel: 'Jahresabschluss aufstellen · ' + bez,
         frist: iso(aufstellung),
         restTage: tagsZwischen(aufstellung, h),
         ampel: ampel(tagsZwischen(aufstellung, h)),
-        paragraph: '§ 264 Abs. 1 HGB',
+        paragraph: istKlein ? '§ 264 Abs. 1 S. 4 HGB (6 Monate, kleine/Kleinst-KapG)'
+                            : '§ 264 Abs. 1 S. 3 HGB (3 Monate, mittelgroße/große KapG)',
         art: 'aufstellung',
         sprung: { view: 'editor', abschlussId: a.id }
       });

@@ -2671,11 +2671,13 @@ function renderUstva(m) {
       zeile('86', 'Steuerpflichtige Umsätze zum Steuersatz 7 % (netto)', u.kz86) +
       zeile('', 'Umsatzsteuer 19 %', u.ust19) +
       zeile('', 'Umsatzsteuer 7 %', u.ust7) +
-      (u.kz84 ? zeile('84', 'Steuer auf bezogene Leistungen (§ 13b UStG)', u.kz84) : '') +
+      (u.kz84 ? zeile('84', 'Bezogene Leistungen § 13b UStG (Bemessungsgrundlage, netto)', u.kz84) : '') +
+      (u.kz85 ? zeile('85', 'Steuer auf bezogene Leistungen (§ 13b UStG)', u.kz85) : '') +
       (u.kz44 ? zeile('44', 'Steuerfreie Umsätze mit Vorsteuerabzug', u.kz44) : '') +
       (u.kz48 ? zeile('48', 'Steuerfreie Umsätze ohne Vorsteuerabzug', u.kz48) : '') +
-      zeile('', '= Umsatzsteuer', Berechnung.cent(u.ustBerechnet + u.kz84), { summe: true }) +
-      zeile('66', 'Abziehbare Vorsteuerbeträge', u.kz66) +
+      zeile('', '= Umsatzsteuer', Berechnung.cent(u.ustBerechnet + u.kz85), { summe: true }) +
+      zeile('66', 'Abziehbare Vorsteuerbeträge aus Rechnungen', u.kz66) +
+      (u.kz67 ? zeile('67', 'Vorsteuer aus Leistungen i. S. d. § 13b UStG', u.kz67) : '') +
       zeile('83', 'Verbleibende Umsatzsteuer-Vorauszahlung', u.kz83, { summe: true }) +
       '</table>';
     h += '<div class="karte-hint" style="margin-top:8px">' +

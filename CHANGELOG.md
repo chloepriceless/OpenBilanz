@@ -11,6 +11,24 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.14.1] - 2026-06-10
+
+Ergebnis eines vollständigen **rechtlichen Reviews** (28 Rechtswerte gegen die Gesetzes-
+Primärquellen verifiziert + Cross-Check gegen DATEV-Kontenrahmen/sevDesk/Lexware/BMF —
+Details in `.planning/RECHTS-REVIEW.md`). 26 Werte ohne Abweichung bestätigt; 2 behoben:
+
+### Behoben
+- **UStVA § 13b UStG — amtliche Kennzahlen-Semantik**: Die Kennzahlen-Übersicht führte den
+  § 13b-**Steuerbetrag** unter „Kz 84" und fasste die § 13b-Vorsteuer mit in Kz 66 zusammen.
+  Amtlich gilt: **Kz 84 = Bemessungsgrundlage (netto), Kz 85 = Steuer darauf, Kz 67 =
+  § 13b-Vorsteuer (getrennt von Kz 66)**. Die berechnete **Zahllast (Kz 83) war stets
+  korrekt** — aber beim manuellen Übertrag nach ELSTER wäre der Steuerbetrag im falschen
+  Feld gelandet. Jetzt werden Kz 84/85/66/67 amtlich korrekt berechnet und angezeigt.
+- **Aufstellungsfrist § 264 Abs. 1 HGB nach Größenklasse**: Die Fristenübersicht zeigte
+  pauschal 6 Monate (korrekt für kleine/Kleinst-Kapitalgesellschaften, Satz 4). Für
+  mittelgroße/große Gesellschaften gilt die **3-Monats-Frist** (Satz 3) — wird jetzt anhand
+  der Größenklasse des Abschlusses unterschieden.
+
 ## [2.14.0] - 2026-06-10
 
 ### Hinzugefügt
@@ -377,7 +395,8 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.0...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.1...HEAD
+[2.14.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.14.0...v2.14.1
 [2.14.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.1...v2.14.0
 [2.13.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.0...v2.13.1
 [2.13.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.12.0...v2.13.0

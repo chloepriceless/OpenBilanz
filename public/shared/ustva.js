@@ -78,17 +78,22 @@
     var ustGebucht = cent(hs('3806') + hs('3801'));
     var vorsteuerKonten = cent(sh('1406') + sh('1401'));   // abziehbare Vorsteuer
 
-    /* § 13b UStG - Steuerschuldnerschaft des Leistungsempfängers. */
-    var kz84 = cent(n(rc.netto19) * 0.19 + n(rc.netto7) * 0.07);
+    /* § 13b UStG - Steuerschuldnerschaft des Leistungsempfängers.
+     * Amtliche Kennzahlen-Semantik (UStVA-Vordruck): Kz 84 = BEMESSUNGSGRUNDLAGE
+     * (Nettobeträge der bezogenen Leistungen), Kz 85 = darauf entfallende STEUER,
+     * Kz 67 = die als Vorsteuer abziehbare § 13b-Steuer (getrennt von Kz 66). */
+    var kz84 = cent(n(rc.netto19) + n(rc.netto7));
+    var kz85 = cent(n(rc.netto19) * 0.19 + n(rc.netto7) * 0.07);
     /* § 4 UStG - steuerfreie Umsätze (rein nachrichtlich). */
     var kz44 = cent(n(sf.mitVorsteuer));    // steuerfrei MIT Vorsteuerabzug
     var kz48 = cent(n(sf.ohneVorsteuer));   // steuerfrei OHNE Vorsteuerabzug
 
     var hinweise = [];
-    var kz66, kz83;
+    var kz66, kz67, kz83;
     if (klein) {
       /* § 19 UStG: kein USt-Ausweis, kein Vorsteuerabzug. */
       kz66 = 0;
+      kz67 = 0;
       kz83 = 0;
       hinweise.push('Kleinunternehmer (§ 19 UStG): Es wird keine Umsatzsteuer ' +
         'ausgewiesen und kein Vorsteuerabzug geltend gemacht; eine ' +
@@ -96,10 +101,13 @@
         '25.000 EUR (Vorjahr) bzw. 100.000 EUR (laufendes Jahr). Die Kennzahlen ' +
         'dienen nur der Übersicht.');
     } else {
-      /* Die nach § 13b geschuldete Steuer ist bei voller Abzugsberechtigung
-       * zugleich als Vorsteuer abziehbar. */
-      kz66 = cent(vorsteuerKonten + kz84);
-      kz83 = cent(ustBerechnet + kz84 - kz66);
+      /* Die nach § 13b geschuldete Steuer (Kz 85) ist bei voller Abzugs-
+       * berechtigung zugleich als Vorsteuer abziehbar - amtlich getrennt
+       * ausgewiesen in Kz 67 (NICHT in Kz 66, die nur die allgemeine
+       * Vorsteuer aus Eingangsrechnungen trägt). */
+      kz66 = cent(vorsteuerKonten);
+      kz67 = kz85;
+      kz83 = cent(ustBerechnet + kz85 - kz66 - kz67);
       if (art === 'ist' && erloesUeberForderung > 0) {
         hinweise.push('Ist-Versteuerung (§ 20 UStG): Im Zeitraum wurden Erlöse von ' +
           erloesUeberForderung.toFixed(2).replace('.', ',') + ' EUR über ein ' +
@@ -107,11 +115,11 @@
           'erst mit dem Zahlungseingang - diese Erlöse zum Zahlungsdatum erfassen, ' +
           'nicht zum Rechnungsdatum.');
       }
-      if (kz84 > 0) {
+      if (kz85 > 0) {
         hinweise.push('§ 13b UStG: Die geschuldete Steuer von ' +
-          kz84.toFixed(2).replace('.', ',') + ' EUR wurde als Vorsteuer ' +
-          'gegengerechnet (volle Vorsteuerabzugsberechtigung unterstellt). Bei ' +
-          'eingeschränktem Vorsteuerabzug ist der Betrag manuell zu kürzen.');
+          kz85.toFixed(2).replace('.', ',') + ' EUR (Kz 85) wurde als Vorsteuer ' +
+          '(Kz 67) gegengerechnet (volle Vorsteuerabzugsberechtigung unterstellt). ' +
+          'Bei eingeschränktem Vorsteuerabzug ist der Betrag manuell zu kürzen.');
       }
       if (kz48 > 0) {
         hinweise.push('Steuerfreie Umsätze ohne Vorsteuerabzug (§ 4 Nr. 8 ff. UStG, ' +
@@ -122,8 +130,9 @@
     }
     return {
       kz81: kz81, kz86: kz86, ust19: ust19, ust7: ust7,
-      kz84: kz84, kz44: kz44, kz48: kz48,
-      ustBerechnet: ustBerechnet, ustGebucht: ustGebucht, kz66: kz66,
+      kz84: kz84, kz85: kz85, kz44: kz44, kz48: kz48,
+      ustBerechnet: ustBerechnet, ustGebucht: ustGebucht,
+      kz66: kz66, kz67: kz67,
       kz83: kz83, vorsteuerKonten: cent(vorsteuerKonten),
       versteuerungsart: art, kleinunternehmer: klein, hinweise: hinweise
     };
