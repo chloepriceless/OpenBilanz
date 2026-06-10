@@ -11,6 +11,38 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.13.1] - 2026-06-10
+
+Härtung aus einem vollständigen Code-Review (Sicherheit, Robustheit, Aufräumen). Keine
+Funktionsänderung für den normalen Ablauf.
+
+### Sicherheit
+- **Pfad-Traversal im Selbst-Hosting-Server behoben**: Ein Mandanten-Parameter aus reinen
+  Punkten (`..`) konnte über `path.join` aus dem Mandanten-Verzeichnis ausbrechen (im
+  Netzwerk-Modus ein Daten-Isolationsbruch). Solche Segmente werden jetzt entschärft. Punkte
+  innerhalb eines Namens bleiben erlaubt.
+- **HTTP-Header-Injection beim Datei-Download behoben**: Der Dateiname im
+  `Content-Disposition`-Header (aus der Abschluss-ID) wird jetzt auf sichere Zeichen
+  beschränkt — kein Response-Splitting/Quote-Breakout mehr.
+- **Supply-Chain-Schutz**: `tools/setup-pdf-lib.sh` verifiziert den pdf-lib-Download jetzt
+  gegen einen gepinnten SHA-256 (statt nur die Größe zu prüfen).
+
+### Behoben (Robustheit)
+- **Kein lautloses Scheitern mehr bei Speicher-/Ladefehlern**: Ein globales Sicherheitsnetz
+  fängt nicht abgefangene Promise-Fehler (z. B. IndexedDB-Quota/Blockade) und zeigt sie an;
+  zusätzlich klare Meldungen beim App-Start und beim Speichern („bitte Backup erstellen").
+  Bei Buchführungsdaten darf ein Fehler nie unsichtbar bleiben.
+- **Vorjahresvergleich**: Nach einem Ladefehler des Vorjahresabschlusses bleibt der Vergleich
+  nicht mehr dauerhaft leer (Lade-Sperre wird zurückgesetzt, Retry möglich).
+
+### Geändert
+- Aufräumen: überflüssiger Konten-Options-Aufbau bei jedem Buchhaltungs-Render entfernt,
+  toter Browser-Ladevorgang (`unterschrift-pdf.js`, durch das Voll-PDF ersetzt) entfernt.
+- Dokumentation: Drittquellen vollständig (ERPNext-SKR04-Vorlage als Herkunft der
+  HGB-Zuordnung; vendored PDF-Bibliotheken), CHANGELOG-Vergleichslinks korrigiert.
+- Tests: bisher ungetestete, datennahe Logik abgedeckt (CAMT-/IBKR-Bankimport-Parser,
+  verschlüsselte `.obz`-Sicherung, Gegenkonto-Heuristik, Abschluss-Checkliste). 265 Tests.
+
 ## [2.13.0] - 2026-06-08
 
 ### Hinzugefügt
@@ -333,7 +365,8 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.0...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.1...HEAD
+[2.13.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.0...v2.13.1
 [2.13.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.12.0...v2.13.0
 [2.12.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.11.0...v2.11.1

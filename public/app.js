@@ -5,7 +5,8 @@
 
 /* ---- Zustand ----------------------------------------------------------- */
 var S = { unternehmen: null, abschluesse: [], aktiv: null, view: 'start', erklaerungen: true,
-          mandanten: [], aktiverMandant: 'standard' };
+          mandanten: [], aktiverMandant: 'standard',
+          vorjahr: null, vorjahrLaedt: null };   /* Vorjahresvergleich (§ 265 Abs. 2 HGB), lazy geladen */
 
 /* ---- Persistenz -------------------------------------------------------- */
 window.OPENBILANZ_MODE = (function () {
