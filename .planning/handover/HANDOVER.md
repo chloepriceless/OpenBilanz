@@ -1,6 +1,13 @@
 # HANDOVER — OpenBilanz (gmbh-verwaltung)
 
-**Stand: 2026-06-10 · HEAD `bf0549e` (v2.14.2) · in sync · Working-Tree sauber · 272 Tests grün**
+**Stand: 2026-06-10 · HEAD `4ae2894` (v2.14.3) · in sync · Working-Tree sauber · 272 Tests grün**
+
+> ✅ **RE-REVIEW (Christin) ERLEDIGT, v2.14.3 live:** Delta v2.13.1→v2.14.2 regressionsfrei
+> (Zahllast-Äquivalenz + Konflikt-Warnung tiefgeprüft). Fach-Review der 65 Glossar-Texte: 9
+> korrigiert — gewichtig: 0135 Software-AfA (BMF 22.02.2022: 1 Jahr), 7000 § 8b-Streubesitz
+> (<10 % VOLL steuerpflichtig), 7600 KSt-Pfad konkret. Plus 3 Code-NIEDRIGs (alleKonten-1x,
+> EOF-Newline, Fristen-Kommentar). **Learning: eigene Rechtstexte wie Code behandeln — immer
+> zweites Augenpaar.** 0 offene Findings über alle Prüfungen.
 
 > ✅ **NACHARBEIT (Christin „alle Findings umsetzen") ERLEDIGT, v2.14.2 live:** Eltern-/Unterposten-
 > Konflikt-Warnung in `pruefe()`, 2910-Haben-Hinweis in BuchungsPruefung, Glossar 2980 (BilMoG-
