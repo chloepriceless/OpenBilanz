@@ -15,6 +15,7 @@ Code aus anderen Projekten uebernommen.
 | Inhalt | Herkunft | Rechtslage |
 |---|---|---|
 | Kontenrahmen SKR04 (Kontonummern und Bezeichnungen) | amtlich publizierter DATEV-Standardkontenrahmen | Tatsachen / Kontenplan; die hier getroffene Auswahl und das HGB-Mapping sind Eigenleistung |
+| Vollstaendiger SKR04 (902 Zusatzkonten in `skr04-voll.js`): HGB-/GuV-Zuordnung je Konto | abgeleitet aus der ERPNext-SKR04-Vorlage ([frappe/erpnext](https://github.com/frappe/erpnext), `de_kontenplan_SKR04.json`, **GPL-3.0**) | Uebernommen werden **nur faktische Daten** (Kontonummer, Kurzbezeichnung, Bilanz-/GuV-Zuordnung) &ndash; nicht urheberrechtlich schutzfaehig (§ 5 UrhG / Tatsachen). Erzeugt von `tools/gen-skr04-voll.js`, gegen die kuratierte Auswahl als Ground-Truth kalibriert, bekannte ERPNext-Einordnungsfehler korrigiert. Die GPL-Quelldatei `tools/skr04-erpnext-source.json` ist **gitignored** (nicht im Repo) &ndash; es wird kein GPL-Code/keine GPL-Datei verbreitet, daher **keine Copyleft-Pflicht**. |
 | HGB-, GmbHG-, EStG- (insb. § 5b EStG &ndash; Rechtsgrundlage der E-Bilanz), GewStG-, KStG-Paragraphen | gesetze-im-internet.de | Amtliche Werke, § 5 UrhG &ndash; kein Urheberrechtsschutz |
 | E-Bilanz-Taxonomie 6.9 (Elementnamen `de-gaap-ci` / `de-gcd`) | amtliche Kerntaxonomie 6.9 der Finanzverwaltung (esteuer.de; BMF-Schreiben vom 10.06.2025) | Amtliche Spezifikation; nur die Elementnamen werden verwendet, um konformes XBRL zu erzeugen |
 | ELSTER-`EBilanz`-Container-Struktur | amtliches ELSTER-XML-Schema | Amtliche Spezifikation |
@@ -41,6 +42,18 @@ Repository uebernommen wurden, entstehen daraus **keine Copyleft-Pflichten**.
 |---|---|---|
 | [Arelle](https://arelle.org) | Apache-2.0 | Optional: XBRL-Validierung gegen die Taxonomie. Wird separat per `pip` installiert, ist nicht im Repo enthalten. |
 | Node.js | MIT u. a. | Laufzeitumgebung |
+
+## Optionale Laufzeit-Bibliotheken fuer die PDF-Erzeugung (vendored, nicht im Repo)
+
+Per `tools/setup-pdf-lib.sh` nach `public/vendor/` geladen (gitignored) &ndash; nur
+benoetigt fuer das ausfuellbare Bilanz-PDF und das ZUGFeRD-Hybrid-PDF. Alle Lizenzen
+sind MIT-kompatibel und erfordern lediglich die Nennung hier:
+
+| Asset | Lizenz | Zweck |
+|---|---|---|
+| [pdf-lib](https://github.com/Hopding/pdf-lib) (inkl. gebuendeltem [pako](https://github.com/nodeca/pako)) | MIT (pdf-lib) / MIT (pako) | PDF-Erzeugung mit AcroForm-Formularfeldern; zugleich devDependency fuer die Node-Tests |
+| Liberation Sans (`LiberationSans-Regular/-Bold.ttf`) | SIL Open Font License 1.1 | eingebettete Schrift im ZUGFeRD-/Voll-PDF |
+| sRGB IEC61966-2.1 ICC-Profil (`sRGB.icc`) | Public Domain | Farbprofil fuer die PDF/A-Konformitaet (ZUGFeRD) |
 
 ## Fazit
 

@@ -333,7 +333,16 @@ Einzelnachweise als Git-Commit-Kurz-Hashes in Klammern.
   für die GmbH, SKR04, E-Bilanz/XBRL-Grundlage, ELSTER-Bezug (`7e2ecb3`).
   Der vollständige Funktionsumfang dieses Stands ist in der README dokumentiert.
 
-[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/chloepriceless/OpenBilanz/compare/v2.13.0...HEAD
+[2.13.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.12.0...v2.13.0
+[2.12.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.11.1...v2.12.0
+[2.11.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.11.0...v2.11.1
+[2.11.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.10.0...v2.11.0
+[2.10.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.9.0...v2.10.0
+[2.9.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.8.0...v2.9.0
+[2.8.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.7.0...v2.8.0
+[2.7.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.6.0...v2.7.0
+[2.6.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.4.1...v2.5.0
 [2.4.1]: https://github.com/chloepriceless/OpenBilanz/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/chloepriceless/OpenBilanz/compare/v2.3.0...v2.4.0

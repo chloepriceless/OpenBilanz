@@ -41,7 +41,7 @@ richtige Seite (AKTIV/PASSIV bzw. ERTRAG/AUFWAND).
   Kurzbezeichnung, HGB-Zuordnung) — Fakten sind nicht urheberrechtlich geschützt. Die GPL-Quelldatei
   wird NICHT ins Repo committet (`.gitignore`); der Generator dokumentiert die Download-URL. Output =
   eigene faktische Datenstruktur mit Quellenattribution. (Präzedenz: skr04.js nutzt bereits
-  laroche/trading-gmbh CC0 + alyf-de/SKR04-Abgleich.) → in DRITTQUELLEN.md nachtragen.
+  laroche/trading-gmbh CC0 + alyf-de/SKR04-Abgleich.) → ✅ in DRITTQUELLEN.md nachgetragen (2026-06-10).
 
 ## Validierung (gemessen, gegen App-Ground-Truth)
 - **Bilanz:** 67/73 exakt deckungsgleich; 2 Konten fehlen in ERPNext (App gewinnt); 4 Diskrepanzen —
