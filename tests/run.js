@@ -2758,6 +2758,52 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
   });
 })();
 
+/* ---- Review-Nachtests (Code-Review 2026-06) ---------------------------- */
+test('Closing: Storno-GEGENBUCHUNG zählt ebenfalls nicht (Paar hebt sich auf)', function () {
+  var bu = [{ soll: '1800', haben: '4400', betrag: 100 },
+            { id: 'b2', soll: '6300', haben: '1800', betrag: 30, storniert: true },
+            { soll: '1800', haben: '6300', betrag: 30, stornoVon: 'b2' }];
+  ok(!Closing.hatKonto(bu, '6300'), 'Storno-Paar 6300 zählt komplett nicht');
+  eq(Closing.summeKonto(bu, '1800').saldo, 100, 'Saldo 1800 ohne beide Storno-Seiten');
+});
+
+test('baumSummen: explizit auf 0 erfasste Kinder überstimmen den Elternwert', function () {
+  var baum = [{ id: 'X', kinder: [{ id: 'X.1' }, { id: 'X.2' }] }];
+  var alt = Berechnung.baumSummen(baum, { 'X': 100 });
+  eq(alt['X'], 100, 'ohne Kindwerte gilt der Eltern-Direktwert');
+  var neu = Berechnung.baumSummen(baum, { 'X': 100, 'X.1': 0, 'X.2': 0 });
+  eq(neu['X'], 0, 'explizite Null-Kinder ergeben 0 statt Elternwert');
+  var teils = Berechnung.baumSummen(baum, { 'X': 100, 'X.1': 40 });
+  eq(teils['X'], 40, 'ein belegtes Kind reicht für die Kindersumme');
+});
+
+test('num: deutsches Tausenderformat "1.234,56" wird korrekt gelesen', function () {
+  eq(Berechnung.num('1.234,56'), 1234.56, 'Tausenderpunkt + Komma');
+  eq(Berechnung.num('12.345.678,90'), 12345678.9, 'mehrere Tausenderpunkte');
+  eq(Berechnung.num('1.234'), 1.234, 'ohne Komma bleibt der Punkt Dezimaltrenner');
+  eq(Berechnung.num('1234,56'), 1234.56, 'Komma als Dezimaltrenner');
+});
+
+test('Steuer: getrennter Gewerbeverlust (§ 10a GewStG) wird angesetzt', function () {
+  var basis = { art: 'JAHRESABSCHLUSS', stichtag: '2026-12-31', werte: {},
+    steuer: { hebesatz: 400, verlustvortrag: 50000 } };
+  var guv = { werte: {}, jahresergebnis: 100000 };
+  var a = Steuer.berechne(basis, guv);
+  eq(a.verlustvortrag.eingesetztKst, 50000, 'KSt-Topf voll eingesetzt');
+  eq(a.verlustvortrag.eingesetztGewSt, 50000, 'ohne eigenes Feld: GewSt wie KSt (Näherung)');
+  var basis2 = JSON.parse(JSON.stringify(basis));
+  basis2.steuer.verlustvortragGewSt = 10000;
+  var b = Steuer.berechne(basis2, guv);
+  eq(b.verlustvortrag.eingesetztGewSt, 10000, 'eigener GewSt-Topf wird angesetzt');
+  eq(b.verlustvortrag.eingesetztKst, 50000, 'KSt-Topf bleibt unverändert');
+  ok(b.gewst.betrag > a.gewst.betrag, 'kleinerer GewSt-Topf -> mehr Gewerbesteuer');
+});
+
+test('MT940: zweistelliges Jahr > 50 wird als 19xx gelesen (Fenster-Verfahren)', function () {
+  eq(Mt940.isoDatum('991231'), '1999-12-31', 'historischer Auszug 1999');
+  eq(Mt940.isoDatum('260110'), '2026-01-10', 'aktuelles Datum 2026');
+});
+
 /* ---- Lauf ------------------------------------------------------------- */
 /* Sequenziell laufen lassen, async-Tests (Promise-Rückgabewert) werden
  * abgewartet, ohne dass synchrone Tests darauf umgeschrieben werden müssen. */

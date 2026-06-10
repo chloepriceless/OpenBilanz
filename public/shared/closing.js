@@ -20,9 +20,15 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  /* Storno-Konvention: ein Storno besteht aus dem Original (storniert: true)
+   * UND der Gegenbuchung (stornoVon gesetzt). Beide zusammen heben sich auf -
+   * wer nur eine Seite ueberspringt, verfaelscht Salden und Treffer. Daher
+   * werden hier BEIDE Seiten ignoriert. */
+  function stornoPaar(b) { return !!(b.storniert || b.stornoVon); }
+
   function hatKonto(buchungen, nr, modus) {
     return (buchungen || []).some(function (b) {
-      if (b.storniert) return false;
+      if (stornoPaar(b)) return false;
       if (modus === 'soll') return b.soll === nr;
       if (modus === 'haben') return b.haben === nr;
       return b.soll === nr || b.haben === nr;
@@ -32,7 +38,7 @@
   function summeKonto(buchungen, nr) {
     var s = 0, h = 0;
     (buchungen || []).forEach(function (b) {
-      if (b.storniert) return;
+      if (stornoPaar(b)) return;
       if (b.soll === nr) s += +b.betrag || 0;
       if (b.haben === nr) h += +b.betrag || 0;
     });
@@ -64,7 +70,7 @@
       titel: 'AfA gebucht',
       status: !hatAnlagen ? 'info' : (hatAfA ? 'ok' : 'offen'),
       detail: !hatAnlagen
-        ? 'Kein Anlagenverzeichnis - keine AfA notwendig.'
+        ? 'Kein Anlagenverzeichnis — keine AfA notwendig.'
         : hatAfA
           ? 'Mindestens ein AfA-Konto wurde bebucht (6200/6220/6221/6260/7210).'
           : 'Anlagenverzeichnis vorhanden, aber kein AfA-Konto bebucht. „AfA-Buchungen ' +
@@ -130,7 +136,7 @@
       l.push({
         titel: 'Bilanz ausgeglichen',
         status: 'info',
-        detail: 'Live im Editor-Status angezeigt - rote Statusbox = Aktiva ≠ Passiva.',
+        detail: 'Live im Editor-Status angezeigt — rote Statusbox = Aktiva ≠ Passiva.',
         sprung: { view: 'editor' }
       });
     }
@@ -213,7 +219,7 @@
       detail: vst >= -0.005
         ? 'Abziehbare Vorsteuer (1406/1401): ' + fmtEur(vst) + ' EUR (Soll-Saldo, plausibel).'
         : 'Die Vorsteuerkonten 1406/1401 haben einen Haben-Überhang (' + fmtEur(vst) + ' EUR). ' +
-          'Das ist untypisch - bitte Buchungsrichtung prüfen.',
+          'Das ist untypisch — bitte Buchungsrichtung prüfen.',
       paragraph: '§ 15 UStG',
       sprung: { view: 'buchhaltung' }
     });

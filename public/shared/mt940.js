@@ -18,10 +18,13 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  /* YYMMDD -> YYYY-MM-DD (zweistelliges Jahr wird als 20YY gelesen). */
+  /* YYMMDD -> YYYY-MM-DD. Zweistelliges Jahr: > 50 wird als 19YY gelesen
+   * (historische Auszuege), sonst 20YY - das uebliche Fenster-Verfahren. */
   function isoDatum(yymmdd) {
     if (!/^\d{6}$/.test(yymmdd)) return '';
-    return '20' + yymmdd.slice(0, 2) + '-' + yymmdd.slice(2, 4) + '-' + yymmdd.slice(4, 6);
+    var yy = yymmdd.slice(0, 2);
+    var jh = parseInt(yy, 10) > 50 ? '19' : '20';
+    return jh + yy + '-' + yymmdd.slice(2, 4) + '-' + yymmdd.slice(4, 6);
   }
 
   /* :61: Umsatzzeile - Wertstellung, Soll/Haben-Kennzeichen und Betrag. */

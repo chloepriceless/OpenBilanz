@@ -21,7 +21,12 @@
   'use strict';
 
   function num(v) {
-    var n = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.'));
+    if (typeof v === 'number') return isNaN(v) ? 0 : v;
+    var s = String(v == null ? '' : v).replace(/\s/g, '');
+    // Deutsches Format "1.234,56": Tausenderpunkte nur entfernen, wenn ein
+    // Komma vorhanden ist - "1.234" ohne Komma bleibt der Punkt-Dezimalwert.
+    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '');
+    var n = parseFloat(s.replace(',', '.'));
     return isNaN(n) ? 0 : n;
   }
   function cent(v) { return Math.round(num(v) * 100) / 100; }
@@ -30,23 +35,32 @@
    * Ergibt für JEDEN Knoten einen Wert: Blätter aus den erfassten Werten,
    * Elternknoten als Summe ihrer Kinder. Wenn ein Elternknoten Kinder ohne
    * Werte hat, aber selbst einen erfassten Wert besitzt (Eingabe auf höherer
-   * Ebene), wird dieser Direktwert verwendet. */
-  function baumSummen(baum, werte, out) {
+   * Ebene), wird dieser Direktwert verwendet.
+   * "Belegt" heißt: im werte-Objekt ist ein Wert ERFASST - auch eine
+   * explizite 0 zählt. Sonst würde ein Elternwert (z. B. 100) Kinder, die
+   * bewusst alle auf 0 gesetzt wurden, still überstimmen. */
+  function istErfasst(v) {
+    return v !== undefined && v !== null && String(v).trim() !== '';
+  }
+  function baumSummen(baum, werte, out, belegt) {
     out = out || {};
+    belegt = belegt || {};
     for (var i = 0; i < baum.length; i++) {
       var k = baum[i];
       if (k.kinder && k.kinder.length) {
-        baumSummen(k.kinder, werte, out);
+        baumSummen(k.kinder, werte, out, belegt);
         var summe = 0, hatKindWert = false;
         for (var j = 0; j < k.kinder.length; j++) {
           var kid = k.kinder[j].id;
           summe += out[kid] || 0;
-          if (out[kid]) hatKindWert = true;
+          if (belegt[kid]) hatKindWert = true;
         }
         // Eingabe auf Elternebene (z.B. römisch) hat Vorrang, wenn kein Kind belegt ist
         out[k.id] = hatKindWert ? cent(summe) : cent(werte[k.id]);
+        belegt[k.id] = hatKindWert || istErfasst(werte[k.id]);
       } else {
         out[k.id] = cent(werte[k.id]);
+        belegt[k.id] = istErfasst(werte[k.id]);
       }
     }
     return out;

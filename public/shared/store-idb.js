@@ -243,7 +243,7 @@
   function speichereAbschluss(obj, mandantId) {
     var m = mid(mandantId);
     var rec = JSON.parse(JSON.stringify(obj || {}));
-    if (!rec.id) rec.id = 'A-' + Date.now();
+    if (!rec.id) rec.id = 'A-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
     rec.mandantId = m;
     rec.geaendertAm = new Date().toISOString();
     return tx(['abschluesse', 'mandanten', 'meta'], 'readwrite', function (t) {
@@ -255,15 +255,16 @@
   }
   function loescheAbschluss(id, mandantId) {
     var m = mid(mandantId);
+    var geloescht = false;
     return tx(['abschluesse', 'meta'], 'readwrite', function (t) {
       var s = t.objectStore('abschluesse');
       s.get(String(id)).onsuccess = function (e) {
         var a = e.target.result;
-        if (a && (a.mandantId || STD) === m) s.delete(String(id));
+        if (a && (a.mandantId || STD) === m) { s.delete(String(id)); geloescht = true; }
       };
       zaehleAenderung(t);
       return null;
-    }).then(function () { return true; });
+    }).then(function () { return geloescht; });
   }
 
   /* ---- Meta (Schluessel/Wert) ------------------------------------------ */

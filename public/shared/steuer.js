@@ -58,8 +58,10 @@
   }
 
   function n(v) {
-    var x = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v)
-      .replace(/\s/g, '').replace(',', '.'));
+    if (typeof v === 'number') return isNaN(v) ? 0 : v;
+    var s = String(v == null ? '' : v).replace(/\s/g, '');
+    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '');   // "1.234,56" -> "1234,56"
+    var x = parseFloat(s.replace(',', '.'));
     return isNaN(x) ? 0 : x;
   }
   function cent(v) { return Math.round(n(v) * 100) / 100; }
@@ -116,7 +118,12 @@
     var veraeuss = n(st.veraeusserungsgewinne);
     var nichtAbzb = n(st.nichtAbziehbareAufwendungen);
     var vga = n(st.vga);
-    var verlustvortrag = n(st.verlustvortrag);
+    var verlustvortrag = n(st.verlustvortrag);            // § 10d EStG (KSt)
+    /* § 10a GewStG ist ein rechtlich GETRENNTER Topf. Eigenes Feld; wenn es
+     * leer (bzw. 0, App-Konvention) ist, wird als Näherung der KSt-Vortrag
+     * angesetzt (mit Hinweis). */
+    var hatGewVortrag = n(st.verlustvortragGewSt) > 0;
+    var verlustvortragGew = hatGewVortrag ? n(st.verlustvortragGewSt) : verlustvortrag;
     var zinsen = n(st.zinsaufwand);
     var mietBew = n(st.mietenBeweglich);
     var mietUnbew = n(st.mietenUnbeweglich);
@@ -258,7 +265,7 @@
     if (gewerbeertrag < 0) gewerbeertrag = 0;
     // Gewerbeverlust § 10a GewStG - Mindestbesteuerung durchgehend mit 60 %
     // (die Anhebung auf 70 % gilt nur für § 10d EStG, nicht für die GewSt).
-    var vvGew = verlustabzug(gewerbeertrag, verlustvortrag, 0.60);
+    var vvGew = verlustabzug(gewerbeertrag, verlustvortragGew, 0.60);
     if (vvGew.abzug > 0) {
       gewerbeertrag = cent(gewerbeertrag - vvGew.abzug);
       gewSchritte.push({ text: '- Gewerbeverlust (§ 10a GewStG)', betrag: -vvGew.abzug });
@@ -277,11 +284,12 @@
         'hinzugerechnet. Sie löst beim Gesellschafter zusätzlich Kapitalertragsteuer ' +
         'aus (siehe Kapitalertragsteuer-Assistent) - im Zweifel steuerlich prüfen lassen.');
     }
-    if (verlustvortrag > 0) {
+    if (verlustvortrag > 0 && !hatGewVortrag) {
       hinweise.push('Verlustvortrag: körperschaftsteuerlicher (§ 10d EStG) und ' +
         'gewerbesteuerlicher Fehlbetrag (§ 10a GewStG) sind rechtlich getrennte ' +
-        'Töpfe; hier wird derselbe Wert für beide angesetzt. Weichen sie ab, die ' +
-        'Werte getrennt prüfen.');
+        'Töpfe; da kein gewerbesteuerlicher Fehlbetrag erfasst ist, wird derselbe ' +
+        'Wert für beide angesetzt. Weichen sie ab, den Gewerbeverlust im eigenen ' +
+        'Feld erfassen.');
     }
     if (auslQuSt > 0) {
       hinweise.push('Ausländische Quellensteuer: hier vereinfacht bis zur Höhe der ' +

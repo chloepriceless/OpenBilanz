@@ -44,7 +44,9 @@
   };
 
   function num(s) {
-    var n = parseFloat(String(s == null ? '' : s).replace(',', '.'));
+    var t = String(s == null ? '' : s).replace(/\s/g, '');
+    if (t.indexOf(',') >= 0) t = t.replace(/\./g, '');   // "1.234,56" -> "1234,56"
+    var n = parseFloat(t.replace(',', '.'));
     return isFinite(n) ? n : 0;
   }
   function cent(n) { return Math.round((num(n) + Number.EPSILON) * 100) / 100; }
