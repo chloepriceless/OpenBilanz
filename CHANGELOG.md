@@ -11,6 +11,62 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.15.0] - 2026-06-10
+
+Komplett-Review (Code, Texte, Rechtsstand, EB-/Übernahme-Automatik) plus drei neue
+Buchungshilfe-Fälle. Rechtsstand gegen Juni 2026 verifiziert (KSt-Stufenplan, GWG,
+§ 19/§ 20 UStG, Taxonomie 6.9, BMF Computerhardware, Aufbewahrung 8 Jahre — alles
+bestätigt; nur die E-Rechnungs-Übergangsfristen waren zu pauschal dargestellt).
+
+### Hinzugefügt
+- Buchungshilfe **6d Bitcoin-Mining**: Zugang geminter Coins zum Tageskurs
+  (BMF 06.03.2025), USt-Behandlung (nicht steuerbar, § 4 Nr. 8b UStG beim Verkauf,
+  kein Vorsteuerabzug), eigener Strom (kein Innenumsatz) und Strom vom
+  Gesellschafter (fremdübliche Abrechnung per Zwischenzähler, vGA-Warnung).
+- Buchungshilfe **6e Stromverkauf & PV-Einspeisung**: 19 % USt auf Stromlieferung
+  (Nullsteuersatz nur für die Anlage), Marktprämie als echter Zuschuss
+  (BMF 31.03.2025), Stromsteuer-Befreiung ≤ 2 MW, 20-%-Grenze bei der
+  erweiterten Grundstückskürzung.
+- Buchungshilfe **6f Vermietung an andere Unternehmen**: Herstellungskosten des
+  Mietobjekts (§ 255 Abs. 2/3 HGB, Anlagen im Bau 0700, aktivierte Eigenleistungen
+  4820, Umbuchung bei Fertigstellung, Gebäude-AfA 3 %), Mietabrechnung mit/ohne
+  USt-Option (§ 4 Nr. 12 / § 9 UStG), bewegliche Sachen immer 19 %.
+- Glossar: Herstellungskosten, Anlagen im Bau, Option zur Umsatzsteuer (§ 9 UStG),
+  Kryptowerte & Mining; erweiterte Grundstückskürzung um die 20-%/5-%-Grenzen ergänzt.
+- Steuerschätzung: eigenes Feld **Gewerbeverlust aus Vorjahren** (§ 10a GewStG) —
+  KSt- und GewSt-Verlusttopf sind rechtlich getrennt; leer = Näherung wie bisher.
+- 5 neue Tests (Storno-Paar, baumSummen-Null-Kinder, Tausenderformat, getrennter
+  Gewerbeverlust, MT940-Jahrhundertfenster) — Suite jetzt 277 Tests.
+
+### Behoben
+- **EB-Übernahme verlor das Vorjahresergebnis**: `eroeffnungsPlan` übersprang
+  P.A.V; der Jahresüberschuss/-fehlbetrag des Quelljahres wird jetzt als
+  Gewinn-/Verlustvortrag (2970/2978) gegen 9000 vorgetragen — vorher ging die
+  Folgejahres-Bilanz um genau das Vorjahresergebnis nicht auf.
+- **EB-Übernahme bei nicht voll eingezahltem Stammkapital**: nicht eingeforderte
+  ausstehende Einlagen werden jetzt auf 2910 gebucht; vorher setzte „Salden
+  übernehmen" das volle gezeichnete Kapital an und die Bilanz war um die
+  ausstehenden Einlagen unausgeglichen. Neue Plausibilitäts-Warnung, wenn das
+  EBK 9000 im Vorschau-Plan nicht aufgeht.
+- Storno-Asymmetrie: `closing.js` (hatKonto/summeKonto) und der Monats-Trend
+  übersprangen nur das stornierte Original, zählten die Storno-Gegenbuchung aber
+  mit — jetzt wird das Paar komplett ignoriert.
+- `baumSummen`: explizit auf 0 gesetzte Kinder überstimmen jetzt einen
+  Eltern-Direktwert (vorher zeigte die Bilanz still den veralteten Elternwert).
+- `num()`: deutsches Tausenderformat („1.234,56") wird in Rechenkern,
+  Steuerschätzung und Ausgangsrechnung korrekt gelesen.
+- MT940-Import: zweistellige Jahre > 50 werden als 19xx gelesen.
+- Stores: `speichereAbschluss` (Node) mutiert das übergebene Objekt nicht mehr;
+  IDB-`loescheAbschluss` meldet jetzt ehrlich, ob gelöscht wurde; ID-Vergabe
+  kollisionssicher; Arelle-Tempdatei kollisionssicher.
+
+### Geändert
+- E-Rechnungs-Übergangsfristen präzisiert (Hilfe + E-RECHNUNG.md): bis 31.12.2026
+  für alle Aussteller, bis 31.12.2027 nur bei Vorjahresumsatz ≤ 800.000 €.
+- Buchungshilfe Fall 2 (Saldenvortrag) um 2910/2970/2978-Zeilen ergänzt.
+- Anrede in den UI-Texten auf durchgängiges Du vereinheitlicht; kleinere
+  Rechtschreib- und Typografie-Korrekturen.
+
 ## [2.14.3] - 2026-06-10
 
 Ergebnis eines Re-Reviews (Delta-Code v2.13.1→v2.14.2 + fachliche Prüfung aller 65
