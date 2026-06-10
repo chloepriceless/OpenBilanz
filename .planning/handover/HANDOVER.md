@@ -1,6 +1,37 @@
 # HANDOVER — OpenBilanz (gmbh-verwaltung)
 
-**Stand: 2026-06-10 · HEAD `4ae2894` (v2.14.3) · in sync · Working-Tree sauber · 272 Tests grün**
+**Stand: 2026-06-10 (abends) · HEAD `3a8ec33` (v2.15.0) · Working-Tree sauber · 277 Tests grün**
+
+> ✅ **KOMPLETT-REVIEW + NEUE FÄLLE (Christin-Auftrag) ERLEDIGT, v2.15.0 committet (3 Commits
+> `8b412e4`/`efc19ce`/`3a8ec33`, noch nicht gepusht/deployt):**
+> 1. **EB-/Übernahme-Automatik — 2 echte Bugs gefunden & behoben** (`public/app.js`,
+>    `eroeffnungsPlan`): (a) Vorjahres-Jahresergebnis ging beim Saldenvortrag verloren
+>    (P.A.V wird nie in werte.passiva gespeichert) → jetzt 9000 an 2970 bzw. 2978 an 9000;
+>    (b) nicht eingeforderte ausstehende Einlagen fehlten → jetzt 2910 an 9000 (sonst setzt
+>    `uebernehmeSalden` app.js:~5100 das volle 2900 als eingefordert an). Plus EBK-9000-
+>    Aufgeh-Warnung in der Vorschau, Hilfe-Fall 2 erweitert.
+> 2. **Code-Review (Sonnet-Agent, 16 Findings):** umgesetzt: baumSummen-Null-Kinder
+>    (berechnung.js), num()-Tausenderpunkte (3 Module), getrennter GewSt-Verlusttopf
+>    (steuer.js + UI-Feld `verlustvortragGewSt`), Storno-Paar-Asymmetrie (closing.js +
+>    monatsTrend), MT940-Jahrhundertfenster, Store-Klon/ID-Kollision/IDB-Delete-Rückgabe,
+>    Arelle-Tempdatei. NICHT umgesetzt (bewusst, niedrig): unescape-Deprecation
+>    pruefkette.js:44, xrechnung-ubl-Rundungsformel-Stil, Mini-XML-Parser-Verschachtelung
+>    (importe.js, dokumentiertes Limit), Dateinamen-Sanitizer-Konsistenz app.js (prüfen bei
+>    Gelegenheit), GuV-blatt()-Tiefe (Architektur-Notiz).
+> 3. **Rechts-Review (Webrecherche, Stand 06/2026):** 15 Themen verifiziert — alles korrekt
+>    (KSt-Stufenplan 15→10 %, GWG 800 €, § 19 25k/100k, § 20 800k, Taxonomie 6.9, BMF
+>    22.02.2022, Soli, § 10d 70 %, 8 J. Belege, § 325). **Einziger Mangel behoben:**
+>    E-Rechnungs-Übergangsfristen waren pauschal „bis 31.12.2027" → präzisiert (alle bis
+>    31.12.2026, ≤ 800k bis 31.12.2027) in app.js-Hilfe + E-RECHNUNG.md. Alles in Merkel.
+> 4. **Neue Buchungshilfe-Fälle 6d/6e/6f** (app.js renderHilfe): Bitcoin-Mining (eigener
+>    Strom/Strom vom Gesellschafter, BMF 06.03.2025 + 27.02.2018), Stromverkauf/PV
+>    (19 %, Marktprämie BMF 31.03.2025, 20-%-GewSt-Grenze), Vermietung an Unternehmen
+>    inkl. Herstellungskosten (§ 255 HGB, 0700→0240, 4820 Eigenleistungen, § 9-Option).
+>    + 4 neue Glossar-Einträge. Rechtsgrundlagen per 2. Recherche-Agent verifiziert.
+> 5. **Textreview:** Sie→Du vereinheitlicht (~20 Stellen), außer/ausser, Typografie.
+> **Offen/Nächste Schritte:** Deploy auf Hetzner steht aus (siehe Memory
+> openbilanz-deploy-hetzner); README-Feature-Liste prüfen ob 6d-6f erwähnt werden sollen
+> (🟡-Regel beachten); CONTRIBUTING.md-ASCII-Fließtext ist Grenzfall (nicht angefasst).
 
 > ✅ **RE-REVIEW (Christin) ERLEDIGT, v2.14.3 live:** Delta v2.13.1→v2.14.2 regressionsfrei
 > (Zahllast-Äquivalenz + Konflikt-Warnung tiefgeprüft). Fach-Review der 65 Glossar-Texte: 9
