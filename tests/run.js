@@ -45,6 +45,7 @@ var MandantenMigration = require('../public/shared/mandanten-migration.js');
 var ImportProtokoll = require('../public/shared/import-protokoll.js');
 var Store = require('../lib/store.js');
 var UnterschriftPdf = require('../public/shared/unterschrift-pdf.js');
+var OBZ = require('../public/shared/obz.js');
 
 var tests = [], pass = 0, fail = 0;
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -54,6 +55,84 @@ function eq(a, b, msg) {
   } else if (a !== b) throw new Error((msg || '') + ' erwartet ' + b + ', war ' + a);
 }
 function ok(c, msg) { if (!c) throw new Error(msg || 'Bedingung nicht erfuellt'); }
+
+/* ---- Test-Umgebung: Node-Polyfills für Browser-APIs (NUR Tests) -------
+ * obz.js nutzt Web Crypto + btoa/atob; importe.js parseCamt/parseIbkrFlex nutzen
+ * DOMParser. In neueren Node-Versionen sind Crypto/btoa bereits global; DOMParser
+ * fehlt immer. Diese Shims existieren ausschliesslich für die Test-Suite und
+ * berühren den Auslieferungs-Code nicht. */
+if (typeof global.crypto === 'undefined' || !global.crypto.subtle) {
+  try { global.crypto = require('crypto').webcrypto; } catch (e) {}
+}
+if (typeof global.btoa === 'undefined') {
+  global.btoa = function (s) { return Buffer.from(s, 'binary').toString('base64'); };
+}
+if (typeof global.atob === 'undefined') {
+  global.atob = function (b) { return Buffer.from(b, 'base64').toString('binary'); };
+}
+if (typeof global.DOMParser === 'undefined') {
+  /* Minimaler XML-Parser, NUR für die Tests von parseCamt/parseIbkrFlex. Deckt
+   * wohlgeformtes XML (Elemente, Text, Attribute, Namespace-Präfixe, self-closing)
+   * ab - genug für die getElementsByTagName('*')/localName/textContent/getAttribute-
+   * Nutzung der Importe. Kein vollwertiger Parser (keine CDATA, kein '>' in Attr-Werten). */
+  global.DOMParser = function () {};
+  global.DOMParser.prototype.parseFromString = function (xml) {
+    function unesc(s) {
+      return String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+    }
+    xml = String(xml).replace(/<\?[\s\S]*?\?>/g, '').replace(/<!--[\s\S]*?-->/g, '');
+    var doc = { localName: '#document', nodes: [] }, stack = [doc], i = 0, n = xml.length;
+    while (i < n) {
+      if (xml.charAt(i) === '<') {
+        var gt = xml.indexOf('>', i);
+        if (gt < 0) throw new Error('XML');
+        var tag = xml.slice(i + 1, gt); i = gt + 1;
+        if (tag.charAt(0) === '/') { stack.pop(); if (!stack.length) throw new Error('XML'); continue; }
+        var self = tag.slice(-1) === '/'; if (self) tag = tag.slice(0, -1);
+        var sp = tag.search(/\s/);
+        var name = sp < 0 ? tag : tag.slice(0, sp);
+        var attrsStr = sp < 0 ? '' : tag.slice(sp);
+        var local = name.indexOf(':') >= 0 ? name.split(':').pop() : name;
+        var attrs = {}, aRe = /([\w.\-:]+)\s*=\s*"([^"]*)"/g, am;
+        while ((am = aRe.exec(attrsStr))) {
+          var k = am[1], kl = k.indexOf(':') >= 0 ? k.split(':').pop() : k;
+          attrs[k] = unesc(am[2]); attrs[kl] = unesc(am[2]);
+        }
+        var el = { localName: local, attrs: attrs, nodes: [] };
+        stack[stack.length - 1].nodes.push({ el: el });
+        if (!self) stack.push(el);
+      } else {
+        var lt = xml.indexOf('<', i); if (lt < 0) lt = n;
+        var t = xml.slice(i, lt); i = lt;
+        if (t) stack[stack.length - 1].nodes.push({ text: unesc(t) });
+      }
+    }
+    if (stack.length !== 1) throw new Error('XML unbalanced');
+    function textContent(node) {
+      var s = ''; (node.nodes || []).forEach(function (c) { s += c.el ? textContent(c.el) : c.text; });
+      return s;
+    }
+    function descend(node, out) {
+      (node.nodes || []).forEach(function (c) { if (c.el) { out.push(c.el); descend(c.el, out); } });
+      return out;
+    }
+    descend(doc, []).forEach(function (node) {
+      node.textContent = textContent(node);
+      node.getAttribute = function (k) { return node.attrs && node.attrs[k] != null ? node.attrs[k] : null; };
+      node.getElementsByTagName = function (nm) {
+        var all = descend(node, []);
+        return nm === '*' ? all : all.filter(function (e) { return e.localName === nm; });
+      };
+    });
+    doc.getElementsByTagName = function (nm) {
+      if (nm === 'parsererror') return [];
+      var all = descend(doc, []);
+      return nm === '*' ? all : all.filter(function (e) { return e.localName === nm; });
+    };
+    return doc;
+  };
+}
 
 /* ---- Rechenkern: Bilanz / § 272 HGB ---------------------------------- */
 test('Eröffnungsbilanz Teileinzahlung ist ausgeglichen', function () {
@@ -131,6 +210,133 @@ test('Umbuchung: identische Konten / Betrag 0 / fehlende Konten werden abgelehnt
   ok(!Umbuchung.buchungen({ von: '1800', nach: '1810', betrag: 0 }).ok, 'Betrag 0 abgelehnt');
   ok(!Umbuchung.buchungen({ von: '', nach: '1810', betrag: 100 }).ok, 'fehlende Quelle abgelehnt');
   ok(!Umbuchung.buchungen({ von: '1800', nach: '1810', betrag: -5 }).ok, 'negativer Betrag abgelehnt');
+});
+
+/* ---- OBZ-Sicherung: Pack/Entpack-Roundtrip (Daten + Krypto) ---------- */
+test('OBZ: unverschlüsselter Roundtrip erhält Unternehmen + Abschlüsse', function () {
+  var daten = { unternehmen: { name: 'Test GmbH' }, abschluesse: [{ id: 'A-1', stichtag: '2025-12-31' }] };
+  return OBZ.packen(daten).then(function (bytes) {
+    ok(bytes && bytes.length > 0, 'Bytes erzeugt');
+    return OBZ.entpacken(bytes, function () { return ''; });
+  }).then(function (snap) {
+    eq(snap.unternehmen.name, 'Test GmbH', 'Unternehmen erhalten');
+    eq(snap.abschluesse.length, 1, 'Abschluss erhalten');
+    eq(snap.abschluesse[0].id, 'A-1', 'Abschluss-ID erhalten');
+  });
+});
+test('OBZ: verschlüsselter Roundtrip (AES-GCM/PBKDF2), Klartext nicht lesbar', function () {
+  var daten = { unternehmen: { name: 'Geheim GmbH' }, abschluesse: [] };
+  return OBZ.packen(daten, 'pw-123').then(function (bytes) {
+    var txt = Buffer.from(bytes).toString('utf8');
+    ok(txt.indexOf('Geheim GmbH') < 0, 'Klartext nicht im verschlüsselten Umschlag');
+    ok(/"verschluesselt":\s*true/.test(txt), 'als verschlüsselt markiert');
+    return OBZ.entpacken(bytes, function () { return 'pw-123'; });
+  }).then(function (snap) {
+    eq(snap.unternehmen.name, 'Geheim GmbH', 'nach Entschlüsselung erhalten');
+  });
+});
+test('OBZ: falsches Passwort wird abgewiesen (GCM-Integritätsprüfung)', function () {
+  return OBZ.packen({ unternehmen: { name: 'X' }, abschluesse: [] }, 'richtig').then(function (bytes) {
+    return OBZ.entpacken(bytes, function () { return 'falsch'; }).then(function () {
+      throw new Error('hätte fehlschlagen müssen');
+    }, function (e) { ok(/Passwort/i.test(e.message), 'sprechender Passwort-Fehler'); });
+  });
+});
+test('OBZ: ungültige Datei wird abgewiesen', function () {
+  return OBZ.entpacken(new TextEncoder().encode('kein obz'), function () { return ''; }).then(function () {
+    throw new Error('hätte fehlschlagen müssen');
+  }, function (e) { ok(/obz|Sicherung|Format/i.test(e.message), 'sprechender Format-Fehler'); });
+});
+
+/* ---- Bankimport-Parser: CAMT.053 + IBKR-Flex (DOMParser-basiert) ----- */
+var CAMT_FIXTURE =
+  '<?xml version="1.0"?>\n' +
+  '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02"><BkToCstmrStmt><Stmt>' +
+  '<Ntry><Amt Ccy="EUR">1500,00</Amt><CdtDbtInd>CRDT</CdtDbtInd>' +
+  '<BookgDt><Dt>2025-03-01</Dt></BookgDt><NtryDtls><TxDtls>' +
+  '<RltdPties><Dbtr><Nm>Kunde Müller</Nm></Dbtr></RltdPties>' +
+  '<RmtInf><Ustrd>Rechnung 2025-007</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>' +
+  '<Ntry><Amt Ccy="EUR">89,90</Amt><CdtDbtInd>DBIT</CdtDbtInd>' +
+  '<BookgDt><Dt>2025-03-02</Dt></BookgDt><NtryDtls><TxDtls>' +
+  '<RmtInf><Ustrd>Hosting Hetzner</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>' +
+  '</Stmt></BkToCstmrStmt></Document>';
+test('Importe.parseCamt: CAMT.053 Ein-/Ausgang, Betrag, Datum, Partner, Zweck', function () {
+  var r = Importe.parseCamt(CAMT_FIXTURE);
+  ok(!r.fehler, 'kein Fehler');
+  eq(r.tx.length, 2, 'zwei Umsätze');
+  eq(r.tx[0].eingang, true, 'CRDT -> Eingang');
+  eq(r.tx[0].betrag, 1500, 'Betrag 1500 (Komma-Dezimal)');
+  eq(r.tx[0].datum, '2025-03-01', 'Buchungsdatum aus BookgDt');
+  ok(r.tx[0].partner.indexOf('Müller') >= 0, 'Partner aus Nm');
+  ok(r.tx[0].zweck.indexOf('2025-007') >= 0, 'Zweck aus Ustrd');
+  eq(r.tx[1].eingang, false, 'DBIT -> Ausgang');
+  eq(r.tx[1].betrag, 89.90, 'Betrag 89,90');
+});
+test('Importe.parseCamt: Nicht-XML und fehlende Ntry werden abgewiesen', function () {
+  ok(Importe.parseCamt('kein xml hier').fehler, 'kein XML/keine Ntry -> Fehler');
+  ok(Importe.parseCamt('<Document></Document>').fehler, 'keine Ntry -> Fehler');
+});
+var IBKR_FIXTURE =
+  '<FlexQueryResponse><FlexStatements><FlexStatement>' +
+  '<Trades><Trade buySell="BUY" quantity="10" symbol="AAPL" tradeDate="20250115" netCash="-1500.50"/></Trades>' +
+  '<CashTransactions>' +
+  '<CashTransaction type="Dividends" amount="42.00" symbol="AAPL" dateTime="20250120" description="AAPL Dividend"/>' +
+  '<CashTransaction type="Withholding Tax" amount="-6.30" symbol="AAPL" dateTime="20250120" description="Tax"/>' +
+  '</CashTransactions></FlexStatement></FlexStatements></FlexQueryResponse>';
+test('Importe.parseIbkrFlex: Trade + Dividende + Quellensteuer korrekt gemappt', function () {
+  var r = Importe.parseIbkrFlex(IBKR_FIXTURE);
+  ok(!r.fehler, 'kein Fehler');
+  eq(r.tx.length, 3, 'Trade + 2 Cash-Transaktionen');
+  eq(r.tx[0].eingang, false, 'Kauf (netCash<0) -> Ausgang');
+  eq(r.tx[0].betrag, 1500.50, 'Trade-Betrag absolut');
+  eq(r.tx[0].kontoHint, '1510', 'Wertpapier-Kontohint');
+  var div = r.tx.filter(function (t) { return t.kontoHint === '7010'; })[0];
+  ok(div && div.eingang, 'Dividende -> 7010, Eingang');
+  var tax = r.tx.filter(function (t) { return t.kontoHint === '7600'; })[0];
+  ok(tax && !tax.eingang, 'Quellensteuer -> 7600, Ausgang');
+});
+test('Importe.parseIbkrFlex: leere Datei wird abgewiesen', function () {
+  ok(Importe.parseIbkrFlex('<FlexQueryResponse></FlexQueryResponse>').fehler, 'keine Trades -> Fehler');
+});
+
+/* ---- Bank-Gegenkonto-Heuristik (bankKontoVorschlag) ------------------ */
+test('Importe.bankKontoVorschlag: eingebaute Regeln treffen', function () {
+  eq(Importe.bankKontoVorschlag('Miete Büro März', false), '6310', 'Miete -> 6310');
+  eq(Importe.bankKontoVorschlag('Telekom Rechnung', false), '6805', 'Telekom -> 6805');
+  eq(Importe.bankKontoVorschlag('Hetzner Server', false), '6300', 'Hosting -> 6300');
+  eq(Importe.bankKontoVorschlag('Gehalt Mitarbeiter', false), '6020', 'Gehalt -> 6020');
+  eq(Importe.bankKontoVorschlag('Finanzamt Umsatzsteuer', false), '3700', 'Finanzamt -> 3700');
+  eq(Importe.bankKontoVorschlag('Gewerbesteuer Stadt', false), '7610', 'GewSt -> 7610');
+  eq(Importe.bankKontoVorschlag('Zinsen', true), '7100', 'Zins-Eingang -> 7100');
+  eq(Importe.bankKontoVorschlag('Zinsen', false), '7300', 'Zins-Ausgang -> 7300');
+});
+test('Importe.bankKontoVorschlag: Nutzerregel hat Vorrang, sonst Default', function () {
+  eq(Importe.bankKontoVorschlag('XY Spezial', false, [{ muster: 'spezial', konto: '6855' }]), '6855', 'Nutzerregel schlägt Default');
+  eq(Importe.bankKontoVorschlag('Komplett unbekannt', true), '4400', 'Default Eingang -> 4400 (Erlös)');
+  eq(Importe.bankKontoVorschlag('Komplett unbekannt', false), '6300', 'Default Ausgang -> 6300');
+});
+
+/* ---- Closing-Checkliste: bisher ungetestete Prüfpunkte --------------- */
+test('Closing.pruefeJaReadiness: Rechnungsabgrenzung erkennt 1900/3900', function () {
+  var mit = Closing.pruefeJaReadiness({ buchungen: [{ soll: '1900', haben: '1800', betrag: 100 }], werte: {} });
+  var rap = mit.filter(function (x) { return /Rechnungsabgrenzung/.test(x.titel); })[0];
+  ok(rap && rap.detail.indexOf('1900') >= 0, 'detail nennt vorhandenes 1900');
+  var ohne = Closing.pruefeJaReadiness({ buchungen: [], werte: {} });
+  var rap2 = ohne.filter(function (x) { return /Rechnungsabgrenzung/.test(x.titel); })[0];
+  ok(rap2 && /abgrenzen/.test(rap2.detail), 'ohne RAP -> Erinnerungstext (§ 250 HGB)');
+});
+test('Closing.pruefeJaReadiness: Bilanz-ausgeglichen-Punkt nur mit werte', function () {
+  var mit = Closing.pruefeJaReadiness({ buchungen: [], werte: {} });
+  ok(mit.some(function (x) { return x.titel === 'Bilanz ausgeglichen'; }), 'mit werte -> Punkt vorhanden');
+  var ohne = Closing.pruefeJaReadiness({ buchungen: [] });
+  ok(!ohne.some(function (x) { return x.titel === 'Bilanz ausgeglichen'; }), 'ohne werte -> kein Punkt');
+});
+test('Closing.hatKonto/summeKonto: Saldo korrekt, Storno ignoriert', function () {
+  var bu = [{ soll: '1800', haben: '4400', betrag: 100 },
+            { soll: '6300', haben: '1800', betrag: 30, storniert: true }];
+  ok(Closing.hatKonto(bu, '1800'), 'hatKonto findet 1800');
+  ok(!Closing.hatKonto(bu, '6300'), 'storniertes 6300 zählt nicht');
+  eq(Closing.summeKonto(bu, '1800').saldo, 100, 'Saldo 1800 (Storno ignoriert)');
 });
 
 /* ---- Rechenkern: GuV -------------------------------------------------- */
