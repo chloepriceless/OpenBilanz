@@ -1,6 +1,12 @@
 # HANDOVER — OpenBilanz (gmbh-verwaltung)
 
-**Stand: 2026-06-10 · HEAD `f882842` (v2.14.1) · in sync · Working-Tree sauber · 270 Tests grün**
+**Stand: 2026-06-10 · HEAD `bf0549e` (v2.14.2) · in sync · Working-Tree sauber · 272 Tests grün**
+
+> ✅ **NACHARBEIT (Christin „alle Findings umsetzen") ERLEDIGT, v2.14.2 live:** Eltern-/Unterposten-
+> Konflikt-Warnung in `pruefe()`, 2910-Haben-Hinweis in BuchungsPruefung, Glossar 2980 (BilMoG-
+> Altfall), § 10d nachverifiziert (Normtext 70 % VERIFIED ab VZ 2024; 60 %-Rückkehr 2028 LIKELY,
+> Wiedervorlage-Kommentar in steuer.js), `__kontoDdBound`→Modul-Variable.
+> **Alle drei Prüfungen (T-0161-Audit, Komplett-Review, Rechts-Review): 0 offene umsetzbare Findings.**
 
 > ✅ **RECHTLICHES REVIEW (Christin-Auftrag) ERLEDIGT, v2.14.1 live.** 28 Rechtswerte gegen
 > Primärquellen verifiziert (2 Sonnet-Recherche-Agenten, gesetze-im-internet.de + Cross-Check
