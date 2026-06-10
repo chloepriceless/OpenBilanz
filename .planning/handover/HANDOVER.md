@@ -1,6 +1,14 @@
 # HANDOVER — OpenBilanz (gmbh-verwaltung)
 
-**Stand: 2026-06-10 · HEAD `c5799a8` (v2.14.0) · in sync · Working-Tree sauber · 268 Tests grün**
+**Stand: 2026-06-10 · HEAD `f882842` (v2.14.1) · in sync · Working-Tree sauber · 270 Tests grün**
+
+> ✅ **RECHTLICHES REVIEW (Christin-Auftrag) ERLEDIGT, v2.14.1 live.** 28 Rechtswerte gegen
+> Primärquellen verifiziert (2 Sonnet-Recherche-Agenten, gesetze-im-internet.de + Cross-Check
+> DATEV-SKR04/sevDesk/Lexware/BMF): 26 [VERIFIED] ohne Abweichung. **1 echter Fehler behoben:**
+> UStVA § 13b — Steuerbetrag lief als „Kz 84" (amtlich = Bemessungsgrundlage), Kz 85/67 fehlten
+> (Zahllast war ergebnisgleich korrekt). **1 Präzisierung:** § 264-Aufstellungsfrist 6/3 Monate je
+> Größenklasse. Deliverable `.planning/RECHTS-REVIEW.md` + 2 Merkel-Einträge. Offen/beobachten:
+> § 10d-70%-Befristung Ende VZ 2027 nur [LIKELY] belegbar (kein Handlungsbedarf).
 
 > ✅ **T3 ERLEDIGT + LIVE (v2.14.0, Christin-GO):** SKR04-Konten-Glossar — `shared/skr04-glossar.js`
 > (64 häufigste Konten, eigene §-gestützte Texte, kein DATEV-Copy), Glossar-View durchsucht den
