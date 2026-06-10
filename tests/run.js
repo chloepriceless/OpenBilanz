@@ -1562,6 +1562,22 @@ test('Belegnummern: riesige Luecke wird gekuerzt, Anzahl bleibt exakt', function
   ok(r.reihen[0].luecken.length <= Belegnummern.MAX_LUECKEN, 'Liste gedeckelt');
 });
 
+/* ---- Sicherheit: Pfad-Traversal-Schutz in store.sicher() ----------- */
+test('store.sicher: reine Punkt-Segmente (.., ., ...) werden auf STANDARD entschärft', function () {
+  eq(Store.sicher('..'), Store.STANDARD, 'mandant=.. darf nicht aus dem Verzeichnis ausbrechen');
+  eq(Store.sicher('.'), Store.STANDARD, '. (aktuelles Verzeichnis) entschärft');
+  eq(Store.sicher('...'), Store.STANDARD, '... entschärft');
+  eq(Store.sicher(''), Store.STANDARD, 'leer -> STANDARD');
+  eq(Store.sicher(null), Store.STANDARD, 'null -> STANDARD');
+});
+test('store.sicher: Slashes/Sonderzeichen werden zu _, legitime Punkte bleiben', function () {
+  ok(Store.sicher('m/x').indexOf('/') < 0, 'kein Slash im Ergebnis');
+  ok(Store.sicher('../etc') !== '..', 'Traversal-Versuch ist kein reines ..');
+  ok(Store.sicher('../etc').indexOf('/') < 0, 'kein Slash im Traversal-Versuch');
+  eq(Store.sicher('v2.0'), 'v2.0', 'Punkt innerhalb eines Namens bleibt erhalten');
+  eq(Store.sicher('A-123'), 'A-123', 'normale ID unverändert');
+});
+
 /* ---- Mandanten-Migration (Welle 7, Schritt a) ---------------------- */
 var MM_JETZT = { jetzt: '2026-06-05T00:00:00.000Z' };
 test('MandantenMigration: v1 -> v2 ordnet alles Mandant standard zu', function () {

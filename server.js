@@ -60,7 +60,14 @@ function sendJSON(res, code, obj) {
 }
 function sendText(res, code, typ, body, dateiname) {
   var h = { 'Content-Type': typ };
-  if (dateiname) h['Content-Disposition'] = 'attachment; filename="' + dateiname + '"';
+  if (dateiname) {
+    /* HTTP-Response-Header-Injection-Schutz: der Dateiname kann (ueber die
+     * Abschluss-ID einer PUT-Anfrage) nutzerkontrolliert sein. Nur sichere
+     * Dateinamen-Zeichen zulassen - CR/LF/Anfuehrungszeichen/Steuerzeichen
+     * wuerden sonst zusaetzliche Header oder einen Quote-Breakout erlauben. */
+    var sicherName = String(dateiname).replace(/[^A-Za-z0-9_.\- ]/g, '_');
+    h['Content-Disposition'] = 'attachment; filename="' + sicherName + '"';
+  }
   res.writeHead(code, h);
   res.end(body);
 }
