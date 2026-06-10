@@ -17,6 +17,9 @@
 set -eu
 
 PDFLIB_VERSION="1.17.1"
+# SHA-256 des erwarteten Downloads (Supply-Chain-Schutz gegen kompromittiertes CDN/MITM).
+# Verifiziert gegen den gepinnten npm-Stand pdf-lib@1.17.1 (dist/pdf-lib.min.js, byte-identisch).
+PDFLIB_SHA256="0f9a5cad07941f0826586c94e089d89b918c46e5c17cf2d5a3c6f666e3bc694f"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENDOR_DIR="$ROOT/public/vendor"
@@ -46,7 +49,14 @@ else
     echo "  FEHLER: pdf-lib.min.js ist verdaechtig klein ($size Byte)." >&2
     rm -f "$PDFLIB_JS"; exit 1
   fi
-  echo "  pdf-lib geladen ($(($size / 1024)) KB)."
+  got=$(sha256 "$PDFLIB_JS")
+  if [ "$got" != "$PDFLIB_SHA256" ]; then
+    echo "  FEHLER: SHA-256 von pdf-lib.min.js stimmt nicht (Supply-Chain-Schutz)." >&2
+    echo "    erwartet: $PDFLIB_SHA256" >&2
+    echo "    erhalten: $got" >&2
+    rm -f "$PDFLIB_JS"; exit 1
+  fi
+  echo "  pdf-lib geladen + SHA-256 verifiziert ($(($size / 1024)) KB)."
 fi
 
 # --- 2. sRGB-ICC-Profil (Public Domain) ------------------------------------
