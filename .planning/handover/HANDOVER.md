@@ -1,6 +1,13 @@
 # HANDOVER — OpenBilanz (gmbh-verwaltung)
 
-**Stand: 2026-06-10 · HEAD `7837502` (v2.13.1) · in sync · Working-Tree sauber · 265 Tests grün**
+**Stand: 2026-06-10 · HEAD `c5799a8` (v2.14.0) · in sync · Working-Tree sauber · 268 Tests grün**
+
+> ✅ **T3 ERLEDIGT + LIVE (v2.14.0, Christin-GO):** SKR04-Konten-Glossar — `shared/skr04-glossar.js`
+> (64 häufigste Konten, eigene §-gestützte Texte, kein DATEV-Copy), Glossar-View durchsucht den
+> vollen 1024er-Kontenrahmen (Nr/Name/Erklärtext, Treffer gedeckelt), Zuordnungs-Label faktisch aus
+> SKR04-Daten. 3 Tests (Verwaisen-Schutz). **Etappe 2 (optional, später):** weitere Konten-Texte in
+> TEXTE ergänzen — Verwaisen-Test sichert ab. **Damit sind T1+T2+T3, Audit T-0161 und das
+> Komplett-Review (v2.13.1) ALLE abgeschlossen.** OFFEN (Christin-Visual): Glossar im Browser ansehen.
 
 > ✅ **KOMPLETT-REVIEW (Christin-Auftrag 2026-06-10) DURCHGEFÜHRT + ALLE FUNDE GEFIXT, live v2.13.1.**
 > 3 Review-Subagenten (Security/Architektur/Tests-Doku). Behoben: Pfad-Traversal (`lib/store.js`
