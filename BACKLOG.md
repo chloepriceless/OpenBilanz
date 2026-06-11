@@ -51,3 +51,13 @@ externe Toolchecks, README-Statusübergänge von 🟡 zu ✅.
 - [ ] Im Selbst-Hosting-Modus: VIES-Knopf gegen mindestens eine reale
       EU-USt-ID drücken; Antwort wird beim Kunden archiviert.
 - [ ] README-Zeile „USt-IdNr.-Prüfung" auf ✅ heben.
+
+## UStVA-Karte — § 13b- und Auslands-Kennzahlen
+
+- [ ] Die UStVA-Karte berechnet bisher nur Kz 81/86/66/83 aus
+      3806/3801/1406/1401. Wer Reverse-Charge-Eingangsleistungen bezieht
+      (§ 13b UStG, Konten 1407/3837 — z. B. Auslands-SaaS oder Gebühren
+      eines ausländischen Zahlungsdienstleisters) oder im Inland nicht
+      steuerbare Auslandsumsätze erzielt (Konto 4338), muss Kz 46/47/67
+      und Kz 45 derzeit manuell in ELSTER ergänzen. Kennzahlen-Berechnung
+      um diese Konten erweitern und in der Karte ausweisen.
