@@ -117,28 +117,40 @@
      * Kz 21 + Zusammenfassende Meldung - nur Hinweis, keine Automatik. */
     var kz45 = cent(hs('4338') + hs('4339'));
 
+    /* Innergemeinschaftlicher Erwerb (§ 1 Abs. 1 Nr. 5 UStG): Warenkauf von
+     * EU-Unternehmern. Gebuchtes Paar 1404 an 3804 (Erwerbs-Vorsteuer an
+     * Erwerbsteuer 19 %). Vordruck: Kz 89 = Bemessungsgrundlage der Erwerbe
+     * zu 19 % (Steuer wird daraus berechnet), Kz 61 = die daraus abziehbare
+     * Vorsteuer (§ 15 Abs. 1 S. 1 Nr. 3 UStG). BMG wie bei § 13b aus der
+     * gebuchten Steuer rückgerechnet. */
+    var ustErwerbGebucht = hs('3804');        // Erwerbsteuer 19 % (gebucht)
+    var vstErwerbGebucht = sh('1404');        // Erwerbs-Vorsteuer 19 % (gebucht)
+    var kz89 = cent(ustErwerbGebucht / 0.19);
+
     var hinweise = [];
-    var kz66, kz67, kz83;
+    var kz66, kz67, kz61, kz83;
     if (klein) {
-      /* § 19 UStG: kein USt-Ausweis, kein Vorsteuerabzug. ABER: die § 13b-Steuer
-       * wird auch vom Kleinunternehmer geschuldet und ist insoweit voranzumelden
-       * (§ 19 Abs. 1 lässt § 18 Abs. 4a UStG ausdrücklich unberührt; § 18 Abs. 4a
-       * nennt die § 13b Abs. 5-Schuldner). Ein Vorsteuerabzug besteht mangels
-       * steuerpflichtiger Ausgangsumsätze nicht (§ 15 Abs. 2 UStG). */
+      /* § 19 UStG: kein USt-Ausweis, kein Vorsteuerabzug. ABER: § 13b-Steuer
+       * und Erwerbsteuer werden auch vom Kleinunternehmer geschuldet und sind
+       * insoweit voranzumelden (§ 19 Abs. 1 lässt § 18 Abs. 4a UStG ausdrücklich
+       * unberührt; § 18 Abs. 4a nennt § 1 Abs. 1 Nr. 5 und § 13b Abs. 5). Ein
+       * Vorsteuerabzug besteht mangels steuerpflichtiger Ausgangsumsätze nicht
+       * (§ 15 Abs. 2 UStG). */
       kz66 = 0;
       kz67 = 0;
-      kz83 = cent(kz85 + kz47);
+      kz61 = 0;
+      kz83 = cent(kz85 + kz47 + ustErwerbGebucht);
       hinweise.push('Kleinunternehmer (§ 19 UStG): Es wird keine Umsatzsteuer ' +
         'ausgewiesen und kein Vorsteuerabzug geltend gemacht; eine ' +
         'Umsatzsteuer-Voranmeldung ist regelmäßig nicht abzugeben. Umsatzgrenze: ' +
         '25.000 EUR (Vorjahr) bzw. 100.000 EUR (laufendes Jahr). Die Kennzahlen ' +
         'dienen nur der Übersicht.');
-      if (kz83 > 0 || vst13bGebucht > 0) {
-        hinweise.push('Ausnahme § 13b UStG: Die Steuer auf bezogene § 13b-Leistungen (' +
-          cent(kz85 + kz47).toFixed(2).replace('.', ',') + ' EUR, Kz 47/85) wird auch ' +
-          'als Kleinunternehmer geschuldet - die Voranmeldung ist insoweit abzugeben ' +
-          '(§ 18 Abs. 4a UStG). Die auf Konto 1407 gebuchte Vorsteuer ist NICHT ' +
-          'abziehbar (§ 15 Abs. 2 UStG).');
+      if (kz83 > 0 || vst13bGebucht > 0 || vstErwerbGebucht > 0) {
+        hinweise.push('Ausnahme: Die Steuer auf bezogene § 13b-Leistungen und ' +
+          'innergemeinschaftliche Erwerbe (' + kz83.toFixed(2).replace('.', ',') +
+          ' EUR) wird auch als Kleinunternehmer geschuldet - die Voranmeldung ist ' +
+          'insoweit abzugeben (§ 18 Abs. 4a UStG). Die auf 1407/1404 gebuchte ' +
+          'Vorsteuer ist NICHT abziehbar (§ 15 Abs. 2 UStG).');
       }
     } else {
       /* Kz 67 = § 13b-Vorsteuer, getrennt von Kz 66 (nur allgemeine Vorsteuer
@@ -147,7 +159,8 @@
        * unterstellter voller Abzugsberechtigung. */
       kz66 = cent(vorsteuerKonten);
       kz67 = cent(manuellSteuer + vst13bGebucht);
-      kz83 = cent(ustBerechnet + kz85 + kz47 - kz66 - kz67);
+      kz61 = cent(vstErwerbGebucht);
+      kz83 = cent(ustBerechnet + kz85 + kz47 + ustErwerbGebucht - kz66 - kz67 - kz61);
       if (art === 'ist' && erloesUeberForderung > 0) {
         hinweise.push('Ist-Versteuerung (§ 20 UStG): Im Zeitraum wurden Erlöse von ' +
           erloesUeberForderung.toFixed(2).replace('.', ',') + ' EUR über ein ' +
@@ -169,6 +182,14 @@
           'gebuchten Steuer (Konto 3837: ' + ust13bGebucht.toFixed(2).replace('.', ',') +
           ' EUR) ab. Das ist nur bei eingeschränktem Vorsteuerabzug richtig - ' +
           'sonst Buchungen prüfen (beide Seiten gehören paarweise gebucht).');
+      }
+      if ((ustErwerbGebucht !== 0 || vstErwerbGebucht !== 0) &&
+          Math.abs(vstErwerbGebucht - ustErwerbGebucht) > 0.005) {
+        hinweise.push('Innergemeinschaftlicher Erwerb: Die gebuchte Erwerbs-Vorsteuer ' +
+          '(Konto 1404: ' + vstErwerbGebucht.toFixed(2).replace('.', ',') + ' EUR) weicht ' +
+          'von der gebuchten Erwerbsteuer (Konto 3804: ' +
+          ustErwerbGebucht.toFixed(2).replace('.', ',') + ' EUR) ab. Das ist nur bei ' +
+          'eingeschränktem Vorsteuerabzug richtig - sonst Buchungen prüfen.');
       }
       if (kz48 > 0) {
         hinweise.push('Steuerfreie Umsätze ohne Vorsteuerabzug (§ 4 Nr. 8 ff. UStG, ' +
@@ -195,6 +216,11 @@
         'bebucht - sie können keiner Vordruckzeile automatisch zugeordnet werden. ' +
         'Auf 3837/1407 (19 %) umbuchen oder die Beträge manuell erfassen.');
     }
+    if (hs('3802') !== 0 || sh('1402') !== 0) {
+      hinweise.push('Die generischen Erwerbskonten 3802/1402 (ohne Steuersatz) sind ' +
+        'bebucht - sie können keiner Vordruckzeile automatisch zugeordnet werden. ' +
+        'Auf 3804/1404 (19 %) umbuchen oder in ELSTER manuell ergänzen.');
+    }
     if (hs('4336') !== 0) {
       hinweise.push('Erlöse auf Konto 4336 (sonstige Leistungen nach § 3a Abs. 2 UStG ' +
         'an EU-Unternehmer): gehören in Kz 21 und in die Zusammenfassende Meldung ' +
@@ -209,7 +235,9 @@
       kz81: kz81, kz86: kz86, ust19: ust19, ust7: ust7,
       kz45: kz45, kz46: kz46, kz47: kz47,
       kz84: kz84, kz85: kz85, kz44: kz44, kz48: kz48,
+      kz89: kz89, kz61: kz61,
       ust13bGebucht: ust13bGebucht, vst13bGebucht: vst13bGebucht,
+      ustErwerbGebucht: ustErwerbGebucht, vstErwerbGebucht: vstErwerbGebucht,
       ustBerechnet: ustBerechnet, ustGebucht: ustGebucht,
       kz66: kz66, kz67: kz67,
       kz83: kz83, vorsteuerKonten: cent(vorsteuerKonten),

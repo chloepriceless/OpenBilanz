@@ -168,11 +168,13 @@
     '3804': 'Erwerbsteuer aus dem innergemeinschaftlichen ERWERB: kauft die GmbH Waren von ' +
       'einem Unternehmer aus einem anderen EU-Staat, schuldet sie darauf selbst 19 % ' +
       'Umsatzsteuer (§ 1 Abs. 1 Nr. 5 UStG). Buchung als Paar mit der abziehbaren ' +
-      'Erwerbs-Vorsteuer: 1404 an 3804. Die UStVA-Karte ordnet diese Beträge derzeit ' +
-      'NICHT automatisch zu — in ELSTER gesondert eintragen.',
+      'Erwerbs-Vorsteuer: 1404 an 3804. Die UStVA-Karte weist den Saldo automatisch in ' +
+      'Kz 89 aus (Bemessungsgrundlage der Erwerbe). Achtung: auch Kleinunternehmer ' +
+      'schulden die Erwerbsteuer und müssen sie anmelden (§ 18 Abs. 4a UStG).',
     '1404': 'Die Vorsteuer aus dem innergemeinschaftlichen Erwerb (Gegenseite zu 3804): bei ' +
       'voller Abzugsberechtigung in gleicher Höhe abziehbar (§ 15 Abs. 1 S. 1 Nr. 3 UStG), ' +
-      'der Erwerb bleibt dann per Saldo steuerneutral.',
+      'der Erwerb bleibt dann per Saldo steuerneutral. In der UStVA-Karte automatisch in ' +
+      'Kz 61. Kleinunternehmer dürfen diese Vorsteuer NICHT abziehen (§ 15 Abs. 2 UStG).',
 
     /* ===== Erträge (Klasse 4 / 7) ======================================= */
     '4400': 'Standard-Erlöskonto für Lieferungen und Leistungen zum Regelsteuersatz 19 %. ' +

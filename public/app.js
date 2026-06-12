@@ -2627,8 +2627,9 @@ function renderUstva(m) {
   html += '<div class="box box-info"><b>Aufbereitung, kein Versand</b>Die ' +
     'Voranmeldung wird über ELSTER übermittelt. Hier werden die Kennzahlen aus den ' +
     'SKR04-Konten ermittelt: Erlöse 4400/4000 (19 %), 4300 (7 %), Vorsteuer ' +
-    '1406/1401, § 13b-Leistungsbezüge 3837/1407 (Kz 46/47/67), nicht steuerbare ' +
-    'Auslandsumsätze 4338/4339 (Kz 45).<br><b>Versteuerungsart:</b> ' + vartText +
+    '1406/1401, § 13b-Leistungsbezüge 3837/1407 (Kz 46/47/67), innergem. Erwerb ' +
+    '3804/1404 (Kz 89/61), nicht steuerbare Auslandsumsätze 4338/4339 (Kz 45).' +
+    '<br><b>Versteuerungsart:</b> ' + vartText +
     ' (Einstellung in den Unternehmensdaten.)</div>';
   if (klein) {
     html += '<div class="box box-warn"><b>Kleinunternehmer (§ 19 UStG)</b>Laut ' +
@@ -2686,12 +2687,15 @@ function renderUstva(m) {
       (u.kz47 ? zeile('47', 'Steuer auf bezogene EU-Leistungen (§ 13b Abs. 1 UStG)', u.kz47) : '') +
       (u.kz84 ? zeile('84', 'Andere Leistungen § 13b Abs. 2 UStG (Bemessungsgrundlage, netto)', u.kz84) : '') +
       (u.kz85 ? zeile('85', 'Steuer auf andere Leistungen (§ 13b Abs. 2 UStG)', u.kz85) : '') +
+      (u.kz89 ? zeile('89', 'Innergemeinschaftliche Erwerbe 19 % (Bemessungsgrundlage, netto)', u.kz89) : '') +
+      (u.ustErwerbGebucht ? zeile('', 'Steuer auf innergemeinschaftliche Erwerbe (Konto 3804)', u.ustErwerbGebucht) : '') +
       (u.kz44 ? zeile('44', 'Steuerfreie Umsätze mit Vorsteuerabzug', u.kz44) : '') +
       (u.kz48 ? zeile('48', 'Steuerfreie Umsätze ohne Vorsteuerabzug', u.kz48) : '') +
       (u.kz45 ? zeile('45', 'Übrige nicht steuerbare Umsätze (Leistungsort nicht im Inland)', u.kz45) : '') +
-      zeile('', '= Umsatzsteuer', Berechnung.cent(u.ustBerechnet + u.kz85 + u.kz47), { summe: true }) +
+      zeile('', '= Umsatzsteuer', Berechnung.cent(u.ustBerechnet + u.kz85 + u.kz47 + u.ustErwerbGebucht), { summe: true }) +
       zeile('66', 'Abziehbare Vorsteuerbeträge aus Rechnungen', u.kz66) +
       (u.kz67 ? zeile('67', 'Vorsteuer aus Leistungen i. S. d. § 13b UStG', u.kz67) : '') +
+      (u.kz61 ? zeile('61', 'Vorsteuer aus dem innergemeinschaftlichen Erwerb', u.kz61) : '') +
       zeile('83', 'Verbleibende Umsatzsteuer-Vorauszahlung', u.kz83, { summe: true }) +
       '</table>';
     h += '<div class="karte-hint" style="margin-top:8px">' +

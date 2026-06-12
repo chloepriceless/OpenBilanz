@@ -1015,6 +1015,40 @@ test('UStVA: generische § 13b-Konten 3835/1408 → Hinweis statt Automatik', fu
   ok(u.hinweise.some(function (h) { return h.indexOf('3835') >= 0; }),
      'Hinweis auf die generischen Konten');
 });
+test('UStVA: innergem. Erwerb (3804/1404) fließt in Kz 89/61', function () {
+  // EU-Wareneinkauf: Aufwand netto + Erwerbsteuer-/Vorsteuer-Paar.
+  var bu = [
+    { datum: '2026-02-10', soll: '5200', haben: '3300', betrag: 1000 },
+    { datum: '2026-02-10', soll: '1404', haben: '3804', betrag: 190 }
+  ];
+  var u = Ustva.berechne(bu, null, null);
+  eq(u.kz89, 1000, 'Kz 89 = rückgerechnete Bemessungsgrundlage der Erwerbe');
+  eq(u.ustErwerbGebucht, 190, 'Erwerbsteuer aus Konto 3804');
+  eq(u.kz61, 190, 'Kz 61 = Erwerbs-Vorsteuer (1404)');
+  eq(u.kz83, 0, 'Zahllast nettet bei voller Abzugsberechtigung');
+  eq(u.hinweise.length, 0, 'keine Hinweise bei symmetrischer Buchung');
+});
+test('UStVA: Kleinunternehmer schuldet auch die Erwerbsteuer (§ 18 Abs. 4a UStG)', function () {
+  var bu = [{ datum: '2026-02-10', soll: '1404', haben: '3804', betrag: 190 }];
+  var u = Ustva.berechne(bu, null, null, { kleinunternehmer: true });
+  eq(u.kz61, 0, 'keine abziehbare Erwerbs-Vorsteuer');
+  eq(u.kz83, 190, 'Zahllast = geschuldete Erwerbsteuer');
+  ok(u.hinweise.some(function (h) { return h.indexOf('18 Abs. 4a') >= 0; }),
+     'Hinweis auf § 18 Abs. 4a UStG');
+});
+test('UStVA: abweichende 1404/3804-Salden lösen Prüf-Hinweis aus', function () {
+  var bu = [{ datum: '2026-02-10', soll: '5200', haben: '3804', betrag: 190 }];
+  var u = Ustva.berechne(bu, null, null);
+  ok(u.hinweise.some(function (h) { return h.indexOf('Erwerbs-Vorsteuer') >= 0; }),
+     'Abweichungs-Hinweis 1404/3804');
+});
+test('UStVA: generische Erwerbskonten 3802/1402 → Hinweis statt Automatik', function () {
+  var bu = [{ datum: '2026-02-10', soll: '5200', haben: '3802', betrag: 100 }];
+  var u = Ustva.berechne(bu, null, null);
+  eq(u.kz89, 0, '3802 fließt nicht in Kz 89');
+  ok(u.hinweise.some(function (h) { return h.indexOf('3802') >= 0; }),
+     'Hinweis auf die generischen Erwerbskonten');
+});
 
 /* ---- Steuer: Verlustvortrag / Hinzurechnungen / vGA ------------------ */
 test('Steuer: Verlustvortrag mindert zu versteuerndes Einkommen', function () {
@@ -2230,6 +2264,13 @@ test('Fristen: Kleinunternehmer mit § 13b-Buchung im Meldezeitraum bekommt UStV
   var r2 = Fristen.naechsteFristen({ kleinunternehmer: true }, ab, '2026-07-05');
   ok(!r2.some(function (x) { return x.art === 'ustva'; }),
      'ohne § 13b im Meldezeitraum weiterhin keine UStVA-Frist');
+  // Erwerbsteuer (3804) zaehlt ebenfalls (§ 1 Abs. 1 Nr. 5 UStG).
+  var abE = [{ stichtag: '2026-12-31', art: 'JAHRESABSCHLUSS', buchungen: [
+    { datum: '2026-04-20', soll: '1404', haben: '3804', betrag: 95 }
+  ] }];
+  var r3 = Fristen.naechsteFristen({ kleinunternehmer: true }, abE, '2026-05-05');
+  ok(r3.some(function (x) { return x.art === 'ustva'; }),
+     'Erwerbsteuer-Buchung im Meldezeitraum listet die UStVA-Frist');
 });
 test('Fristen: Sortierung rot > gelb > gruen', function () {
   var u = {};

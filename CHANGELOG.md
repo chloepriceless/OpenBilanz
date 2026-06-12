@@ -11,6 +11,20 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.20.0] - 2026-06-12
+
+### Hinzugefügt
+- **UStVA: innergemeinschaftlicher Erwerb automatisch (Kz 89/61)** — das
+  gebuchte Paar 1404 an 3804 (Erwerbs-Vorsteuer an Erwerbsteuer 19 %,
+  § 1 Abs. 1 Nr. 5 UStG) fließt jetzt automatisch in die Kennzahlen:
+  Kz 89 (Bemessungsgrundlage der Erwerbe, rückgerechnet) und Kz 61
+  (Erwerbs-Vorsteuer, § 15 Abs. 1 S. 1 Nr. 3 UStG). Hinweise bei
+  generischen Konten 3802/1402 und bei 1404/3804-Abweichung.
+- **Kleinunternehmer**: auch die Erwerbsteuer wird unter § 19 geschuldet und
+  ist anzumelden (§ 18 Abs. 4a UStG nennt § 1 Abs. 1 Nr. 5) — Zahllast,
+  Abschluss-Checkliste und Fristen-Karte behandeln sie wie die § 13b-Steuer.
+  Glossar-Texte 3804/1404 entsprechend. Suite 291 Tests.
+
 ## [2.19.0] - 2026-06-12
 
 ### Hinzugefügt

@@ -166,9 +166,11 @@
     });
 
     // Kleinunternehmer: keine USt -> uebrige Pruefungen entfallen.
-    // AUSNAHME: Steuer nach § 13b UStG wird auch vom Kleinunternehmer geschuldet
-    // und ist insoweit voranzumelden (§ 19 Abs. 1 laesst § 18 Abs. 4a unberuehrt).
-    var st13b = Math.round((((+u.kz47) || 0) + ((+u.kz85) || 0)) * 100) / 100;
+    // AUSNAHME: Steuer nach § 13b UStG und Erwerbsteuer (§ 1 Abs. 1 Nr. 5 UStG)
+    // werden auch vom Kleinunternehmer geschuldet und sind insoweit voranzumelden
+    // (§ 19 Abs. 1 laesst § 18 Abs. 4a unberuehrt).
+    var st13b = Math.round((((+u.kz47) || 0) + ((+u.kz85) || 0) +
+                            ((+u.ustErwerbGebucht) || 0)) * 100) / 100;
     if (u.kleinunternehmer && st13b <= 0) {
       l.push({
         titel: 'Kleinunternehmer (§ 19 UStG)',
@@ -181,12 +183,12 @@
     }
     if (u.kleinunternehmer) {
       l.push({
-        titel: 'Kleinunternehmer: § 13b-Steuer geschuldet',
+        titel: 'Kleinunternehmer: § 13b-/Erwerbsteuer geschuldet',
         status: 'offen',
         detail: 'Auch als Kleinunternehmer wird die Steuer auf bezogene § 13b-Leistungen ' +
-          'geschuldet (' + fmtEur(st13b) + ' EUR, Kz 47/85) - die Voranmeldung ist ' +
-          'insoweit abzugeben (§ 18 Abs. 4a UStG). Ein Vorsteuerabzug besteht nicht. ' +
-          'Die Regelbesteuerungs-Abstimmungen unten entfallen.',
+          'und innergemeinschaftliche Erwerbe geschuldet (' + fmtEur(st13b) + ' EUR) - ' +
+          'die Voranmeldung ist insoweit abzugeben (§ 18 Abs. 4a UStG). Ein ' +
+          'Vorsteuerabzug besteht nicht. Die Regelbesteuerungs-Abstimmungen unten entfallen.',
         paragraph: '§ 18 Abs. 4a UStG',
         sprung: { view: 'ustva' }
       });

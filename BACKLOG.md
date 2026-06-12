@@ -64,9 +64,9 @@ externe Toolchecks, README-Statusübergänge von 🟡 zu ✅.
       Kleinunternehmer, wenn im Meldezeitraum § 13b-Konten (3837/3835) bebucht
       sind (§ 18 Abs. 4a UStG) — Buchungszugriff war über `abschluesse`
       bereits vorhanden, keine Schnittstellen-Änderung nötig.
-- [ ] Folge-Idee: Innergemeinschaftlicher ERWERB (Konten 1404/3804, § 1 Abs. 1
-      Nr. 5 UStG) analog automatisch in die UStVA-Kennzahlen aufnehmen —
-      vorher die amtlichen Kennzahlen (Erwerbe/Erwerbs-Vorsteuer) gegen den
-      aktuellen Vordruck verifizieren (research-rigor, nicht aus dem
-      Gedächtnis). Glossar-Texte zu 1404/3804 weisen bis dahin auf die
-      manuelle ELSTER-Eintragung hin.
+- [x] ERLEDIGT (v2.20.0): Innergemeinschaftlicher Erwerb (1404/3804) fließt
+      automatisch in Kz 89/61 (Kennzahlen vorab gegen mehrere deckungsgleiche
+      Quellen verifiziert: Kz 89 = BMG Erwerbe 19 %, Kz 61 = Erwerbs-Vorsteuer).
+      Kleinunternehmer-Behandlung analog § 13b (§ 18 Abs. 4a nennt § 1 Abs. 1
+      Nr. 5 ausdrücklich); fristen.js/closing.js mitgezogen; Hinweise für
+      generische Konten 3802/1402 und 1404/3804-Abweichung.

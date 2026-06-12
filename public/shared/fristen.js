@@ -162,9 +162,10 @@
 
     // UStVA: naechster 10. eines Monats (Vormonats-USt). Kleinunternehmer
     // (Unternehmen.kleinunternehmer === true) skip - AUSSER im Meldezeitraum
-    // wurden § 13b-Konten (3837/3835) bebucht: die Steuerschuldnerschaft des
-    // Leistungsempfaengers trifft auch Kleinunternehmer, die Voranmeldung ist
-    // insoweit abzugeben (§ 18 Abs. 4a UStG; § 19 Abs. 1 laesst das unberuehrt).
+    // wurden § 13b-Konten (3837/3835) oder Erwerbsteuer-Konten (3804/3802)
+    // bebucht: diese Steuern schuldet auch der Kleinunternehmer, die
+    // Voranmeldung ist insoweit abzugeben (§ 18 Abs. 4a UStG; § 19 Abs. 1
+    // laesst das unberuehrt).
     var jahr = h.getFullYear(), monat = h.getMonth(), tag = h.getDate();
     // Wenn der 10. dieses Monats noch nicht erreicht ist, ist er der naechste Termin;
     // sonst der 10. des Folgemonats.
@@ -179,13 +180,15 @@
       return (a.buchungen || []).some(function (b) {
         if (!b || String(b.datum || '').slice(0, 7) !== periode) return false;
         return b.soll === '3837' || b.haben === '3837' ||
-               b.soll === '3835' || b.haben === '3835';
+               b.soll === '3835' || b.haben === '3835' ||
+               b.soll === '3804' || b.haben === '3804' ||
+               b.soll === '3802' || b.haben === '3802';
       });
     });
     if (!klein || hat13bImZeitraum) {
       liste.push({
         titel: 'UStVA für ' + monatsname(monat, tag <= 10) +
-               (klein ? ' (§ 13b-Steuer trotz Kleinunternehmerregelung)' : ''),
+               (klein ? ' (§ 13b-/Erwerbsteuer trotz Kleinunternehmerregelung)' : ''),
         frist: iso(ustVa),
         restTage: tagsZwischen(ustVa, h),
         ampel: ampel(tagsZwischen(ustVa, h)),
