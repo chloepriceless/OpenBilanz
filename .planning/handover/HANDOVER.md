@@ -1,6 +1,18 @@
 # HANDOVER — OpenBilanz (gmbh-verwaltung)
 
-**Stand: 2026-06-12 · HEAD `c78e764` (v2.18.0) · Working-Tree sauber · in sync · 287 Tests grün · LIVE auf openbilanz.de verifiziert**
+**Stand: 2026-06-12 (nachmittags) · v2.20.0 · Working-Tree sauber · in sync · 291 Tests grün · LIVE auf openbilanz.de verifiziert**
+
+> ✅ **Nachtrag gleiche Session — zwei weitere Releases:**
+> 4. **v2.19.0 — Glossar-Etappe 2:** 11 eigene Konten-Texte Auslandsgeschäft/Reverse-Charge
+>    (3837/1407, 3835/1408, 3804/1404, 4336/4337/4338/4339, 4000) — Glossar jetzt 76 Konten.
+> 5. **v2.20.0 — innergem. Erwerb automatisch:** Paar 1404 an 3804 → Kz 89 (BMG,
+>    rückgerechnet) + Kz 61 (Erwerbs-Vorsteuer); Kennzahlen multi-quellen-verifiziert.
+>    Kleinunternehmer schulden auch die Erwerbsteuer (§ 18 Abs. 4a nennt § 1 Abs. 1 Nr. 5) —
+>    Zahllast/closing.js/fristen.js analog § 13b. Hinweise 3802/1402 + 1404/3804-Abweichung.
+> **BACKLOG-Stand:** UStVA-Block komplett erledigt; offen nur extern Blockiertes
+> (E-Rechnung-Echtdaten, KoSIT/Mustang = Java, VIES-Livetest) + Christin-Visuals.
+> **Nächster autonomer Kandidat:** Glossar-Etappe 3 (weitere Konten-Texte) oder
+> § 13b-7-%-Konten (selten, niedrige Prio).
 
 > ✅ **2026-06-12 (autonome Session): drei Stände live gebracht.**
 > 1. **v2.16.0 nachdeployt** — war committet+getaggt, aber nicht deployt (Vorsession
