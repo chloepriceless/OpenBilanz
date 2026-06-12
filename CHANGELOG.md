@@ -11,6 +11,16 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.19.0] - 2026-06-12
+
+### Hinzugefügt
+- **Konten-Glossar Etappe 2: Auslandsgeschäft / Reverse-Charge** — 11 neue
+  eigene Erklärtexte zu den Konten des Auslandsgeschäfts: § 13b-Paar 3837/1407
+  (+ generische 3835/1408), innergemeinschaftlicher Erwerb 3804/1404,
+  Auslands-Erlöskonten 4336/4337/4338/4339 sowie 4000. Die Texte verzahnen
+  mit den neuen UStVA-Kennzahlen aus 2.17.0 (Kz 45/46/47/67, Kz 21/ZM,
+  OSS-Vorbehalt) und nennen die Buchungs-Paare. Glossar damit 76 Konten.
+
 ## [2.18.0] - 2026-06-12
 
 ### Hinzugefügt

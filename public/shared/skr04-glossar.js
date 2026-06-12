@@ -146,10 +146,60 @@
       'Vorsteuer (1406/1401) verrechnet; der Rest ist die Zahllast.',
     '3801': 'Wie 3806, aber für den ermäßigten Steuersatz 7 % (§ 12 Abs. 2 UStG).',
 
+    /* ===== Auslandsgeschäft / Reverse-Charge (§ 13b, innergem.) ========= */
+    '3837': 'Die Umsatzsteuer 19 %, die die GmbH als LEISTUNGSEMPFÄNGERIN selbst schuldet ' +
+      '(Reverse-Charge, § 13b Abs. 1, 2 und 5 UStG) — typisch beim Bezug von Auslands-SaaS, ' +
+      'Online-Werbung oder Gebühren ausländischer Zahlungsdienstleister. Buchung zusätzlich ' +
+      'zum Aufwand: 1407 an 3837 (Steuer und Vorsteuer als Paar). Die UStVA-Karte weist den ' +
+      'Saldo automatisch in Kz 47 aus (Drittlands-/Bauleistungsanteil über das Aufteilungsfeld ' +
+      'nach Kz 84/85). Achtung: auch Kleinunternehmer schulden diese Steuer und müssen sie ' +
+      'anmelden (§ 18 Abs. 4a UStG).',
+    '1407': 'Die Gegenseite zu 3837: die nach § 13b UStG geschuldete Steuer ist bei ' +
+      'Verwendung für vorsteuerunschädliche Umsätze zugleich als Vorsteuer abziehbar ' +
+      '(§ 15 Abs. 1 S. 1 Nr. 4 UStG) — dann neutralisieren sich beide Buchungen. In der ' +
+      'UStVA-Karte fließt der Saldo automatisch in Kz 67. Kleinunternehmer dürfen diese ' +
+      'Vorsteuer NICHT abziehen (§ 15 Abs. 2 UStG).',
+    '3835': 'Generisches § 13b-Steuerkonto OHNE festen Steuersatz. Besser das satzgenaue ' +
+      'Konto 3837 (19 %) verwenden — Beträge auf 3835 kann die UStVA-Karte keiner ' +
+      'Vordruckzeile automatisch zuordnen.',
+    '1408': 'Generisches Konto für die § 13b-Vorsteuer OHNE festen Steuersatz. Besser das ' +
+      'satzgenaue Konto 1407 (19 %) verwenden — Beträge auf 1408 kann die UStVA-Karte ' +
+      'nicht automatisch zuordnen.',
+    '3804': 'Erwerbsteuer aus dem innergemeinschaftlichen ERWERB: kauft die GmbH Waren von ' +
+      'einem Unternehmer aus einem anderen EU-Staat, schuldet sie darauf selbst 19 % ' +
+      'Umsatzsteuer (§ 1 Abs. 1 Nr. 5 UStG). Buchung als Paar mit der abziehbaren ' +
+      'Erwerbs-Vorsteuer: 1404 an 3804. Die UStVA-Karte ordnet diese Beträge derzeit ' +
+      'NICHT automatisch zu — in ELSTER gesondert eintragen.',
+    '1404': 'Die Vorsteuer aus dem innergemeinschaftlichen Erwerb (Gegenseite zu 3804): bei ' +
+      'voller Abzugsberechtigung in gleicher Höhe abziehbar (§ 15 Abs. 1 S. 1 Nr. 3 UStG), ' +
+      'der Erwerb bleibt dann per Saldo steuerneutral.',
+
     /* ===== Erträge (Klasse 4 / 7) ======================================= */
     '4400': 'Standard-Erlöskonto für Lieferungen und Leistungen zum Regelsteuersatz 19 %. ' +
       'Buchung der Ausgangsrechnung: 1200 an 4400 + 3806. Nettobetrag = Umsatzerlös (§ 277 Abs. 1 HGB).',
+    '4000': 'Allgemeines Umsatzerlöse-Konto (ohne Branchenzuordnung). Wirkt in OpenBilanz wie ' +
+      '4400: die Erlöse zählen zu den steuerpflichtigen Umsätzen 19 % (UStVA Kz 81). Wer nur ' +
+      'ein Erlöskonto braucht, nimmt einheitlich 4400.',
     '4300': 'Erlöse zum ermäßigten Steuersatz 7 % (§ 12 Abs. 2 UStG).',
+    '4336': 'Erlöse aus sonstigen Leistungen an Unternehmer in anderen EU-Staaten ' +
+      '(B2B-Grundregel § 3a Abs. 2 UStG): der Leistungsort liegt beim Empfänger, die Steuer ' +
+      'schuldet ER in seinem Staat (Reverse-Charge). Rechnung OHNE Umsatzsteuer, mit beiden ' +
+      'USt-IdNrn. und der Angabe „Steuerschuldnerschaft des Leistungsempfängers" (§ 14a ' +
+      'Abs. 1 und 5 UStG). In der UStVA in Kz 21 anzugeben und in der Zusammenfassenden ' +
+      'Meldung zu erklären (§§ 18a, 18b UStG) — die UStVA-Karte weist darauf hin.',
+    '4337': 'Erlöse aus Leistungen IM INLAND, bei denen die Steuerschuld auf den ' +
+      'Leistungsempfänger übergeht (§ 13b Abs. 2 und 5 UStG — z. B. Bauleistungen an ' +
+      'bauleistende Unternehmer). Rechnung ohne Umsatzsteuer mit dem Hinweis ' +
+      '„Steuerschuldnerschaft des Leistungsempfängers" (§ 14a Abs. 5 UStG); in der UStVA ' +
+      'gesondert anzugeben.',
+    '4338': 'Erlöse aus Leistungen, deren Leistungsort im DRITTLAND liegt — im Inland nicht ' +
+      'steuerbar (Ortsregeln § 3a UStG), daher keine deutsche Umsatzsteuer. Die UStVA-Karte ' +
+      'weist den Saldo automatisch in Kz 45 aus (nachrichtlich). Ob im Empfängerstaat ' +
+      'Steuerpflichten entstehen, ist dort zu prüfen.',
+    '4339': 'Erlöse aus Leistungen, die in einem ANDEREN EU-Staat steuerbar sind, aber NICHT ' +
+      'unter die B2B-Grundregel fallen (sonst Konto 4336) — z. B. grundstücksbezogene ' +
+      'Leistungen (§ 3a Abs. 3 Nr. 1 UStG). Erscheint in der UStVA-Karte in Kz 45; werden ' +
+      'solche Umsätze über das OSS-Verfahren erklärt, gehören sie nicht in die Voranmeldung.',
     '4185': 'Erlöse ohne Umsatzsteuer-Ausweis als Kleinunternehmer (§ 19 UStG, Grenzen ab 2025: ' +
       '25.000 € Vorjahr / 100.000 € laufendes Jahr). Achtung: kein Vorsteuerabzug.',
     '4830': 'Betriebliche Erträge außerhalb des Kerngeschäfts: Erstattungen, Sachbezüge, ' +
