@@ -166,7 +166,10 @@
     });
 
     // Kleinunternehmer: keine USt -> uebrige Pruefungen entfallen.
-    if (u.kleinunternehmer) {
+    // AUSNAHME: Steuer nach § 13b UStG wird auch vom Kleinunternehmer geschuldet
+    // und ist insoweit voranzumelden (§ 19 Abs. 1 laesst § 18 Abs. 4a unberuehrt).
+    var st13b = Math.round((((+u.kz47) || 0) + ((+u.kz85) || 0)) * 100) / 100;
+    if (u.kleinunternehmer && st13b <= 0) {
       l.push({
         titel: 'Kleinunternehmer (§ 19 UStG)',
         status: 'info',
@@ -175,6 +178,18 @@
         paragraph: '§ 19 UStG'
       });
       return l;
+    }
+    if (u.kleinunternehmer) {
+      l.push({
+        titel: 'Kleinunternehmer: § 13b-Steuer geschuldet',
+        status: 'offen',
+        detail: 'Auch als Kleinunternehmer wird die Steuer auf bezogene § 13b-Leistungen ' +
+          'geschuldet (' + fmtEur(st13b) + ' EUR, Kz 47/85) - die Voranmeldung ist ' +
+          'insoweit abzugeben (§ 18 Abs. 4a UStG). Ein Vorsteuerabzug besteht nicht. ' +
+          'Die Regelbesteuerungs-Abstimmungen unten entfallen.',
+        paragraph: '§ 18 Abs. 4a UStG',
+        sprung: { view: 'ustva' }
+      });
     }
 
     // 1. Keine offenen (nicht festgeschriebenen) Buchungen im Zeitraum (GoBD).
@@ -191,6 +206,10 @@
       paragraph: '§ 146 AO',
       sprung: { view: 'buchhaltung' }
     });
+
+    // Kleinunternehmer mit § 13b-Steuer: Festschreibung (GoBD) gilt, die
+    // Regelbesteuerungs-Abstimmungen (USt/Erloese, Vorsteuer) passen nicht.
+    if (u.kleinunternehmer) return l;
 
     // 2. Gebuchte USt (3806/3801) stimmt mit der aus den Erlösen 19/7 % errechneten USt überein.
     var berechnet = +u.ustBerechnet || 0;

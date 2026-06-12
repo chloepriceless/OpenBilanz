@@ -11,6 +11,30 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.17.0] - 2026-06-12
+
+### Hinzugefügt
+- **UStVA: § 13b- und Auslands-Kennzahlen automatisch** (Backlog-Item): auf
+  3837/1407 gebuchte Reverse-Charge-Beträge (z. B. Auslands-SaaS) erscheinen
+  jetzt automatisch in Kz 46/47 (EU-Leistungsbezüge § 13b Abs. 1) und Kz 67
+  (§ 13b-Vorsteuer); Erlöse auf 4338/4339 (im Inland nicht steuerbar) in Kz 45.
+  Neues Aufteilungsfeld gliedert den Drittlands-/Bauleistungsanteil der
+  gebuchten Beträge nach Kz 84/85 um (Zahllast bleibt invariant). Suite 286 Tests.
+- **Plausi-Hinweise**: mögliche Doppelerfassung (gebucht + manuell),
+  1407/3837-Abweichung, generische § 13b-Konten 3835/1408, Konto 4336
+  (gehört in Kz 21 + Zusammenfassende Meldung), OSS-Vorbehalt bei 4339.
+
+### Geändert / korrigiert
+- **Kleinunternehmer (§ 19 UStG) mit § 13b-Bezügen**: die § 13b-Steuer wird
+  auch als Kleinunternehmer geschuldet und ist insoweit voranzumelden
+  (§ 18 Abs. 4a UStG; § 19 Abs. 1 lässt das unberührt) — die UStVA-Karte
+  weist sie jetzt als Zahllast aus (ohne Vorsteuerabzug, § 15 Abs. 2 UStG);
+  vorher zeigte sie pauschal 0. Die Abschluss-Checkliste
+  (`pruefeUstvaReadiness`) überspringt den Kleinunternehmer-Fall nur noch,
+  wenn keine § 13b-Steuer anfällt.
+- Manuelle § 13b-Felder in der UStVA-Karte klar als „NICHT gebuchte
+  Drittland-/Bauleistungen (Kz 84/85)" beschriftet.
+
 ## [2.16.0] - 2026-06-12
 
 ### Hinzugefügt

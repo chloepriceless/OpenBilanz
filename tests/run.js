@@ -948,6 +948,73 @@ test('UStVA: steuerfreie Umsätze ohne Vorsteuerabzug melden Kz 48 + Hinweis', f
   ok(u.hinweise.some(function (h) { return h.indexOf('Vorsteueraufteilung') >= 0; }),
      'Hinweis auf Vorsteueraufteilung § 15 Abs. 4');
 });
+test('UStVA: gebuchte § 13b-Beträge (3837/1407) fließen in Kz 46/47/67', function () {
+  // Auslands-SaaS, korrekt gebucht: Aufwand netto + Steuer-/Vorsteuer-Paar.
+  var bu = [
+    { datum: '2026-02-05', soll: '6800', haben: '1800', betrag: 1000 },
+    { datum: '2026-02-05', soll: '1407', haben: '3837', betrag: 190 }
+  ];
+  var u = Ustva.berechne(bu, null, null);
+  eq(u.kz47, 190, 'Kz 47 = gebuchte § 13b-Steuer (3837)');
+  eq(u.kz46, 1000, 'Kz 46 = rückgerechnete Bemessungsgrundlage');
+  eq(u.kz67, 190, 'Kz 67 = gebuchte § 13b-Vorsteuer (1407)');
+  eq(u.kz83, 0, 'Zahllast nettet bei voller Abzugsberechtigung');
+  eq(u.hinweise.length, 0, 'keine Hinweise bei symmetrischer Buchung');
+});
+test('UStVA: Drittland-Aufteilung gliedert gebuchte § 13b-Beträge nach Kz 84/85 um', function () {
+  var bu = [{ datum: '2026-02-05', soll: '1407', haben: '3837', betrag: 380 }];
+  var ohne = Ustva.berechne(bu, null, null);
+  var mit  = Ustva.berechne(bu, null, null, { gebucht13b: { drittlandNetto: 1000 } });
+  eq(ohne.kz47, 380, 'ohne Aufteilung alles in Kz 47');
+  eq(mit.kz47, 190, 'Kz 47 um den Drittland-Anteil gekürzt');
+  eq(mit.kz84, 1000, 'Kz 84 = Drittland-Bemessungsgrundlage');
+  eq(mit.kz85, 190, 'Kz 85 = Drittland-Steuer');
+  eq(mit.kz83, ohne.kz83, 'Zahllast invariant gegen die Aufteilung');
+});
+test('UStVA: Warnung bei gebuchtem 3837 plus manueller § 13b-Eingabe (Doppelerfassung)', function () {
+  var bu = [{ datum: '2026-02-05', soll: '1407', haben: '3837', betrag: 190 }];
+  var u = Ustva.berechne(bu, null, null, { rc13b: { netto19: 1000 } });
+  ok(u.hinweise.some(function (h) { return h.indexOf('Doppelerfassung') >= 0; }),
+     'Doppelerfassungs-Hinweis vorhanden');
+});
+test('UStVA: Kleinunternehmer schuldet die § 13b-Steuer (§ 18 Abs. 4a UStG)', function () {
+  var bu = [{ datum: '2026-02-05', soll: '1407', haben: '3837', betrag: 190 }];
+  var u = Ustva.berechne(bu, null, null, { kleinunternehmer: true });
+  eq(u.kz47, 190, 'Kz 47 auch im Kleinunternehmer-Fall');
+  eq(u.kz67, 0, 'kein Vorsteuerabzug (§ 15 Abs. 2 UStG)');
+  eq(u.kz83, 190, 'Zahllast = geschuldete § 13b-Steuer');
+  ok(u.hinweise.some(function (h) { return h.indexOf('18 Abs. 4a') >= 0; }),
+     'Hinweis auf § 18 Abs. 4a UStG');
+});
+test('UStVA: abweichende 1407/3837-Salden lösen Prüf-Hinweis aus', function () {
+  // Nur die Steuerseite gebucht (3837), keine Vorsteuer (1407).
+  var bu = [{ datum: '2026-02-05', soll: '5400', haben: '3837', betrag: 190 }];
+  var u = Ustva.berechne(bu, null, null);
+  eq(u.kz67, 0, 'keine gebuchte § 13b-Vorsteuer');
+  eq(u.kz83, 190, 'Zahllast = § 13b-Steuer ohne Abzug');
+  ok(u.hinweise.some(function (h) { return h.indexOf('weicht') >= 0; }),
+     'Abweichungs-Hinweis 1407/3837');
+});
+test('UStVA: Kz 45 aus 4338/4339, Kz-21-Hinweis nur für 4336', function () {
+  var bu = [
+    { datum: '2026-03-01', soll: '1800', haben: '4338', betrag: 5000 },
+    { datum: '2026-03-02', soll: '1800', haben: '4339', betrag: 2000 },
+    { datum: '2026-03-03', soll: '1800', haben: '4336', betrag: 700 }
+  ];
+  var u = Ustva.berechne(bu, null, null);
+  eq(u.kz45, 7000, 'Kz 45 = 4338 + 4339');
+  ok(u.hinweise.some(function (h) { return h.indexOf('Kz 21') >= 0; }),
+     '4336 → Hinweis auf Kz 21 + Zusammenfassende Meldung');
+  ok(u.hinweise.some(function (h) { return h.indexOf('OSS') >= 0; }),
+     '4339 → OSS-Vorbehalts-Hinweis');
+});
+test('UStVA: generische § 13b-Konten 3835/1408 → Hinweis statt Automatik', function () {
+  var bu = [{ datum: '2026-02-05', soll: '5400', haben: '3835', betrag: 100 }];
+  var u = Ustva.berechne(bu, null, null);
+  eq(u.kz47, 0, '3835 fließt nicht in Kz 47');
+  ok(u.hinweise.some(function (h) { return h.indexOf('3835') >= 0; }),
+     'Hinweis auf die generischen Konten');
+});
 
 /* ---- Steuer: Verlustvortrag / Hinzurechnungen / vGA ------------------ */
 test('Steuer: Verlustvortrag mindert zu versteuerndes Einkommen', function () {
@@ -2306,6 +2373,15 @@ test('UStVA-Readiness: Kleinunternehmer überspringt die Prüfungen', function (
   eq(l.length, 1, 'nur ein Info-Eintrag');
   eq(l[0].status, 'info', '');
   ok(/Kleinunternehmer/.test(l[0].titel), '');
+});
+test('UStVA-Readiness: Kleinunternehmer mit § 13b-Steuer → insoweit Pflicht (§ 18 Abs. 4a)', function () {
+  var b = [{ datum: '2026-03-05', soll: '1407', haben: '3837', betrag: 190, fest: true }];
+  var u = Ustva.berechne(b, '2026-03-01', '2026-03-31', { kleinunternehmer: true });
+  var l = Closing.pruefeUstvaReadiness(b, '2026-03-01', '2026-03-31', u);
+  ok(l.some(function (x) { return x.paragraph === '§ 18 Abs. 4a UStG' && x.status === 'offen'; }),
+     '§ 18 Abs. 4a als offener Punkt');
+  ok(!!findP(l, /festgeschrieben/), 'Festschreibungs-Check (GoBD) läuft weiter');
+  ok(!findP(l, /Gebuchte USt/), 'Regelbesteuerungs-Abstimmung entfällt');
 });
 
 /* ---- HealthCheck Startseite ----------------------------------------- */

@@ -2627,13 +2627,17 @@ function renderUstva(m) {
   html += '<div class="box box-info"><b>Aufbereitung, kein Versand</b>Die ' +
     'Voranmeldung wird über ELSTER übermittelt. Hier werden die Kennzahlen aus den ' +
     'SKR04-Konten ermittelt: Erlöse 4400/4000 (19 %), 4300 (7 %), Vorsteuer ' +
-    '1406/1401.<br><b>Versteuerungsart:</b> ' + vartText +
+    '1406/1401, § 13b-Leistungsbezüge 3837/1407 (Kz 46/47/67), nicht steuerbare ' +
+    'Auslandsumsätze 4338/4339 (Kz 45).<br><b>Versteuerungsart:</b> ' + vartText +
     ' (Einstellung in den Unternehmensdaten.)</div>';
   if (klein) {
     html += '<div class="box box-warn"><b>Kleinunternehmer (§ 19 UStG)</b>Laut ' +
       'Unternehmensdaten wird die Kleinunternehmerregelung angewendet: kein ' +
       'USt-Ausweis, kein Vorsteuerabzug. Eine Voranmeldung ist dann regelmäßig ' +
-      'nicht abzugeben. Die Kennzahlen unten dienen nur der Übersicht.</div>';
+      'nicht abzugeben — <b>außer</b> es wird Steuer nach § 13b UStG geschuldet ' +
+      '(bezogene Auslands-Leistungen, Konto 3837): die ist auch als ' +
+      'Kleinunternehmer anzumelden (§ 18 Abs. 4a UStG) und nicht als Vorsteuer ' +
+      'abziehbar.</div>';
   }
   html += '<div class="karte"><h2>Zeitraum</h2><div class="gitter g3">' +
     feldWrap('von', '', '<input type="date" id="ustVon" value="' + esc(von0) + '">') +
@@ -2641,11 +2645,15 @@ function renderUstva(m) {
     '</div></div>';
   html += '<div class="karte"><h2>Sonderfälle</h2><div class="karte-hint">' +
     'Beträge, die sich nicht aus den Buchungen ergeben — jeweils netto eintragen, ' +
-    'sonst leer lassen.</div><div class="gitter g2">' +
-    feldWrap('§ 13b: bezogene Leistungen 19 % (netto)', '',
+    'sonst leer lassen. Auf 3837/1407 <b>gebuchte</b> § 13b-Beträge fließen ' +
+    'automatisch ein (Kz 46/47) — hier nicht noch einmal eintragen.</div>' +
+    '<div class="gitter g2">' +
+    feldWrap('§ 13b NICHT gebucht: Drittland/Bauleistungen 19 % (netto) → Kz 84/85', '',
       '<input type="number" step="0.01" id="ust13b19">') +
-    feldWrap('§ 13b: bezogene Leistungen 7 % (netto)', '',
+    feldWrap('§ 13b NICHT gebucht: Drittland/Bauleistungen 7 % (netto) → Kz 84/85', '',
       '<input type="number" step="0.01" id="ust13b7">') +
+    feldWrap('Davon Drittland/Bauleistung in den GEBUCHTEN § 13b-Beträgen (netto) → Kz 84/85', '',
+      '<input type="number" step="0.01" id="ust13bDritt">') +
     feldWrap('Steuerfreie Umsätze MIT Vorsteuerabzug', '',
       '<input type="number" step="0.01" id="ustSfMit">') +
     feldWrap('Steuerfreie Umsätze OHNE Vorsteuerabzug (§ 4 Nr. 12 u. a.)', '',
@@ -2666,6 +2674,7 @@ function renderUstva(m) {
     var u = Ustva.berechne(a.buchungen, von, bis, {
       versteuerungsart: vart, kleinunternehmer: klein,
       rc13b: { netto19: zahl('ust13b19'), netto7: zahl('ust13b7') },
+      gebucht13b: { drittlandNetto: zahl('ust13bDritt') },
       steuerfrei: { mitVorsteuer: zahl('ustSfMit'), ohneVorsteuer: zahl('ustSfOhne') }
     });
     var h = '<div class="karte"><h2>Kennzahlen</h2><table class="pos-tab">' +
@@ -2673,11 +2682,14 @@ function renderUstva(m) {
       zeile('86', 'Steuerpflichtige Umsätze zum Steuersatz 7 % (netto)', u.kz86) +
       zeile('', 'Umsatzsteuer 19 %', u.ust19) +
       zeile('', 'Umsatzsteuer 7 %', u.ust7) +
-      (u.kz84 ? zeile('84', 'Bezogene Leistungen § 13b UStG (Bemessungsgrundlage, netto)', u.kz84) : '') +
-      (u.kz85 ? zeile('85', 'Steuer auf bezogene Leistungen (§ 13b UStG)', u.kz85) : '') +
+      (u.kz46 ? zeile('46', 'Bezogene EU-Leistungen § 13b Abs. 1 UStG (Bemessungsgrundlage, netto)', u.kz46) : '') +
+      (u.kz47 ? zeile('47', 'Steuer auf bezogene EU-Leistungen (§ 13b Abs. 1 UStG)', u.kz47) : '') +
+      (u.kz84 ? zeile('84', 'Andere Leistungen § 13b Abs. 2 UStG (Bemessungsgrundlage, netto)', u.kz84) : '') +
+      (u.kz85 ? zeile('85', 'Steuer auf andere Leistungen (§ 13b Abs. 2 UStG)', u.kz85) : '') +
       (u.kz44 ? zeile('44', 'Steuerfreie Umsätze mit Vorsteuerabzug', u.kz44) : '') +
       (u.kz48 ? zeile('48', 'Steuerfreie Umsätze ohne Vorsteuerabzug', u.kz48) : '') +
-      zeile('', '= Umsatzsteuer', Berechnung.cent(u.ustBerechnet + u.kz85), { summe: true }) +
+      (u.kz45 ? zeile('45', 'Übrige nicht steuerbare Umsätze (Leistungsort nicht im Inland)', u.kz45) : '') +
+      zeile('', '= Umsatzsteuer', Berechnung.cent(u.ustBerechnet + u.kz85 + u.kz47), { summe: true }) +
       zeile('66', 'Abziehbare Vorsteuerbeträge aus Rechnungen', u.kz66) +
       (u.kz67 ? zeile('67', 'Vorsteuer aus Leistungen i. S. d. § 13b UStG', u.kz67) : '') +
       zeile('83', 'Verbleibende Umsatzsteuer-Vorauszahlung', u.kz83, { summe: true }) +
@@ -2695,7 +2707,7 @@ function renderUstva(m) {
     });
     document.getElementById('ustvaErgebnis').innerHTML = h;
   }
-  ['ustVon', 'ustBis', 'ust13b19', 'ust13b7', 'ustSfMit', 'ustSfOhne'].forEach(function (id) {
+  ['ustVon', 'ustBis', 'ust13b19', 'ust13b7', 'ust13bDritt', 'ustSfMit', 'ustSfOhne'].forEach(function (id) {
     var el = m.querySelector('#' + id);
     if (el) el.addEventListener('input', zeigen);
   });

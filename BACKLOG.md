@@ -54,10 +54,14 @@ externe Toolchecks, README-Statusübergänge von 🟡 zu ✅.
 
 ## UStVA-Karte — § 13b- und Auslands-Kennzahlen
 
-- [ ] Die UStVA-Karte berechnet bisher nur Kz 81/86/66/83 aus
-      3806/3801/1406/1401. Wer Reverse-Charge-Eingangsleistungen bezieht
-      (§ 13b UStG, Konten 1407/3837 — z. B. Auslands-SaaS oder Gebühren
-      eines ausländischen Zahlungsdienstleisters) oder im Inland nicht
-      steuerbare Auslandsumsätze erzielt (Konto 4338), muss Kz 46/47/67
-      und Kz 45 derzeit manuell in ELSTER ergänzen. Kennzahlen-Berechnung
-      um diese Konten erweitern und in der Karte ausweisen.
+- [x] ERLEDIGT (v2.17.0): Konten 3837/1407 fließen automatisch in Kz 46/47/67,
+      4338/4339 in Kz 45; „davon Drittland"-Aufteilung nach Kz 84/85;
+      Kleinunternehmer-Fall nach § 18 Abs. 4a UStG korrigiert (Steuer wird
+      geschuldet, kein Vorsteuerabzug); Plausi-Hinweise (Doppelerfassung,
+      1407/3837-Abweichung, 3835/1408, 4336 → Kz 21/ZM, 4339-OSS-Vorbehalt).
+      Design + Refute-Review: `.planning/USTVA-KZ45-46-47-DESIGN.md`.
+- [ ] Folge-Item: `fristen.js` kennt für Kleinunternehmer keine UStVA-Frist —
+      bei § 13b-Steuerschuld ist die Voranmeldung aber insoweit abzugeben
+      (§ 18 Abs. 4a UStG). Fristen-Logik braucht dafür Zugriff auf die
+      Buchungen (3837/3835 bebucht?), heute bekommt sie nur die Stammdaten —
+      Schnittstellen-Erweiterung nötig, deshalb separates Item.
