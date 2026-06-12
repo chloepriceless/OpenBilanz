@@ -228,5 +228,23 @@
   function hatErklaerung(nr) { return TEXTE[String(nr)] != null; }
   function nummern() { return Object.keys(TEXTE); }
 
-  return { erklaerung: erklaerung, hatErklaerung: hatErklaerung, nummern: nummern };
+  /* Durchsucht eine Kontenliste (Objekte mit nr/name) nach Glossar-Logik:
+   * ohne Suchbegriff nur die Konten MIT eigener Erklärung (kompakte Übersicht),
+   * mit Suchbegriff alle übergebenen Konten über Nr, Name UND Erklärtext.
+   * max deckelt die Treffer (hält das DOM klein); gesamt = Trefferzahl vor
+   * der Deckelung. Reine Funktion — vom Glossar UND der Buchungshilfe genutzt. */
+  function suche(konten, q, max) {
+    q = String(q == null ? '' : q).trim().toLowerCase();
+    max = max || 80;
+    var alle = (konten || []).filter(function (k) {
+      var erkl = erklaerung(k.nr);
+      if (!q) return !!erkl;
+      return (k.nr + ' ' + (k.name || '') + ' ' + (erkl || ''))
+        .toLowerCase().indexOf(q) >= 0;
+    });
+    return { treffer: alle.slice(0, max), gesamt: alle.length };
+  }
+
+  return { erklaerung: erklaerung, hatErklaerung: hatErklaerung, nummern: nummern,
+           suche: suche };
 });

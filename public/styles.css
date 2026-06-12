@@ -281,3 +281,8 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 .arelle-log{font-family:monospace;font-size:11px;white-space:pre-wrap;
   max-height:340px;overflow:auto;background:var(--bg);padding:10px;
   border-radius:6px;border:1px solid var(--line);margin:0}
+
+/* ---- Buchungshilfe: anklickbare Kontonummern (Konto nachschlagen) ---- */
+.konto-klick{cursor:pointer;color:var(--akzent);
+  border-bottom:1px dotted var(--akzent)}
+.konto-klick:hover{background:rgba(0,0,0,.05)}

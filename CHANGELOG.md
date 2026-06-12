@@ -11,6 +11,16 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.16.0] - 2026-06-12
+
+### Hinzugefügt
+- **Konten-Glossar in der Buchungshilfe** (T-0156): neue Karte „Konto
+  nachschlagen" mit Live-Suche über den gesamten SKR04 (Nummer, Name und
+  Konten-Erklärtexte); jede Kontonummer in den Buchungssatz-Beispielen ist
+  jetzt anklickbar und springt mit Erklärung in die Suche.
+- `SKR04Glossar.suche()` als gemeinsame, getestete Suchlogik — das Glossar
+  nutzt dieselbe Funktion (Refactor statt Duplikat); Suite jetzt 278 Tests.
+
 ## [2.15.0] - 2026-06-10
 
 Komplett-Review (Code, Texte, Rechtsstand, EB-/Übernahme-Automatik) plus drei neue

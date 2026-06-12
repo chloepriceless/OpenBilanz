@@ -2804,6 +2804,32 @@ test('MT940: zweistelliges Jahr > 50 wird als 19xx gelesen (Fenster-Verfahren)',
   eq(Mt940.isoDatum('260110'), '2026-01-10', 'aktuelles Datum 2026');
 });
 
+/* ---- Konten-Suche (Buchungshilfe/Glossar, T-0156) ----------------------- */
+test('SKR04Glossar.suche: Glossar-Logik mit und ohne Suchbegriff, Deckelung', function () {
+  var G = require('../public/shared/skr04-glossar.js');
+  var konten = [
+    { nr: '1800', name: 'Bank (Guthaben bei Kreditinstituten)' },   // hat Erklärung
+    { nr: '4400', name: 'Erlöse 19 % USt' },
+    { nr: '6310', name: 'Miete (unbewegliche Wirtschaftsgüter)' },
+    { nr: '9999', name: 'Fantasiekonto ohne Erklärung' }
+  ];
+  // ohne Suchbegriff: nur Konten MIT eigener Erklärung
+  var leer = G.suche(konten, '', 80);
+  ok(leer.treffer.every(function (k) { return G.hatErklaerung(k.nr); }),
+    'ohne q nur Konten mit Erklärung');
+  ok(leer.treffer.some(function (k) { return k.nr === '1800'; }), '1800 ist dabei');
+  ok(!leer.treffer.some(function (k) { return k.nr === '9999'; }), '9999 nicht dabei');
+  // mit Suchbegriff: Nr, Name UND Erklärtext werden durchsucht
+  eq(G.suche(konten, '9999', 80).treffer.length, 1, 'Treffer über die Nummer');
+  eq(G.suche(konten, 'miete', 80).treffer[0].nr, '6310', 'Treffer über den Namen');
+  ok(G.suche(konten, 'Kontoauszug', 80).treffer.some(function (k) { return k.nr === '1800'; }),
+    'Treffer über den Erklärtext (1800 erwähnt den Kontoauszug)');
+  // Deckelung: max greift, gesamt bleibt ehrlich
+  var res = G.suche(konten, 'e', 2);
+  eq(res.treffer.length, 2, 'max deckelt die Treffer');
+  ok(res.gesamt >= res.treffer.length, 'gesamt >= angezeigte Treffer');
+});
+
 /* ---- Lauf ------------------------------------------------------------- */
 /* Sequenziell laufen lassen, async-Tests (Promise-Rückgabewert) werden
  * abgewartet, ohne dass synchrone Tests darauf umgeschrieben werden müssen. */

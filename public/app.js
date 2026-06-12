@@ -5229,7 +5229,51 @@ function fr(d, t) {
 /* ===========================================================================
  * BUCHUNGSHILFE  -  erklaerte Standardfaelle mit konkreten Buchungssaetzen
  * ========================================================================= */
+
+/* Faktisches Zuordnungs-Label eines SKR04-Kontos (Bilanzseite/-posten bzw.
+ * GuV-Kategorie) — genutzt vom Glossar UND der Konten-Suche der Buchungshilfe. */
+function kontoZuordnungLabel(k) {
+  if (k.seite === 'EBK') return 'Eröffnungsbilanzkonto (Verrechnungskonto)';
+  if (k.seite === 'AKTIV' || k.seite === 'PASSIV') {
+    return 'Bilanz ' + (k.seite === 'AKTIV' ? 'Aktiva' : 'Passiva') +
+      (k.pos ? ' · Posten ' + k.pos : '') + ' (§ 266 HGB)';
+  }
+  var kat = SKR04.KAT_GUV[k.kat];
+  return 'GuV · ' + (kat && kat.label ? kat.label : k.kat) + ' (§ 275 HGB)';
+}
+
+/* Treffer-HTML der SKR04-Konten-Suche (Glossar-Logik aus skr04-glossar.js). */
+function kontenSucheHtml(q, max) {
+  var hatGlossar = typeof SKR04Glossar !== 'undefined';
+  if (!hatGlossar) return '';
+  var res = SKR04Glossar.suche(SKR04.alleKonten(), q, max);
+  if (!res.treffer.length) {
+    return '<div class="karte-hint" style="margin-top:8px">Kein Konto gefunden — ' +
+      'Suche nach Nummer (z. B. 4338), Name oder Stichwort (z. B. „Miete“).</div>';
+  }
+  var h = '<div class="karte-hint" style="margin-top:8px">' + res.gesamt +
+    ' Konto/Konten gefunden' + (res.gesamt > res.treffer.length
+      ? ' — die ersten ' + res.treffer.length + ' angezeigt, Suche verfeinern' : '') +
+    '</div>';
+  res.treffer.forEach(function (k) {
+    var erkl = SKR04Glossar.erklaerung(k.nr);
+    h += '<div style="margin-top:9px"><b class="mono">' + esc(k.nr) + '</b> &nbsp;<b>' +
+      esc(k.name) + '</b>' +
+      '<div class="karte-hint">' + esc(kontoZuordnungLabel(k)) +
+      (erkl ? '<br>' + esc(erkl) : '') + '</div></div>';
+  });
+  return h;
+}
+
 function renderHilfe(m) {
+  /* Kontonummer in den Buchungssatz-Tabellen anklickbar machen (nur reine
+   * Nummern; Platzhalter wie "Sachkonto" bleiben Text). */
+  function kontoZelle(s) {
+    return /^\d{3,6}$/.test(String(s))
+      ? '<span class="konto-klick" data-konto="' + s +
+        '" title="Konto nachschlagen">' + s + '</span>'
+      : esc(String(s));
+  }
   /* Karte mit erklaerendem Text und optionaler Buchungssatz-Tabelle.
    * saetze: Array von [Soll-Konto, Haben-Konto, Geschaeftsvorfall]. */
   function fall(titel, text, saetze) {
@@ -5239,8 +5283,8 @@ function renderHilfe(m) {
       h += '<table class="liste"><thead><tr><th>Soll</th><th>Haben</th>' +
         '<th>Geschäftsvorfall</th></tr></thead><tbody>';
       saetze.forEach(function (s) {
-        h += '<tr><td class="mono">' + s[0] + '</td><td class="mono">' + s[1] +
-          '</td><td>' + s[2] + '</td></tr>';
+        h += '<tr><td class="mono">' + kontoZelle(s[0]) + '</td><td class="mono">' +
+          kontoZelle(s[1]) + '</td><td>' + s[2] + '</td></tr>';
       });
       h += '</tbody></table>';
     }
@@ -5255,6 +5299,16 @@ function renderHilfe(m) {
     'ein Haben-Konto und denselben Betrag auf beiden Seiten. In der Buchhaltung erzeugt ' +
     '„Salden in Bilanz/GuV übernehmen“ aus den Kontensalden automatisch Bilanz und GuV. ' +
     'Eine HGB-Bilanzposition (z. B. „Sachanlagen“) bündelt dabei mehrere Konten.</div>';
+
+  /* Konten-Glossar direkt in der Buchungshilfe: jede Kontonummer in den
+   * Beispielen ist anklickbar, zusätzlich freie Suche über den ganzen SKR04. */
+  html += '<div class="karte" id="hilfeKontoKarte"><h2>Konto nachschlagen</h2>' +
+    '<div class="karte-hint">Jede <span class="konto-klick">Kontonummer</span> in den ' +
+    'Beispielen unten ist anklickbar — oder hier direkt suchen: Nummer, Name oder ' +
+    'Stichwort; durchsucht den gesamten SKR04 samt Konten-Erklärungen.</div>' +
+    feldWrap('Suche', 'z. B. 4338, „Verkaufsprovisionen“ oder „Miete“',
+      '<input id="hilfeKontoSuche" placeholder="Konto-Nr., Name oder Stichwort">') +
+    '<div id="hilfeKontoTreffer"></div></div>';
 
   html += fall('1. GmbH-Gründung &amp; Eröffnungsbilanz',
     'Die <b>Eröffnungsbilanz</b> wird direkt erfasst — sie hat kein Buchungsjournal. ' +
@@ -5632,6 +5686,25 @@ function renderHilfe(m) {
     'einholen.</div>';
 
   m.innerHTML = html;
+
+  /* Konten-Suche binden: Tippen sucht live; Klick auf eine Kontonummer in den
+   * Beispielen füllt die Suche und scrollt zur Karte. */
+  var inp = document.getElementById('hilfeKontoSuche');
+  var out = document.getElementById('hilfeKontoTreffer');
+  function zeigeKonten() {
+    var q = inp.value.trim();
+    out.innerHTML = q ? kontenSucheHtml(q, 25) : '';
+  }
+  inp.addEventListener('input', zeigeKonten);
+  m.querySelectorAll('.konto-klick').forEach(function (el) {
+    if (!el.dataset.konto) return;            // reiner Demo-Text in der Hint-Zeile
+    el.onclick = function () {
+      inp.value = el.dataset.konto;
+      zeigeKonten();
+      var karte = document.getElementById('hilfeKontoKarte');
+      if (karte && karte.scrollIntoView) karte.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+  });
 }
 
 /* ===========================================================================
@@ -5734,17 +5807,6 @@ function renderGlossar(m) {
   m.innerHTML = html;
   var inp = document.getElementById('glsSuche');
 
-  /* SKR04-Konten-Glossar: Zuordnungs-Label aus den Kontenrahmen-Daten ableiten
-   * (faktisch), Erklärtext aus dem eigenen Konten-Glossar (skr04-glossar.js). */
-  function kontoZuordnung(k) {
-    if (k.seite === 'EBK') return 'Eröffnungsbilanzkonto (Verrechnungskonto)';
-    if (k.seite === 'AKTIV' || k.seite === 'PASSIV') {
-      return 'Bilanz ' + (k.seite === 'AKTIV' ? 'Aktiva' : 'Passiva') +
-        (k.pos ? ' · Posten ' + k.pos : '') + ' (§ 266 HGB)';
-    }
-    var kat = SKR04.KAT_GUV[k.kat];
-    return 'GuV · ' + (kat && kat.label ? kat.label : k.kat) + ' (§ 275 HGB)';
-  }
   function zeichne() {
     var q = inp.value.trim().toLowerCase();
     var gruppen = [], idx = {};
@@ -5764,27 +5826,24 @@ function renderGlossar(m) {
     });
     /* Konten-Sektion: ohne Suchbegriff nur die Konten MIT eigener Erklärung
      * (übersichtlich); mit Suchbegriff ALLE Konten des vollen SKR04 durchsuchen
-     * (Nr, Name, Erklärtext), Treffer gedeckelt — hält das DOM klein. */
+     * (Nr, Name, Erklärtext), Treffer gedeckelt — gemeinsame Logik
+     * SKR04Glossar.suche(), genutzt auch von der Buchungshilfe. */
     var hatGlossar = typeof SKR04Glossar !== 'undefined';
     var alleK = SKR04.alleKonten();           // einmal aufbauen (läuft je Tastendruck)
-    var konten = alleK.filter(function (k) {
-      var erkl = hatGlossar ? SKR04Glossar.erklaerung(k.nr) : null;
-      if (!q) return !!erkl;
-      return (k.nr + ' ' + k.name + ' ' + (erkl || '')).toLowerCase().indexOf(q) >= 0;
-    });
-    var MAX = 80, gesamt = konten.length;
-    if (konten.length > MAX) konten = konten.slice(0, MAX);
-    if (konten.length) {
+    var MAX = 80;
+    var res = hatGlossar ? SKR04Glossar.suche(alleK, q, MAX)
+      : { treffer: [], gesamt: 0 };
+    if (res.treffer.length) {
       h += '<div class="karte"><h2>SKR04-Konten</h2>' +
         '<div class="karte-hint">' + (q
-          ? gesamt + ' Konto/Konten gefunden' + (gesamt > MAX ? ' — die ersten ' + MAX + ' angezeigt, Suche verfeinern' : '')
+          ? res.gesamt + ' Konto/Konten gefunden' + (res.gesamt > MAX ? ' — die ersten ' + MAX + ' angezeigt, Suche verfeinern' : '')
           : 'Die häufigsten Konten mit Erklärung — über die Suche ist der gesamte Kontenrahmen (' +
             alleK.length + ' Konten) durchsuchbar.') + '</div>';
-      konten.forEach(function (k) {
-        var erkl = hatGlossar ? SKR04Glossar.erklaerung(k.nr) : null;
+      res.treffer.forEach(function (k) {
+        var erkl = SKR04Glossar.erklaerung(k.nr);
         h += '<div style="margin-bottom:9px"><b class="mono">' + esc(k.nr) + '</b> &nbsp;<b>' +
           esc(k.name) + '</b>' +
-          '<div class="karte-hint">' + esc(kontoZuordnung(k)) +
+          '<div class="karte-hint">' + esc(kontoZuordnungLabel(k)) +
           (erkl ? '<br>' + esc(erkl) : '') + '</div></div>';
       });
       h += '</div>';
