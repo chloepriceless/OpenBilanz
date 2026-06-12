@@ -2218,6 +2218,19 @@ test('Fristen: UStVA wird gelistet, Kleinunternehmer skip', function () {
   var rk = Fristen.naechsteFristen({ kleinunternehmer: true }, [], '2026-05-20');
   ok(!rk.some(function (x) { return x.art === 'ustva'; }), 'Kleinunternehmer: keine UStVA');
 });
+test('Fristen: Kleinunternehmer mit § 13b-Buchung im Meldezeitraum bekommt UStVA-Frist', function () {
+  var ab = [{ stichtag: '2026-12-31', art: 'JAHRESABSCHLUSS', buchungen: [
+    { datum: '2026-04-15', soll: '1407', haben: '3837', betrag: 190 }
+  ] }];
+  // 2026-05-05: naechste UStVA (10.05.) deckt den April ab -> § 13b im Zeitraum.
+  var r = Fristen.naechsteFristen({ kleinunternehmer: true }, ab, '2026-05-05');
+  ok(r.some(function (x) { return x.art === 'ustva' && /18 Abs\. 4a/.test(x.paragraph); }),
+     'UStVA-Frist mit § 18 Abs. 4a UStG gelistet');
+  // 2026-07-05: naechste UStVA deckt den Juni ab -> keine § 13b-Buchung -> skip.
+  var r2 = Fristen.naechsteFristen({ kleinunternehmer: true }, ab, '2026-07-05');
+  ok(!r2.some(function (x) { return x.art === 'ustva'; }),
+     'ohne § 13b im Meldezeitraum weiterhin keine UStVA-Frist');
+});
 test('Fristen: Sortierung rot > gelb > gruen', function () {
   var u = {};
   var abs = [

@@ -11,6 +11,15 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.18.0] - 2026-06-12
+
+### Hinzugefügt
+- **Fristen-Karte: UStVA-Frist für Kleinunternehmer mit § 13b-Bezügen** —
+  wurden im Meldezeitraum die § 13b-Konten 3837/3835 bebucht, erscheint die
+  UStVA-Frist jetzt auch bei aktivierter Kleinunternehmerregelung (Pflicht
+  nach § 18 Abs. 4a UStG); ohne solche Buchungen bleibt der bisherige Skip.
+  Vervollständigt die § 13b-Korrektur aus 2.17.0. Suite 287 Tests.
+
 ## [2.17.0] - 2026-06-12
 
 ### Hinzugefügt

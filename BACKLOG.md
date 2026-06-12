@@ -60,8 +60,7 @@ externe Toolchecks, README-Statusübergänge von 🟡 zu ✅.
       geschuldet, kein Vorsteuerabzug); Plausi-Hinweise (Doppelerfassung,
       1407/3837-Abweichung, 3835/1408, 4336 → Kz 21/ZM, 4339-OSS-Vorbehalt).
       Design + Refute-Review: `.planning/USTVA-KZ45-46-47-DESIGN.md`.
-- [ ] Folge-Item: `fristen.js` kennt für Kleinunternehmer keine UStVA-Frist —
-      bei § 13b-Steuerschuld ist die Voranmeldung aber insoweit abzugeben
-      (§ 18 Abs. 4a UStG). Fristen-Logik braucht dafür Zugriff auf die
-      Buchungen (3837/3835 bebucht?), heute bekommt sie nur die Stammdaten —
-      Schnittstellen-Erweiterung nötig, deshalb separates Item.
+- [x] ERLEDIGT (v2.18.0): `fristen.js` listet die UStVA-Frist jetzt auch für
+      Kleinunternehmer, wenn im Meldezeitraum § 13b-Konten (3837/3835) bebucht
+      sind (§ 18 Abs. 4a UStG) — Buchungszugriff war über `abschluesse`
+      bereits vorhanden, keine Schnittstellen-Änderung nötig.
