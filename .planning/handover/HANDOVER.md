@@ -1,6 +1,28 @@
 # HANDOVER — OpenBilanz (gmbh-verwaltung)
 
-**Stand: 2026-06-10 (abends) · HEAD `3a8ec33` (v2.15.0) · Working-Tree sauber · 277 Tests grün**
+**Stand: 2026-06-12 · HEAD `c78e764` (v2.18.0) · Working-Tree sauber · in sync · 287 Tests grün · LIVE auf openbilanz.de verifiziert**
+
+> ✅ **2026-06-12 (autonome Session): drei Stände live gebracht.**
+> 1. **v2.16.0 nachdeployt** — war committet+getaggt, aber nicht deployt (Vorsession
+>    endete vor dem Deploy). Live verifiziert.
+> 2. **v2.17.0 — UStVA § 13b-/Auslands-Kennzahlen automatisch (Backlog-Item):**
+>    Konten 3837/1407 → Kz 46/47/67, 4338/4339 → Kz 45, „davon Drittland"-Feld
+>    (→ Kz 84/85, Zahllast invariant), **Kleinunternehmer-Korrektur** (§ 13b-Steuer
+>    wird geschuldet + ist voranzumelden, § 18 Abs. 4a UStG — vorher zeigte die Karte
+>    pauschal 0), closing.js-Readiness angeglichen, 5 Plausi-Hinweise (Doppelerfassung,
+>    1407/3837-Abweichung, 3835/1408, 4336→Kz 21/ZM, 4339-OSS). Design + Refute-Review
+>    (4 Findings, alle umgesetzt): `.planning/USTVA-KZ45-46-47-DESIGN.md`. Rechtsgrundlagen
+>    primärquellen-verifiziert (§§ 18/19 UStG, gesetze-im-internet.de) + Merkel-Eintrag.
+> 3. **v2.18.0 — Fristen-Karte:** UStVA-Frist erscheint jetzt auch für Kleinunternehmer,
+>    wenn im Meldezeitraum 3837/3835 bebucht sind (§ 18 Abs. 4a UStG).
+> **OFFEN (Christin-Visual):** UStVA-Karte im Browser mit einer § 13b-Buchung ansehen
+> (neue Zeilen 45/46/47, Drittland-Feld). **Deploy-Weg jetzt rsync** (Memory
+> openbilanz-deploy-hetzner; rsync ggf. `apt-get install rsync`). **Stamp-Gotcha:**
+> version.js trägt konventionsgemäß den VORGÄNGER-Commit-Hash — nach dem Commit NICHT
+> nachstempeln. **Nächste Kandidaten:** Glossar-Etappe 2 (weitere Konten-Texte),
+> BACKLOG-Rest ist extern blockiert (E-Rechnung-Echtdaten, KoSIT/Mustang-Java, VIES).
+
+*(Älterer Stand darunter: 2026-06-10, v2.15.0.)*
 
 > ✅ **KOMPLETT-REVIEW + NEUE FÄLLE (Christin-Auftrag) ERLEDIGT, v2.15.0 — committet, getaggt,
 > gepusht (origin/main in sync) und auf openbilanz.de DEPLOYT (rsync + Container-Restart,
