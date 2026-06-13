@@ -378,7 +378,7 @@ test('Fristen: Aufstellung 6 Monate (kleine KapG) vs. 3 Monate (mittelgroße)', 
 test('SKR04Glossar: jede Glossar-Nummer existiert im Kontenrahmen', function () {
   var G = require('../public/shared/skr04-glossar.js');
   var nrs = G.nummern();
-  ok(nrs.length >= 40, 'Etappe 1: mindestens 40 Konten erklärt (sind ' + nrs.length + ')');
+  ok(nrs.length >= 120, 'Etappe 3: mindestens 120 Konten erklärt (sind ' + nrs.length + ')');
   var fehlend = nrs.filter(function (n) { return !SKR04.kontoFinden(n); });
   eq(fehlend.length, 0, 'verwaiste Glossar-Nummern: ' + fehlend.join(','));
 });
@@ -394,7 +394,9 @@ test('SKR04Glossar: Texte substanziell, API liefert null für Unbekanntes', func
 });
 test('SKR04Glossar: kein Konto doppelt, Kernkonten der GmbH abgedeckt', function () {
   var G = require('../public/shared/skr04-glossar.js');
-  var kern = ['1800', '1600', '1460', '2900', '2910', '1406', '3806', '4400', '6300', '7600', '7610', '9000'];
+  var kern = ['1800', '1600', '1460', '2900', '2910', '1406', '3806', '4400', '6300', '7600', '7610', '9000',
+              '0100', '0143', '0200', '0240', '0800', '1000', '1240', '1950', '2930', '3000', '3250',
+              '3460', '4820', '5100', '6200', '6221', '6905', '7200', '7639'];
   var fehlt = kern.filter(function (n) { return !G.hatErklaerung(n); });
   eq(fehlt.length, 0, 'Kernkonten ohne Erklärung: ' + fehlt.join(','));
 });
