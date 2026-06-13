@@ -11,6 +11,22 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.22.0] - 2026-06-13
+
+### Hinzugefügt
+- **SKR04-Glossar Vollabdeckung** — die letzten 14 kuratierten SKR04-Konten ohne
+  eigene Erklärung wurden ergänzt (120 → 134 Konten-Erklärungen). Damit hat jedes
+  der 122 bilanz-/GuV-relevanten Konten des Kontenrahmens einen eigenen,
+  §-gestützten Erklärtext: weitere Bankkonten (1810–1840), unbebaute Grundstücke,
+  grundstücksgleiche Rechte und andere Bauten (0215/0220/0260), Lkw (0540),
+  Ausleihungen an Beteiligungen (0880), unfertige Leistungen (1110), Anteile an
+  verbundenen Unternehmen im Umlaufvermögen (1500), satzungsmäßige Rücklagen
+  (2950) sowie Erträge aus dem Abgang von Anlage-/Umlaufvermögen (4900/4906).
+  Texte aufs HGB gestützt (u. a. § 253/255/266/271 HGB), kein DATEV-Copy. Neuer
+  Regressionstest erzwingt die Vollabdeckung (jedes kuratierte Konto braucht eine
+  Erklärung — neue Konten ohne Text fallen rot). Die durchsuchbare Glossar-UI in
+  Buchungshilfe („Konto nachschlagen") und Glossar-Reiter bestand bereits.
+
 ## [2.21.0] - 2026-06-13
 
 ### Hinzugefügt
