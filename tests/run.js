@@ -378,9 +378,15 @@ test('Fristen: Aufstellung 6 Monate (kleine KapG) vs. 3 Monate (mittelgroße)', 
 test('SKR04Glossar: jede Glossar-Nummer existiert im Kontenrahmen', function () {
   var G = require('../public/shared/skr04-glossar.js');
   var nrs = G.nummern();
-  ok(nrs.length >= 120, 'Etappe 3: mindestens 120 Konten erklärt (sind ' + nrs.length + ')');
+  ok(nrs.length >= 134, 'Vollabdeckung: mindestens 134 Konten erklärt (sind ' + nrs.length + ')');
   var fehlend = nrs.filter(function (n) { return !SKR04.kontoFinden(n); });
   eq(fehlend.length, 0, 'verwaiste Glossar-Nummern: ' + fehlend.join(','));
+});
+test('SKR04Glossar: Vollabdeckung — jedes kuratierte SKR04-Konto hat eine Erklärung', function () {
+  var G = require('../public/shared/skr04-glossar.js');
+  var ohne = SKR04.KONTEN.filter(function (k) { return !G.hatErklaerung(k.nr); });
+  eq(ohne.length, 0, 'kuratierte Konten ohne Glossar-Erklärung: ' +
+     ohne.map(function (k) { return k.nr; }).join(','));
 });
 test('SKR04Glossar: Texte substanziell, API liefert null für Unbekanntes', function () {
   var G = require('../public/shared/skr04-glossar.js');

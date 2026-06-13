@@ -7,8 +7,10 @@
  * (Copyright: nur Kontonummern und amtliche Kurzbezeichnungen sind Fakten;
  * alle Erklärtexte hier sind Originaltexte dieses Projekts).
  *
- * Etappe 1: die häufigsten Konten einer kleinen / vermögensverwaltenden GmbH.
- * Die Liste ist bewusst erweiterbar - weitere Konten einfach in TEXTE ergänzen.
+ * Stand: Vollabdeckung der 122 kuratierten SKR04-Konten (SKR04.KONTEN) — jedes
+ * bilanz-/GuV-relevante Konto hat einen eigenen Erklärtext. Der Regressionstest
+ * "SKR04Glossar: Vollabdeckung" erzwingt das; neue kuratierte Konten ohne Text
+ * fallen rot. Die Liste ist erweiterbar - weitere Konten einfach in TEXTE ergänzen.
  *
  *   erklaerung(nr) -> String | null     eigener Erklärtext zum Konto
  *   hatErklaerung(nr) -> Boolean
@@ -30,6 +32,19 @@
       'Buchführungsmangel.',
     '1800': 'Geschäftskonto der GmbH bei der Bank. Soll-Buchung = Geldeingang, Haben-Buchung = ' +
       'Geldausgang. Der Saldo soll dem Kontoauszug entsprechen — Grundlage des Bankimports.',
+    '1810': 'Weiteres Bankkonto der GmbH neben dem Hauptkonto 1800 — z. B. ein zweites ' +
+      'Geschäftskonto, Tagesgeld- oder Rücklagenkonto. Buchungslogik identisch zu 1800 ' +
+      '(Soll = Eingang, Haben = Ausgang); jedes reale Bankkonto wird getrennt geführt und ' +
+      'gegen seinen eigenen Auszug abgestimmt.',
+    '1820': 'Drittes Bankkonto, falls die GmbH mehrere Geschäfts- oder Anlagekonten parallel ' +
+      'führt. Buchung wie 1800; ein eigenes Sachkonto je Bankverbindung hält den Bankimport ' +
+      'und die Abstimmung sauber getrennt.',
+    '1830': 'Weiteres Bankkonto (viertes Konto) — etwa ein zweckgebundenes Konto oder eine ' +
+      'zusätzliche Bankverbindung. Saldo soll dem jeweiligen Kontoauszug entsprechen; ' +
+      'Buchungslogik wie 1800.',
+    '1840': 'Weiteres Bankkonto (fünftes Konto) für GmbHs mit mehreren Bankverbindungen. ' +
+      'Jedes Konto bleibt ein eigenes Sachkonto, damit Eingänge und Ausgänge je Bank ' +
+      'nachvollziehbar bleiben; Buchungslogik wie 1800.',
     '1460': 'Verrechnungskonto für Geld, das zwischen eigenen Konten unterwegs ist (z. B. ' +
       'Überweisung Bank A → Bank B über den Jahreswechsel oder Bareinzahlung auf die Bank). ' +
       'Es nimmt Abgang und Eingang getrennt auf; nach beiden Buchungen ist der Saldo null. ' +
@@ -54,6 +69,11 @@
     '2960': 'Andere Gewinnrücklagen aus einbehaltenen Gewinnen. Die Bildung setzt eine ' +
       'Ergebnisverwendung durch die Gesellschafter voraus; sie mindert nicht den Gewinn des ' +
       'Jahres, sondern verschiebt Eigenkapital innerhalb der Passivseite.',
+    '2950': 'Satzungsmäßige Rücklage — eine Gewinnrücklage, die der Gesellschaftsvertrag ' +
+      '(die Satzung) selbst vorschreibt. Anders als die gesetzliche Rücklage (2930) beruht ' +
+      'sie auf einer freiwillig in die Satzung aufgenommenen Bindung; Bildung und Auflösung ' +
+      'folgen den Satzungsregeln. Teil der Gewinnrücklagen (§ 266 Abs. 3 A.III HGB), ' +
+      'verschiebt Eigenkapital innerhalb der Passivseite.',
     '2970': 'Noch nicht verwendeter Gewinn aus Vorjahren. Bleibt stehen, bis die Gesellschafter' +
       'versammlung über die Verwendung beschließt — Ausschüttung, Rücklage oder erneuter ' +
       'Vortrag (§ 29 GmbHG).',
@@ -92,15 +112,30 @@
     '0520': 'Firmenfahrzeuge (Pkw) im Anlagevermögen. Anschaffungskosten aktivieren, Nutzungs' +
       'dauer üblich 6 Jahre. Bei privater Nutzung durch Gesellschafter-Geschäftsführer an ' +
       '1-%-Regel bzw. Fahrtenbuch denken.',
+    '0540': 'Lastkraftwagen und Nutzfahrzeuge im Anlagevermögen — getrennt von Pkw (0520), ' +
+      'weil Nutzungsdauer und steuerliche Behandlung abweichen (bei Lkw kein 1-%-Ansatz, da ' +
+      'keine typische Privatnutzung). Anschaffungskosten aktivieren und planmäßig abschreiben ' +
+      '(§ 253 Abs. 3 HGB).',
     '0200': 'Grundstücke, grundstücksgleiche Rechte und Bauten als Sammelkonto des Sachanlage' +
       'vermögens. Grundstück und Gebäude sollten praktisch getrennt dokumentiert werden, weil ' +
       'nur das Gebäude planmäßig abgeschrieben wird; Grund und Boden regelmäßig nicht.',
+    '0215': 'Unbebaute Grundstücke — Grund und Boden ohne Gebäude. Wie der Bodenanteil ' +
+      'bebauter Grundstücke nicht abnutzbar und daher nicht planmäßig abzuschreiben ' +
+      '(§ 253 Abs. 3 HGB betrifft abnutzbare Vermögensgegenstände); nur bei dauerhafter ' +
+      'Wertminderung ist eine außerplanmäßige Abschreibung zu prüfen.',
+    '0220': 'Grundstücksgleiche Rechte — Rechte, die rechtlich wie Grundstücke behandelt ' +
+      'werden, etwa Erbbaurechte oder Wohnungseigentum. Ausweis im Sachanlagevermögen ' +
+      '(§ 266 Abs. 2 A.II HGB); abnutzbare Rechte werden über ihre Laufzeit abgeschrieben, ' +
+      'ein reiner Bodenwert nicht.',
     '0235': 'Grund und Boden eigener bebauter Grundstücke. Der nicht abnutzbare Bodenanteil ' +
       'wird getrennt vom Gebäude geführt und grundsätzlich nicht planmäßig abgeschrieben ' +
       '(§ 253 Abs. 3 HGB betrifft abnutzbare Vermögensgegenstände).',
     '0240': 'Geschäftsbauten der GmbH. Anschaffungs- oder Herstellungskosten werden aktiviert ' +
       'und über die Nutzungsdauer abgeschrieben; spätere werterhöhende Herstellungskosten ' +
       'gehören ebenfalls hierher, reine Erhaltungsaufwendungen nicht.',
+    '0260': 'Andere Bauten, die nicht Geschäfts- oder Verwaltungsgebäude sind — z. B. ' +
+      'Außenanlagen, Hallen, Garagen oder Aufbauten. Herstellungskosten aktivieren ' +
+      '(§ 255 HGB) und über die Nutzungsdauer planmäßig abschreiben (§ 253 Abs. 3 HGB).',
     '0400': 'Technische Anlagen und Maschinen im Betrieb. Anschaffungskosten einschließlich ' +
       'Nebenkosten aktivieren (§ 255 HGB) und planmäßig abschreiben (§ 253 Abs. 3 HGB).',
     '0440': 'Maschinen als konkretisiertes Sachanlagenkonto. Wartung und Reparatur sind Aufwand; ' +
@@ -127,6 +162,10 @@
     '0850': 'Andere Beteiligungen an Kapitalgesellschaften, die dauerhaft gehalten werden, aber ' +
       'nicht die Schwelle eines verbundenen Unternehmens erreichen. Wertminderungen sind nach ' +
       '§ 253 HGB zu prüfen; Erträge daraus laufen typischerweise über Beteiligungserträge.',
+    '0880': 'Ausleihungen an Unternehmen, mit denen ein Beteiligungsverhältnis besteht — ' +
+      'langfristige Darlehen an Beteiligungen, die noch keine verbundenen Unternehmen sind ' +
+      '(deren Ausleihungen laufen auf 0810). Finanzanlagevermögen; Zinsen sind Finanzerträge, ' +
+      'Laufzeit, Sicherheiten und Fremdüblichkeit schriftlich dokumentieren.',
     '0900': 'Wertpapiere (Aktien, Fonds, Anleihen), die DAUERHAFT gehalten werden — Finanzanlage ' +
       '(Posten A.III). Kurzfristig gehaltene Papiere gehören auf 1510 (Umlaufvermögen); dort ' +
       'gilt das strenge Niederstwertprinzip (§ 253 Abs. 4 HGB).',
@@ -141,6 +180,10 @@
     '1100': 'Unfertige Erzeugnisse: begonnene, noch nicht verkaufsfertige Produkte. Die ' +
       'Herstellungskosten werden nach § 255 Abs. 2 HGB bewertet; reine Vertriebskosten gehören ' +
       'nicht in den Bestand.',
+    '1110': 'Unfertige Leistungen: noch nicht abgeschlossene Dienstleistungen oder Aufträge ' +
+      'zum Stichtag — das Pendant zu 1100 für Dienstleister statt Produzenten. Bewertung mit ' +
+      'den Herstellungskosten (§ 255 Abs. 2 HGB); reine Vertriebskosten gehören nicht in den ' +
+      'Bestand.',
     '1140': 'Fertige Erzeugnisse und Waren, die am Stichtag noch vorhanden sind. Bewertung ' +
       'höchstens mit Anschaffungs- oder Herstellungskosten; niedrigere beizulegende Werte ' +
       'müssen beim Umlaufvermögen angesetzt werden (§ 253 Abs. 4 HGB).',
@@ -167,6 +210,10 @@
     '1510': 'Kurzfristig gehaltene Wertpapiere im Umlaufvermögen (B.III). Am Stichtag gilt das ' +
       'strenge Niederstwertprinzip: Liegt der Kurs unter den Anschaffungskosten, MUSS ' +
       'abgeschrieben werden (§ 253 Abs. 4 HGB, Gegenkonto 7210).',
+    '1500': 'Anteile an verbundenen Unternehmen, die NICHT dauerhaft gehalten werden, sondern ' +
+      'zur kurzfristigen Veräußerung bestimmt sind — daher Umlaufvermögen (B.III), nicht ' +
+      'Finanzanlage (0800). Am Stichtag gilt das strenge Niederstwertprinzip ' +
+      '(§ 253 Abs. 4 HGB).',
 
     /* ===== Rechnungsabgrenzung / latente Steuern ======================== */
     '1900': 'Ausgaben vor dem Stichtag, die Aufwand des FOLGEjahres sind (z. B. im Dezember ' +
@@ -292,6 +339,13 @@
     '4820': 'Andere aktivierte Eigenleistungen. Eigene Arbeits- oder Materialleistungen für ' +
       'ein aktiviertes Wirtschaftsgut erhöhen dessen Herstellungskosten (§ 255 Abs. 2 HGB) ' +
       'und werden hier als Ertrag gegengebucht.',
+    '4900': 'Erträge aus dem Abgang von Anlagevermögen — Gewinn beim Verkauf eines ' +
+      'Anlageguts, wenn der Erlös über dem Restbuchwert liegt (Gegenstück zu 6900, dem ' +
+      'Abgangsverlust). Sonstiger betrieblicher Ertrag; Restbuchwert, Erlös und Umsatzsteuer ' +
+      'beim Anlagenabgang getrennt nachvollziehbar machen.',
+    '4906': 'Erträge aus dem Abgang von Umlaufvermögen, z. B. realisierte Kursgewinne bei ' +
+      'Wertpapieren des Umlaufvermögens (Gegenstück zu 6905). Für Trading- oder Wertpapier-' +
+      'GmbHs getrennt von den laufenden Erträgen analysieren.',
     '4830': 'Betriebliche Erträge außerhalb des Kerngeschäfts: Erstattungen, Sachbezüge, ' +
       'aufgelöste Rückstellungen, Kursgewinne (GuV-Posten „sonstige betriebliche Erträge").',
     '4860': 'Miet- und Pachterlöse aus Grundbesitz — das Erlöskonto der Vermietungs-GmbH. ' +
