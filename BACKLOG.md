@@ -46,10 +46,15 @@ externe Toolchecks, README-Statusübergänge von 🟡 zu ✅.
 
 ## USt-IdNr.-Prüfung
 
-- [ ] Struktur-Prüfung mit bekannten validen Beispielen pro Staat
-      durchspielen (DE eigene USt-ID, valide AT/NL/IT als Kunde).
+- [x] ERLEDIGT: Struktur-Prüfung mit bekannten validen Beispielen pro Staat
+      durchgespielt — Regression-Test über alle 28 im Code geführten EU-/EWR-
+      Staaten + XI (`tests/run.js`, „UstId: alle Länder-Formate akzeptieren
+      ihr kanonisches Beispiel"), inkl. Meta-Guard (jedes Code-Land braucht
+      ein Beispiel) und Prüfziffer-/Hinweis-Semantik. DE/AT/NL/IT mit
+      prüfziffer-validen Beispielen, übrige format-valide.
 - [ ] Im Selbst-Hosting-Modus: VIES-Knopf gegen mindestens eine reale
-      EU-USt-ID drücken; Antwort wird beim Kunden archiviert.
+      EU-USt-ID drücken; Antwort wird beim Kunden archiviert. (extern blockiert:
+      Server-Modus + reale EU-USt-ID nötig)
 - [ ] README-Zeile „USt-IdNr.-Prüfung" auf ✅ heben.
 
 ## UStVA-Karte — § 13b- und Auslands-Kennzahlen

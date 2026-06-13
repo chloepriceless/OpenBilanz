@@ -1738,6 +1738,49 @@ test('UstId: leerer Eingabewert → Fehler', function () {
   eq(UstId.pruefe(null).ok, false, '');
 });
 
+/* Ein strukturvalides Beispiel je im Code geführtem Staat. Die Aufbauten
+ * folgen der von ustid.js zitierten Quelle (EU-Kommission, „VAT identification
+ * numbers"); Prüfziffer-Länder (DE/AT/NL/IT) tragen ein prüfziffer-valides
+ * Beispiel, die übrigen ein format-valides. Sichert jede FORMAT-Regex gegen
+ * spätere Tippfehler im Muster ab. */
+var USTID_BEISPIELE = {
+  AT: 'ATU13585627', BE: 'BE0123456749', BG: 'BG123456789', CY: 'CY12345678A',
+  CZ: 'CZ12345678', DE: 'DE123456788', DK: 'DK12345678', EE: 'EE123456789',
+  EL: 'EL123456789', ES: 'ESX1234567X', FI: 'FI12345678', FR: 'FRAB123456789',
+  HR: 'HR12345678901', HU: 'HU12345678', IE: 'IE1234567A', IT: 'IT12345678903',
+  LT: 'LT123456789', LU: 'LU12345678', LV: 'LV12345678901', MT: 'MT12345678',
+  NL: 'NL100000009B01', PL: 'PL1234567890', PT: 'PT123456789', RO: 'RO1234567890',
+  SE: 'SE123456789012', SI: 'SI12345678', SK: 'SK1234567890', XI: 'XI123456789'
+};
+var USTID_PRUEFZIFFER = { DE: true, AT: true, NL: true, IT: true };
+
+test('UstId: jeder Staat im Code hat ein strukturvalides Beispiel (Abdeckung)', function () {
+  UstId.LAENDER.forEach(function (land) {
+    ok(USTID_BEISPIELE[land],
+       'Beispiel für ' + land + ' fehlt — neues Land ohne Testabdeckung?');
+  });
+  Object.keys(USTID_BEISPIELE).forEach(function (land) {
+    ok(UstId.LAENDER.indexOf(land) >= 0, 'Beispiel ' + land + ' ohne Code-Land');
+  });
+  eq(Object.keys(USTID_BEISPIELE).length, UstId.LAENDER.length,
+     'Beispielzahl deckt Länderzahl');
+});
+
+test('UstId: alle Länder-Formate akzeptieren ihr kanonisches Beispiel', function () {
+  Object.keys(USTID_BEISPIELE).forEach(function (land) {
+    var r = UstId.pruefe(USTID_BEISPIELE[land]);
+    eq(r.ok, true, land + ' (' + USTID_BEISPIELE[land] + ') sollte ok sein' +
+       (r.fehler ? ' — ' + r.fehler : ''));
+    eq(r.land, land, land + ': Länderkennung korrekt erkannt');
+    if (USTID_PRUEFZIFFER[land]) {
+      eq(r.hinweis, undefined, land + ': implementierte Prüfziffer → kein Hinweis');
+    } else {
+      ok(/nicht implementiert/.test(r.hinweis || ''),
+         land + ': Format-only → Hinweis auf fehlende Prüfziffer');
+    }
+  });
+});
+
 /* ---- Fremdwährung § 256a HGB ---------------------------------------- */
 test('Fx: kurzfristige Forderung folgt zwingend dem Stichtagskurs', function () {
   // 10.000 USD-Forderung, Anschaffung zu Kurs 1,10 = 11.000 EUR Buchwert,
