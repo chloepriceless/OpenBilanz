@@ -1,6 +1,6 @@
 {
   "name": "openbilanz",
-  "version": "2.20.0",
+  "version": "2.21.0",
   "description": "Lokales Open-Source-Tool zur Vorbereitung von Eroeffnungsbilanz und Jahresabschluss einer GmbH nach HGB inkl. E-Bilanz-XBRL-Export und Validierung gegen die amtliche Taxonomie.",
   "main": "server.js",
   "scripts": {

@@ -11,6 +11,20 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+## [2.21.0] - 2026-06-13
+
+### Hinzugefügt
+- **SKR04-Glossar Etappe 3** — das durchsuchbare Konten-Glossar in der
+  Buchungshilfe wurde von 76 auf 120 eigene, §-gestützte Konten-Erklärungen
+  erweitert. Schwerpunkt Anlage- und Umlaufvermögen: immaterielle Werte
+  (0100/0143/0150/0170), Grund/Boden und Bauten (0200/0235/0240),
+  technische Anlagen (0400/0440), Anlagen im Bau (0700), Finanzanlagen
+  (0800/0810/0850/0900/0920) sowie Vorräte und Forderungen (1000/1100/
+  1140/1180/1240/1340) und Gewinn-/Kapitalrücklagen (2930/2960). Texte sind
+  eigener, aufs HGB gestützter Wortlaut (u. a. § 246/248/253/255/266/271/272
+  HGB), kein DATEV-Copy. Glossar-Mindestabdeckung und neue Ankerkonten in der
+  Testsuite abgesichert.
+
 ## [2.20.0] - 2026-06-12
 
 ### Hinzugefügt
