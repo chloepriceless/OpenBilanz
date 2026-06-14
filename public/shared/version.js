@@ -15,7 +15,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   var APP = '2.22.0';
-  var COMMIT = 'de5f3c3';
+  var COMMIT = '88ee3e8';
   return {
     app: APP,
     commit: COMMIT,
