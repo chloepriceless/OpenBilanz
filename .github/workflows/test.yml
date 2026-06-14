@@ -1,17 +1,25 @@
 name: Tests
 
-# Läuft NICHT bei jedem Commit. Die Test-Suite wird nur dann ausgeführt, wenn
-# eine Version festgenagelt wird — d. h. ein Tag der Form v* (z. B. v2.0.0)
-# gepusht wird — sowie manuell über den "Run workflow"-Knopf.
+# Die Test-Suite läuft bei jedem Push und Pull Request (damit Regressionen sofort
+# auffallen) UND zusätzlich beim Push eines Version-Tags v* (Release-Gate) sowie
+# manuell über den "Run workflow"-Knopf.
 on:
   push:
+    branches:
+      - '**'
     tags:
       - 'v*'
+  pull_request:
   workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    # GitHub Actions setzt CI=true automatisch; explizit gesetzt, damit der
+    # skipDep()-Guard in tests/run.js fehlende devDependencies hart als Fehler
+    # wertet statt sie still grün zu überspringen.
+    env:
+      CI: true
     steps:
       - name: Quellcode auschecken
         uses: actions/checkout@v4
@@ -20,7 +28,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      # OpenBilanz hat keine npm-Abhängigkeiten — kein "npm install" nötig.
+      # OpenBilanz hat devDependencies (fake-indexeddb, pdf-lib) — sie werden für
+      # die IDB-Migrations- und PDF/ZUGFeRD-Tests gebraucht. Ohne Installation
+      # würden diese Tests still übersprungen und CI bliebe fälschlich grün.
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
       - name: Test-Suite ausführen
         run: npm test
