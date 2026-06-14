@@ -56,6 +56,22 @@ function eq(a, b, msg) {
 }
 function ok(c, msg) { if (!c) throw new Error(msg || 'Bedingung nicht erfuellt'); }
 
+/* Tests, die eine optionale devDependency (pdf-lib, fake-indexeddb) brauchen,
+ * werden lokal ohne `npm install` ÜBERSPRUNGEN — aber in CI (Umgebungsvariable
+ * CI gesetzt, nach `npm ci`) MÜSSEN sie laufen. Fehlt die Abhängigkeit dort, ist
+ * das ein HARTER Fehler statt eines stillen grünen Skips (sonst bliebe CI grün,
+ * obwohl IDB-Migration und PDF/ZUGFeRD-Erzeugung in Wahrheit ungetestet sind). */
+function skipDep(name, dep) {
+  if (process.env.CI) {
+    test(name + ' [CI: ' + dep + ' fehlt — npm ci nicht gelaufen?]', function () {
+      throw new Error('In CI darf der ' + dep + '-abhängige Test nicht übersprungen ' +
+        'werden — devDependency fehlt (npm ci ausführen).');
+    });
+  } else {
+    test(name + ' (übersprungen: ' + dep + ' nicht installiert)', function () {});
+  }
+}
+
 /* ---- Test-Umgebung: Node-Polyfills für Browser-APIs (NUR Tests) -------
  * obz.js nutzt Web Crypto + btoa/atob; importe.js parseCamt/parseIbkrFlex nutzen
  * DOMParser. In neueren Node-Versionen sind Crypto/btoa bereits global; DOMParser
@@ -1457,6 +1473,34 @@ test('E-Rechnung: Bytes ohne PDF-Magic → klare Fehlermeldung', function () {
   });
 });
 
+/* ZUGFeRD/Factur-X-Generator (zugferd-pdf.js) — Rundlauf-Test:
+ * erzeuge() bettet die übergebene CII-XML als factur-x.xml in ein Hybrid-PDF ein,
+ * parseERechnungPdf() extrahiert sie über pdfa3.js wieder und parst sie. Deckt den
+ * zuvor komplett ungetesteten Generator ab (Release-Review 2026-06-14, Blocker). */
+(function () {
+  var ZP = null;
+  try { require('pdf-lib'); ZP = require('../public/shared/zugferd-pdf.js'); }
+  catch (e) { ZP = null; }
+  if (!ZP) { skipDep('ZUGFeRD-PDF: Rundlauf erzeuge()→parseERechnungPdf', 'pdf-lib'); return; }
+  test('ZUGFeRD-PDF: erzeuge() bettet CII-XML ein, parseERechnungPdf liest sie zurück (Rundlauf)', function () {
+    var rechnung = { nummer: '2026-CII-007', datum: '2026-05-12', netto: 10, ust: 1.9, brutto: 11.9,
+      positionen: [{ bezeichnung: 'Schraube M6 x 30', menge: 100, einzelpreis: 0.10 }] };
+    var eigene = { name: 'Lindgrün Software GmbH', strasse: 'Karl-Heine-Straße 47',
+      plz: '04229', ort: 'Leipzig', ustId: 'DE123456788' };
+    return ZP.erzeuge(rechnung, eigene, FIXTURE_CII).then(function (bytes) {
+      ok(bytes && bytes.length > 1000, 'Hybrid-PDF erzeugt (' + (bytes ? bytes.length : 0) + ' Bytes)');
+      eq(Buffer.from(bytes.slice(0, 5)).toString('latin1'), '%PDF-', 'PDF-Magic vorhanden');
+      return Importe.parseERechnungPdf(Buffer.from(bytes)).then(function (r) {
+        ok(!r.fehler, 'Rücklesen ohne Fehler: ' + (r.fehler || ''));
+        eq(r.rechnung.nummer, '2026-CII-007', 'Rechnungsnummer round-trip aus eingebetteter XML');
+        eq(r.rechnung.verkaeufer, 'Eisenwaren Bäcker GmbH', 'Verkäufer round-trip (Umlaut erhalten)');
+        eq(r.rechnung.brutto, 11.9, 'Bruttobetrag round-trip');
+        ok(/BASIC/.test(r.rechnung.profil || ''), 'Factur-X-BASIC-Profil aus PDF-Anhang erkannt');
+      });
+    });
+  });
+})();
+
 /* ---- Ausgangsrechnung: XRechnung-UBL-Renderer ------------------------ */
 var EIGENE_TEST = {
   name: 'Lindgrün Software GmbH', strasse: 'Karl-Heine-Straße 47',
@@ -2698,9 +2742,7 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
   var fakeOk = false;
   try { require('fake-indexeddb/auto'); fakeOk = true; } catch (e) { fakeOk = false; }
   if (!fakeOk) {
-    test('IDB-Migration v1->v2: übersprungen (fake-indexeddb nicht installiert)', function () {
-      ok(true, 'optional: `npm install` aktiviert die IDB-onupgradeneeded-Tests');
-    });
+    skipDep('IDB-Migration v1->v2', 'fake-indexeddb');
     return;
   }
   var StoreIDB = require('../public/shared/store-idb.js');
@@ -2807,9 +2849,7 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
   var PL = null;
   try { PL = require('pdf-lib'); } catch (e) { PL = null; }
   if (!PL) {
-    test('Unterschriften-PDF: übersprungen (pdf-lib nicht installiert)', function () {
-      ok(true, 'optional: `npm install` aktiviert die AcroForm-Tests');
-    });
+    skipDep('Unterschriften-PDF', 'pdf-lib');
     return;
   }
   test('Unterschriften-PDF: erzeugt gültiges PDF mit ausfüllbaren Feldern', function () {
@@ -2914,9 +2954,7 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
   var PL2 = null;
   try { PL2 = require('pdf-lib'); } catch (e) { PL2 = null; }
   if (!PL2) {
-    test('Bilanz-PDF (AcroForm): übersprungen (pdf-lib nicht installiert)', function () {
-      ok(true, 'optional: `npm install` aktiviert den Voll-PDF-Test');
-    });
+    skipDep('Bilanz-PDF (AcroForm)', 'pdf-lib');
     return;
   }
   test('Bilanz-PDF: gültiges PDF mit Bilanz-Inhalt + ausfüllbaren Feldern', function () {
