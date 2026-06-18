@@ -11,6 +11,43 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+### Behoben
+- **Tausenderzahlen ohne Komma** wurden falsch geparst: `num()` interpretierte
+  `"2.500.000"` als 2,5, `"12.500"` als 12,5 und `"1.000"` als 1 — Datenkorruption
+  bei ganzzahligen Tausenderbeträgen. Jetzt werden reine 3er-Punktgruppierungen als
+  Tausender erkannt; echte Dezimalpunkte (`1.5`, `1.23`) bleiben unangetastet. Fix
+  konsistent über alle vier Parser-Kopien (`berechnung.js`, `steuer.js`,
+  `ausgangsrechnung.js`, `validate-browser.js`).
+- **Fristen einen Tag zu früh:** Die Datumsausgabe nutzte UTC (`toISOString()`) auf
+  lokal konstruierten Dates → in jeder Zeitzone östlich von UTC (alle deutschen
+  Nutzer) verschob sich jede Frist um einen Tag, im Meldezeitraum-Pfad um einen
+  Monat. `fristen.js` und `vorlagen.js` rechnen jetzt mit lokalen Kalenderfeldern.
+- **GuV ignorierte explizite Null-Unterposten:** ein auf 0 gesetzter a/b-Unterposten
+  überstimmt jetzt den Eltern-Direktwert (wie in der Bilanz), statt einen veralteten
+  Elternwert stehenzulassen.
+- **UStVA-Readiness zählte die Storno-Gegenbuchung mit** — jetzt werden beide
+  Storno-Seiten (Original + Gegenbuchung) aus dem Zeitraum ausgeschlossen.
+- **IBKR-Import:** ausländische Quellensteuer wird auf Konto 7639 (anrechenbare
+  ausländische Quellensteuer) gebucht statt auf 7600 (Körperschaftsteuer).
+
+### Sicherheit / Robustheit
+- **E-Bilanz-Validierung gehärtet** (`lib/validate.js`): doppelter Callback im
+  Arelle-Spawn abgesichert (verhinderte einen möglichen „headers already
+  sent"-Crash); die Taxonomie-Suche durchsucht nicht mehr das world-writable
+  `/tmp` (kein untergeschobenes ZIP gelangt mehr an Arelle `--packages`);
+  Arelle-Verfügbarkeit und Taxonomie-Pfad werden gecacht (kein blockierendes
+  `execSync`/`readdirSync` mehr im Request-Pfad); der Arelle-Ausgabe-Parser hat
+  jetzt einen Unit-Test.
+- **Taxonomie-Download** (`setup-taxonomie.sh`): optionale SHA-256-Verifikation
+  (Pin über `TAXONOMIE_SHA256` oder `<ziel>.sha256`), sonst wird die berechnete
+  Prüfsumme zum Pinnen ausgegeben.
+- **Service-Worker-Precache** deckt jetzt alle 44 `shared/`-Module ab (vorher 20)
+  — vollständiger Offline-Betrieb; Cache-Version auf v7.
+
+### CI
+- Die Test-Suite läuft zusätzlich in einer Zeitzone östlich von UTC
+  (`TZ=Europe/Berlin`), damit Datums-/Fristen-Regressionen sofort auffallen.
+
 ## [2.22.0] - 2026-06-13
 
 ### Hinzugefügt
