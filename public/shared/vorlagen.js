@@ -62,13 +62,19 @@
   var MONATE = { monatlich: 1, quartalsweise: 3, jaehrlich: 12 };
 
   function iso(d) {
-    // toISOString -> 'YYYY-MM-DD'; lokal/UTC unkritisch fuer reine Tagesvergleiche.
-    return d.toISOString().slice(0, 10);
+    // Lokale Kalenderfelder, NICHT toISOString()/UTC: naechsteFaelligkeit baut
+    // lokale Dates; toISOString() verschoebe sie oestlich von UTC um einen Tag.
+    var m = d.getMonth() + 1, t = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (t < 10 ? '0' + t : t);
   }
   function parseDatum(s) {
     if (!s) return null;
     if (s instanceof Date) return isNaN(s.getTime()) ? null : s;
-    var d = new Date(String(s));
+    var str = String(s);
+    // Reines Datum "JJJJ-MM-TT" als lokale Mitternacht (sonst Vortag in West-TZ).
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+    var d = new Date(str);
     return isNaN(d.getTime()) ? null : d;
   }
 
