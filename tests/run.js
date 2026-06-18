@@ -39,6 +39,7 @@ var Fristen = require('../public/shared/fristen.js');
 var StbPaket = require('../public/shared/stbpaket.js');
 var Belege = require('../public/shared/belege.js');
 var Closing = require('../public/shared/closing.js');
+var Validate = require('../lib/validate.js');
 var HealthCheck = require('../public/shared/healthcheck.js');
 var Belegnummern = require('../public/shared/belegnummern.js');
 var MandantenMigration = require('../public/shared/mandanten-migration.js');
@@ -3004,6 +3005,21 @@ test('Closing.pruefeUstvaReadiness: Storno-Paar im Zeitraum wird nicht gezählt'
     '2025-02-01', '2025-02-28', {});
   var fest2 = mit.filter(function (x) { return /festgeschrieben/.test(x.titel); })[0];
   eq(fest2.status, 'ok', 'die echte festgeschriebene Buchung zählt, das Storno-Paar nicht');
+});
+
+test('Validate.parseArelle: trennt [code]-Fehler von info-Zeilen', function () {
+  var aus = [
+    '[info] loaded taxonomy package german-gaap',
+    '[xbrl.5.2.1] Element foo ist ungueltig',
+    'eine Zeile ohne eckige Klammern wird ignoriert',
+    '[ERROR] Pflichtfeld fehlt',
+    '[info] validated instance'
+  ].join('\n');
+  var r = Validate.parseArelle(aus);
+  eq(r.fehler.length, 2, 'zwei [code]-Fehlerzeilen');
+  eq(r.fehler[0].code, 'xbrl.5.2.1', 'erster Fehlercode erkannt');
+  ok(r.hinweise.indexOf('loaded taxonomy package german-gaap') >= 0, 'info-Zeile als Hinweis');
+  eq(Validate.parseArelle('').fehler.length, 0, 'leere Ausgabe -> keine Fehler (ok=true)');
 });
 
 test('baumSummen: explizit auf 0 erfasste Kinder überstimmen den Elternwert', function () {
