@@ -15,20 +15,30 @@
  * ========================================================================= */
 'use strict';
 
-var CACHE = 'openbilanz-v6';
+var CACHE = 'openbilanz-v7';
 
+// Vollständiger Modulbestand von public/shared/ — sonst fehlen Module beim
+// Offline-Start (Network-First fällt offline auf den Cache zurück). Bei einem
+// neuen shared-Modul hier ergänzen UND CACHE-Version erhöhen (idealerweise
+// build-seitig aus dem Verzeichnis generieren).
 var SHELL = [
   './', './index.html', './styles.css', './app.js', './manifest.webmanifest',
   './pyodide-worker.js',
-  './shared/positionen.js', './shared/berechnung.js', './shared/taxonomie.js',
-  './shared/skr04.js', './shared/steuer.js', './shared/ustva.js',
-  './shared/mt940.js', './shared/datev.js', './shared/importe.js',
-  './shared/import-protokoll.js',
-  './shared/journalexport.js',
-  './shared/gdpdu.js', './shared/pruefkette.js', './shared/xbrl.js',
-  './shared/mandanten-migration.js',
-  './shared/store-idb.js', './shared/store-adapter.js',
-  './shared/validate-browser.js', './shared/obz.js', './shared/fileio.js',
+  './shared/ausgangsrechnung.js', './shared/autocomplete.js', './shared/belege.js',
+  './shared/belegnummern.js', './shared/berechnung.js', './shared/bilanz-pdf.js',
+  './shared/buchungspruefung.js', './shared/closing.js', './shared/datev.js',
+  './shared/fileio.js', './shared/fristen.js', './shared/fx.js',
+  './shared/gdpdu.js', './shared/healthcheck.js', './shared/import-protokoll.js',
+  './shared/importe.js', './shared/journalexport.js', './shared/kontenabschluss.js',
+  './shared/mandanten-migration.js', './shared/mt940.js', './shared/obz.js',
+  './shared/palette.js', './shared/pdfa3.js', './shared/positionen.js',
+  './shared/pruefkette.js', './shared/skr04.js', './shared/skr04-glossar.js',
+  './shared/skr04-voll.js', './shared/stbpaket.js', './shared/steuer.js',
+  './shared/store-adapter.js', './shared/store-idb.js', './shared/taxonomie.js',
+  './shared/umbuchung.js', './shared/unterschrift-pdf.js', './shared/ustid.js',
+  './shared/ustva.js', './shared/validate-browser.js', './shared/version.js',
+  './shared/vorlagen.js', './shared/xbrl.js', './shared/xrechnung-cii.js',
+  './shared/xrechnung-ubl.js', './shared/zugferd-pdf.js',
   './assets/marke.png', './assets/favicon.png', './assets/apple-touch-icon.png',
   './assets/icon-192.png', './assets/icon-512.png'
 ];
