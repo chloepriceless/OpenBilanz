@@ -21,8 +21,13 @@
   'use strict';
 
   function num(v) {
-    var n = typeof v === 'number' ? v
-      : parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.'));
+    if (typeof v === 'number') return isNaN(v) ? 0 : v;
+    var s = String(v == null ? '' : v).replace(/\s/g, '');
+    // Deutsche Zahl: Komma = Dezimaltrenner, Punkt = Tausender. (Zuvor entfernte
+    // diese Funktion die Tausenderpunkte NICHT -> "1.234,56" wurde zu 1.234.)
+    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+    else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+    var n = parseFloat(s);
     return isNaN(n) ? 0 : n;
   }
   function eur(n) {

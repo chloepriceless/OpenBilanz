@@ -44,9 +44,13 @@
   };
 
   function num(s) {
+    // Gespeicherte JS-Zahl unveraendert durchreichen (sonst wuerde z. B. 1.234
+    // ueber den String-Pfad als Tausender "1234" fehlinterpretiert).
+    if (typeof s === 'number') return isFinite(s) ? s : 0;
     var t = String(s == null ? '' : s).replace(/\s/g, '');
-    if (t.indexOf(',') >= 0) t = t.replace(/\./g, '');   // "1.234,56" -> "1234,56"
-    var n = parseFloat(t.replace(',', '.'));
+    if (t.indexOf(',') >= 0) t = t.replace(/\./g, '').replace(',', '.');  // "1.234,56" -> "1234.56"
+    else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');   // "12.500" -> Tausender
+    var n = parseFloat(t);
     return isFinite(n) ? n : 0;
   }
   function cent(n) { return Math.round((num(n) + Number.EPSILON) * 100) / 100; }

@@ -60,8 +60,9 @@
   function n(v) {
     if (typeof v === 'number') return isNaN(v) ? 0 : v;
     var s = String(v == null ? '' : v).replace(/\s/g, '');
-    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '');   // "1.234,56" -> "1234,56"
-    var x = parseFloat(s.replace(',', '.'));
+    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');  // "1.234,56" -> "1234.56"
+    else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');   // "12.500" -> Tausender
+    var x = parseFloat(s);
     return isNaN(x) ? 0 : x;
   }
   function cent(v) { return Math.round(n(v) * 100) / 100; }

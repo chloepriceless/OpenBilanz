@@ -23,10 +23,16 @@
   function num(v) {
     if (typeof v === 'number') return isNaN(v) ? 0 : v;
     var s = String(v == null ? '' : v).replace(/\s/g, '');
-    // Deutsches Format "1.234,56": Tausenderpunkte nur entfernen, wenn ein
-    // Komma vorhanden ist - "1.234" ohne Komma bleibt der Punkt-Dezimalwert.
-    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '');
-    var n = parseFloat(s.replace(',', '.'));
+    // Deutsche Zahl: Komma = Dezimaltrenner, Punkt = Tausender.
+    if (s.indexOf(',') >= 0) {
+      // "1.234,56" -> Tausenderpunkte raus, Komma wird Dezimalpunkt.
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) {
+      // Kein Komma, aber reine 3er-Gruppierung ("1.234", "12.500", "2.500.000"):
+      // Punkte sind Tausendertrenner. So bleibt "1.5"/"1.23" der Dezimalpunkt.
+      s = s.replace(/\./g, '');
+    }
+    var n = parseFloat(s);
     return isNaN(n) ? 0 : n;
   }
   function cent(v) { return Math.round(num(v) * 100) / 100; }

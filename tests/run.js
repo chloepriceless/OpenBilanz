@@ -2996,11 +2996,31 @@ test('baumSummen: explizit auf 0 erfasste Kinder überstimmen den Elternwert', f
   eq(teils['X'], 40, 'ein belegtes Kind reicht für die Kindersumme');
 });
 
-test('num: deutsches Tausenderformat "1.234,56" wird korrekt gelesen', function () {
+test('num: deutsches Tausenderformat (Punkt=Tausender, Komma=Dezimal)', function () {
   eq(Berechnung.num('1.234,56'), 1234.56, 'Tausenderpunkt + Komma');
   eq(Berechnung.num('12.345.678,90'), 12345678.9, 'mehrere Tausenderpunkte');
-  eq(Berechnung.num('1.234'), 1.234, 'ohne Komma bleibt der Punkt Dezimaltrenner');
   eq(Berechnung.num('1234,56'), 1234.56, 'Komma als Dezimaltrenner');
+  // Ohne Komma: reine 3er-Gruppierung sind Tausender (deutsche Eingabe), NICHT
+  // Dezimalpunkt. Behebt "2.500.000"->2.5 und "12.500"->12.5 (Finding #6). Die
+  // Mehrdeutigkeit "1.234" wird bewusst als 1234 aufgeloest: ein Cent-genauer
+  // EUR-Betrag mit drei Nachkommastellen existiert im Rechnungswesen nicht, und
+  // kein interner Pfad speist JS-Dezimalstrings in num() (Zahlen werden oben per
+  // typeof-Guard unveraendert durchgereicht).
+  eq(Berechnung.num('2.500.000'), 2500000, 'Millionen ohne Komma');
+  eq(Berechnung.num('12.500'), 12500, 'eine Tausendergruppe');
+  eq(Berechnung.num('1.000'), 1000, 'glatte Tausend');
+  eq(Berechnung.num('1.234'), 1234, 'drei Nachkommastellen ohne Komma = Tausender');
+  eq(Berechnung.num('-1.500'), -1500, 'negativ');
+  eq(Berechnung.num('1500'), 1500, 'ohne Trenner');
+  eq(Berechnung.num('1.5'), 1.5, 'ein Dezimalpunkt, 1 Nachkommastelle bleibt Dezimal');
+  eq(Berechnung.num('1.23'), 1.23, 'zwei Nachkommastellen bleibt Dezimal');
+  eq(Berechnung.num('1.2345'), 1.2345, 'vier Nachkommastellen bleibt Dezimal');
+  eq(Berechnung.num(1.234), 1.234, 'gespeicherte JS-Zahl bleibt unveraendert');
+  eq(Berechnung.num(''), 0, 'leer');
+  eq(Berechnung.num(null), 0, 'null');
+  // Dieselbe kalibrierte Logik in der Steuer-Kopie n() (via exportiertes cent):
+  eq(Steuer.cent('12.500'), 12500, 'steuer.js n(): Tausender konsistent');
+  eq(Steuer.cent('1.234,56'), 1234.56, 'steuer.js n(): Tausender + Komma');
 });
 
 test('Steuer: getrennter Gewerbeverlust (§ 10a GewStG) wird angesetzt', function () {
