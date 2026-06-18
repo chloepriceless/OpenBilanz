@@ -23,11 +23,22 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  function iso(d) { return d.toISOString().slice(0, 10); }
+  // Lokale Kalenderfelder verwenden, NICHT toISOString()/UTC: addMonate/addJahre
+  // bauen lokale Mitternachts-Dates; toISOString() verschoebe sie in jeder
+  // Zeitzone oestlich von UTC (alle deutschen Nutzer) um einen Tag/Monat zurueck.
+  function iso(d) {
+    var m = d.getMonth() + 1, t = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (t < 10 ? '0' + t : t);
+  }
   function parse(s) {
     if (s instanceof Date) return isNaN(s.getTime()) ? null : s;
     if (!s) return null;
-    var d = new Date(String(s));
+    var str = String(s);
+    // Reines Datum "JJJJ-MM-TT" als LOKALE Mitternacht parsen: new Date(str) waere
+    // UTC-Mitternacht und ergaebe in westlichen Zeitzonen den Vortag (getDate() -1).
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+    var d = new Date(str);
     return isNaN(d.getTime()) ? null : d;
   }
   function addMonate(d, m) {

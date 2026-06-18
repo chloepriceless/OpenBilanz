@@ -38,3 +38,9 @@ jobs:
 
       - name: Test-Suite ausführen
         run: npm test
+
+      # Zweiter Lauf in einer Zeitzone östlich von UTC: deckt Datums-/Fristen-
+      # Regressionen auf (lokale Mitternachts-Dates dürfen bei der ISO-Ausgabe
+      # nicht um einen Tag verschoben werden — betrifft alle deutschen Nutzer).
+      - name: Test-Suite ausführen (TZ=Europe/Berlin)
+        run: TZ=Europe/Berlin npm test
