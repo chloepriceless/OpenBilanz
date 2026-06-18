@@ -308,8 +308,10 @@ test('Importe.parseIbkrFlex: Trade + Dividende + Quellensteuer korrekt gemappt',
   eq(r.tx[0].kontoHint, '1510', 'Wertpapier-Kontohint');
   var div = r.tx.filter(function (t) { return t.kontoHint === '7010'; })[0];
   ok(div && div.eingang, 'Dividende -> 7010, Eingang');
-  var tax = r.tx.filter(function (t) { return t.kontoHint === '7600'; })[0];
-  ok(tax && !tax.eingang, 'Quellensteuer -> 7600, Ausgang');
+  var tax = r.tx.filter(function (t) { return t.kontoHint === '7639'; })[0];
+  ok(tax && !tax.eingang, 'Quellensteuer -> 7639 (anrechenbare ausländische QSt), Ausgang');
+  ok(!r.tx.some(function (t) { return t.kontoHint === '7600'; }),
+     'keine Buchung auf 7600 (Körperschaftsteuer) durch den Import');
 });
 test('Importe.parseIbkrFlex: leere Datei wird abgewiesen', function () {
   ok(Importe.parseIbkrFlex('<FlexQueryResponse></FlexQueryResponse>').fehler, 'keine Trades -> Fehler');

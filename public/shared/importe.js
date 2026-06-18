@@ -93,7 +93,9 @@
       var typ = attr(c, 'type');
       var hint = /dividend/i.test(typ) ? '7010'
         : /interest/i.test(typ) ? '7100'
-        : /withhold|tax/i.test(typ) ? '7600' : '6300';
+        // Quellensteuer = anrechenbare ausländische Quellensteuer (7639), NICHT
+        // Körperschaftsteuer-Aufwand (7600).
+        : /withhold|tax/i.test(typ) ? '7639' : '6300';
       tx.push({ datum: isoDat(attr(c, 'dateTime') || attr(c, 'settleDate') || attr(c, 'reportDate')),
         betrag: Math.abs(amount), eingang: amount > 0,
         zweck: typ + ' ' + attr(c, 'description'),
