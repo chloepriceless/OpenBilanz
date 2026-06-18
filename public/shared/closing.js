@@ -158,7 +158,10 @@
   function pruefeUstvaReadiness(buchungen, von, bis, ustva) {
     var l = [], u = ustva || {};
     var imZeitraum = (buchungen || []).filter(function (b) {
-      if (!b || b.storniert) return false;
+      // BEIDE Storno-Seiten ausschließen (Original storniert + Gegenbuchung
+      // stornoVon), nicht nur das Original — sonst zählt die Gegenbuchung mit,
+      // entgegen der dokumentierten Storno-Paar-Regel (stornoPaar(), s. oben).
+      if (!b || stornoPaar(b)) return false;
       var d = b.datum || '';
       if (von && d < von) return false;
       if (bis && d > bis) return false;

@@ -2986,6 +2986,24 @@ test('Closing: Storno-GEGENBUCHUNG zählt ebenfalls nicht (Paar hebt sich auf)',
   eq(Closing.summeKonto(bu, '1800').saldo, 100, 'Saldo 1800 ohne beide Storno-Seiten');
 });
 
+test('Closing.pruefeUstvaReadiness: Storno-Paar im Zeitraum wird nicht gezählt', function () {
+  var pair = [
+    { id: 'o', datum: '2025-02-10', soll: '4400', haben: '3806', betrag: 100, storniert: true },
+    { datum: '2025-02-10', soll: '3806', haben: '4400', betrag: 100, stornoVon: 'o' }
+  ];
+  var l = Closing.pruefeUstvaReadiness(pair, '2025-02-01', '2025-02-28', {});
+  var fest = l.filter(function (x) { return /festgeschrieben/.test(x.titel); })[0];
+  // Beide Storno-Seiten ausgeschlossen -> kein zählbarer Posten im Zeitraum.
+  // Mit dem alten Bug leakte die Gegenbuchung (stornoVon) -> status wäre 'offen'.
+  eq(fest.status, 'info', 'nur Storno-Paar -> keine zählbaren Buchungen im Zeitraum');
+  // Gegenprobe: eine echte (nicht stornierte) Buchung im Zeitraum wird gezählt.
+  var mit = Closing.pruefeUstvaReadiness(
+    pair.concat([{ datum: '2025-02-15', soll: '1800', haben: '4400', betrag: 50, fest: true }]),
+    '2025-02-01', '2025-02-28', {});
+  var fest2 = mit.filter(function (x) { return /festgeschrieben/.test(x.titel); })[0];
+  eq(fest2.status, 'ok', 'die echte festgeschriebene Buchung zählt, das Storno-Paar nicht');
+});
+
 test('baumSummen: explizit auf 0 erfasste Kinder überstimmen den Elternwert', function () {
   var baum = [{ id: 'X', kinder: [{ id: 'X.1' }, { id: 'X.2' }] }];
   var alt = Berechnung.baumSummen(baum, { 'X': 100 });
