@@ -33,11 +33,36 @@ else
 fi
 # Plausibilitaetspruefung: muss ein ZIP sein (Magic 'PK') und hinreichend gross
 # - faengt z. B. eine versehentlich gespeicherte Fehler-/Weiterleitungsseite ab.
-# Fuer echte Integritaet zusaetzlich die amtliche SHA-256-Pruefsumme vergleichen.
 if [ "$(head -c2 "$ZIEL" 2>/dev/null)" != "PK" ] || [ "$(wc -c < "$ZIEL")" -lt 1000000 ]; then
   echo "FEHLER: Download ist kein gueltiges Taxonomie-ZIP (Format/Groesse)." >&2
   rm -f "$ZIEL"
   exit 1
 fi
+
+# Integritaets-Verifikation per SHA-256. Eine erwartete Pruefsumme kann ueber die
+# Umgebungsvariable TAXONOMIE_SHA256 ODER eine Datei "<ZIEL>.sha256" hinterlegt
+# werden (Format: "<hash>  <dateiname>" wie von sha256sum erzeugt). Ist eine
+# erwartete Summe gesetzt und weicht ab -> Abbruch. Ist keine gesetzt, wird die
+# berechnete Summe ausgegeben, damit sie nach einer vertrauenswuerdigen
+# Erstinstallation gepinnt werden kann (trust-on-first-use; der Download selbst
+# laeuft bereits ueber TLS gegen xbrl.de).
+ERWARTET="${TAXONOMIE_SHA256:-}"
+[ -z "$ERWARTET" ] && [ -f "$ZIEL.sha256" ] && ERWARTET="$(awk '{print $1}' "$ZIEL.sha256" | head -n1)"
+if command -v sha256sum >/dev/null 2>&1; then SHA="$(sha256sum "$ZIEL" | awk '{print $1}')";
+elif command -v shasum   >/dev/null 2>&1; then SHA="$(shasum -a 256 "$ZIEL" | awk '{print $1}')";
+else SHA=""; echo "WARNUNG: weder sha256sum noch shasum vorhanden - keine Pruefsummen-Verifikation." >&2; fi
+if [ -n "$ERWARTET" ] && [ -n "$SHA" ]; then
+  if [ "$SHA" != "$ERWARTET" ]; then
+    echo "FEHLER: SHA-256 stimmt nicht ueberein." >&2
+    echo "  erwartet:  $ERWARTET" >&2
+    echo "  berechnet: $SHA" >&2
+    rm -f "$ZIEL"
+    exit 1
+  fi
+  echo "SHA-256 verifiziert: $SHA"
+elif [ -n "$SHA" ]; then
+  echo "SHA-256 (zum Pinnen via TAXONOMIE_SHA256 oder $ZIEL.sha256): $SHA"
+fi
+
 echo "Fertig: $ZIEL ($(wc -c < "$ZIEL") Bytes)"
 echo "Pruefen der Installation:  python3 -c 'import arelle' && echo Arelle OK"
