@@ -117,7 +117,10 @@
         for (var i = 0; i < p.kinder.length; i++) {
           werte[p.kinder[i].id] = cent(erfasst[p.kinder[i].id]);
           s += werte[p.kinder[i].id];
-          if (werte[p.kinder[i].id]) hat = true;
+          // "Belegt" über istErfasst (wie baumSummen), NICHT über die Wahrheit
+          // des Werts: eine explizit erfasste 0 in einem Kind muss den Eltern-
+          // Direktwert überstimmen (sonst bliebe ein veralteter Elternwert stehen).
+          if (istErfasst(erfasst[p.kinder[i].id])) hat = true;
         }
         werte[p.id] = hat ? cent(s) : cent(erfasst[p.id]);
       } else if (!p.formel) {

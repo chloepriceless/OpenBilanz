@@ -2996,6 +2996,18 @@ test('baumSummen: explizit auf 0 erfasste Kinder überstimmen den Elternwert', f
   eq(teils['X'], 40, 'ein belegtes Kind reicht für die Kindersumme');
 });
 
+test('rechneGuv: explizit auf 0 erfasste a/b-Kinder überstimmen den Elternwert', function () {
+  function gv(guv) {
+    return Berechnung.rechneGuv({ art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+      werte: { guv: guv } }).werte;
+  }
+  eq(gv({ 'gkv.5': 100 })['gkv.5'], 100, 'ohne Kindwerte gilt der Eltern-Direktwert');
+  eq(gv({ 'gkv.5': 100, 'gkv.5a': 0, 'gkv.5b': 0 })['gkv.5'], 0,
+     'explizite Null-Kinder ergeben 0 statt Elternwert (wie Bilanz/baumSummen)');
+  eq(gv({ 'gkv.5': 100, 'gkv.5a': 40 })['gkv.5'], 40,
+     'ein belegtes Kind reicht für die Kindersumme');
+});
+
 test('num: deutsches Tausenderformat (Punkt=Tausender, Komma=Dezimal)', function () {
   eq(Berechnung.num('1.234,56'), 1234.56, 'Tausenderpunkt + Komma');
   eq(Berechnung.num('12.345.678,90'), 12345678.9, 'mehrere Tausenderpunkte');
