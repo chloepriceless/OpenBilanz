@@ -770,6 +770,17 @@ test('Taxonomie: GuV-Elemente sind nicht leer', function () {
        'GuV-Element für ' + id + ' ungueltig');
   });
 });
+test('Taxonomie: UKV-Umsatzerlöse auf gültiges COGS-Element (grossOpProfit, nicht grossTradingProfit)', function () {
+  // grossTradingProfit existiert in der Kerntaxonomie NUR unter operatingTC (GKV);
+  // unter operatingCOGS (UKV) heißt der Zweig grossOpProfit. Ein COGS+grossTradingProfit-
+  // Mapping erzeugt ein in der amtlichen XSD unbekanntes Element -> ERiC/Arelle lehnt ab.
+  Object.keys(Taxonomie.GUV).forEach(function (id) {
+    ok(!/operatingCOGS\.grossTradingProfit/.test(Taxonomie.GUV[id]),
+       id + ' nutzt grossTradingProfit unter operatingCOGS — existiert nicht in der Kerntaxonomie');
+  });
+  eq(Taxonomie.guvElement('ukv.1'), 'is.netIncome.regular.operatingCOGS.grossOpProfit.netSales',
+     'UKV-Umsatzerlöse auf das in der XSD vorhandene COGS-netSales-Element');
+});
 
 /* ---- XBRL-Erzeugung --------------------------------------------------- */
 test('XBRL: reine Instanz enthaelt xbrli:xbrl und Fakten', function () {

@@ -115,7 +115,7 @@
     'gkv.15': 'is.netIncome.eat',
     'gkv.16': 'is.netIncome.otherTaxes',
     'gkv.17': 'is.netIncome',
-    'ukv.1':  'is.netIncome.regular.operatingCOGS.grossTradingProfit.netSales',
+    'ukv.1':  'is.netIncome.regular.operatingCOGS.grossOpProfit.netSales',
     'ukv.13': 'is.netIncome.tax',
     'ukv.15': 'is.netIncome.otherTaxes',
     'ukv.16': 'is.netIncome',
