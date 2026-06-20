@@ -894,11 +894,23 @@ test('Steuer: Quellensteuer-Anrechnung auf den Höchstbetrag (KSt) begrenzt', fu
   eq(s.kst.betrag, 1500, 'KSt 15 % von 10.000');
   eq(s.kst.auslQuellensteuer, 1500, 'Anrechnung auf die anfallende KSt begrenzt');
 });
-test('Steuer: Quellensteuer mindert die Gesamtsteuer', function () {
+test('Steuer: Quellensteuer-Anrechnung mindert KSt UND Soli (§ 3 Abs. 1 Nr. 1 SolzG)', function () {
   var g = { werte: {}, jahresergebnis: 100000 };
   var ohne = Steuer.berechne({ steuer: { hebesatz: 400 } }, g);
   var mit  = Steuer.berechne({ steuer: { hebesatz: 400, auslQuellensteuer: 2000 } }, g);
-  eq(ohne.gesamtsteuer - mit.gesamtsteuer, 2000, 'Gesamtsteuer um die Anrechnung niedriger');
+  eq(ohne.kst.soli, 825, 'Soli ohne Anrechnung: 5,5 % von 15.000');
+  eq(mit.kst.soli, 715, 'Soli auf festgesetzte KSt: 5,5 % von (15.000 - 2.000)');
+  // Bemessungsgrundlage des Soli ist die FESTGESETZTE (= um die § 26-Anrechnung
+  // geminderte) KSt. Die Anrechnung von 2.000 entlastet die KSt um 2.000 UND den
+  // Soli um 110 (= 2.000 × 5,5 %), zusammen also 2.110 - nicht nur 2.000.
+  eq(ohne.gesamtsteuer - mit.gesamtsteuer, 2110, 'Gesamtentlastung = Anrechnung × 1,055');
+});
+test('Steuer: voll angerechnete Quellensteuer -> Soli 0 (keine festgesetzte KSt)', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', steuer: { hebesatz: 400, auslQuellensteuer: 9999 } };
+  var s = Steuer.berechne(ja, { werte: {}, jahresergebnis: 10000 });
+  eq(s.kst.betrag, 1500, 'KSt brutto 15 % von 10.000');
+  eq(s.kst.auslQuellensteuer, 1500, 'Anrechnung auf den Höchstbetrag begrenzt');
+  eq(s.kst.soli, 0, 'festgesetzte KSt = 0 -> kein Soli (vorher fälschlich 82,50)');
 });
 
 /* ---- UStVA / Versteuerungsart ---------------------------------------- */

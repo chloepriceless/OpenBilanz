@@ -188,16 +188,17 @@
     }
     var satz = kstSatz(vz);
     var kst = cent(zvE * satz);
-    var soli = cent(kst * SOLI_SATZ);
     kstSchritte.push({ text: '= zu versteuerndes Einkommen', betrag: zvE, summe: true });
     kstSchritte.push({ text: 'Körperschaftsteuer ' + Math.round(satz * 100) + ' %' +
       (vz && vz >= 2028 ? ' (VZ ' + vz + ')' : ''), betrag: kst });
-    kstSchritte.push({ text: 'Solidaritätszuschlag 5,5 %', betrag: soli });
 
     // § 26 KStG - Anrechnung ausländischer Quellensteuer auf die KSt. Der
     // Anrechnungshöchstbetrag ist hier vereinfacht die anfallende KSt; die
     // genaue Begrenzung (anteilige deutsche Steuer auf die ausländischen
     // Einkünfte, getrennt je Staat) erfordert die ausländischen Einkünfte.
+    // Die Anrechnung mindert die FESTGESETZTE KSt und damit auch die
+    // Bemessungsgrundlage des Solidaritätszuschlags (§ 3 Abs. 1 Nr. 1 SolzG) -
+    // der Soli wird deshalb erst nach der Anrechnung bemessen.
     var auslQuSt = n(st.auslQuellensteuer);
     var quStAnrechenbar = auslQuSt > 0 ? cent(Math.min(auslQuSt, kst)) : 0;
     if (auslQuSt > 0) {
@@ -205,6 +206,10 @@
         (quStAnrechenbar < auslQuSt ? ' - auf den Höchstbetrag begrenzt' : ''),
         betrag: -quStAnrechenbar });
     }
+    // Solidaritätszuschlag auf die festgesetzte (um die § 26-Anrechnung
+    // geminderte) Körperschaftsteuer, § 3 Abs. 1 Nr. 1 SolzG.
+    var soli = cent((kst - quStAnrechenbar) * SOLI_SATZ);
+    kstSchritte.push({ text: 'Solidaritätszuschlag 5,5 %', betrag: soli });
 
     /* ---- Gewerbesteuer ---- */
     var gewSchritte = [];
