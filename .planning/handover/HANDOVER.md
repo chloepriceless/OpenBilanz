@@ -1,201 +1,58 @@
-# HANDOVER — OpenBilanz (gmbh-verwaltung)
+# HANDOVER — OpenBilanz (Pfenni / gmbh-verwaltung)
 
-**Stand: 2026-06-12 (nachmittags) · v2.20.0 · Working-Tree sauber · in sync · 291 Tests grün · LIVE auf openbilanz.de verifiziert**
+_Letzte Aktualisierung: 2026-06-20 ~21:00 (vor Flotten-Pause; Auto-Neustart ~03:15 MESZ)._
 
-> ✅ **Nachtrag gleiche Session — zwei weitere Releases:**
-> 4. **v2.19.0 — Glossar-Etappe 2:** 11 eigene Konten-Texte Auslandsgeschäft/Reverse-Charge
->    (3837/1407, 3835/1408, 3804/1404, 4336/4337/4338/4339, 4000) — Glossar jetzt 76 Konten.
-> 5. **v2.20.0 — innergem. Erwerb automatisch:** Paar 1404 an 3804 → Kz 89 (BMG,
->    rückgerechnet) + Kz 61 (Erwerbs-Vorsteuer); Kennzahlen multi-quellen-verifiziert.
->    Kleinunternehmer schulden auch die Erwerbsteuer (§ 18 Abs. 4a nennt § 1 Abs. 1 Nr. 5) —
->    Zahllast/closing.js/fristen.js analog § 13b. Hinweise 3802/1402 + 1404/3804-Abweichung.
-> **BACKLOG-Stand:** UStVA-Block komplett erledigt; offen nur extern Blockiertes
-> (E-Rechnung-Echtdaten, KoSIT/Mustang = Java, VIES-Livetest) + Christin-Visuals.
-> **Nächster autonomer Kandidat:** Glossar-Etappe 3 (weitere Konten-Texte) oder
-> § 13b-7-%-Konten (selten, niedrige Prio).
+## Aufgabe & Ziel
+Stehender Christin-Auftrag (via Hub): OpenBilanz autonom weiterentwickeln — Korrektheit
+sichern, Features, Rechts-Recherche → Merkel. Diese Session: **Multi-Agent-Korrektheits-Audit**
+des Steuer-/Bilanz-Kerns (Flotten-Aktivierung, Quality-First, Workflow-Fan-out).
 
-> ✅ **2026-06-12 (autonome Session): drei Stände live gebracht.**
-> 1. **v2.16.0 nachdeployt** — war committet+getaggt, aber nicht deployt (Vorsession
->    endete vor dem Deploy). Live verifiziert.
-> 2. **v2.17.0 — UStVA § 13b-/Auslands-Kennzahlen automatisch (Backlog-Item):**
->    Konten 3837/1407 → Kz 46/47/67, 4338/4339 → Kz 45, „davon Drittland"-Feld
->    (→ Kz 84/85, Zahllast invariant), **Kleinunternehmer-Korrektur** (§ 13b-Steuer
->    wird geschuldet + ist voranzumelden, § 18 Abs. 4a UStG — vorher zeigte die Karte
->    pauschal 0), closing.js-Readiness angeglichen, 5 Plausi-Hinweise (Doppelerfassung,
->    1407/3837-Abweichung, 3835/1408, 4336→Kz 21/ZM, 4339-OSS). Design + Refute-Review
->    (4 Findings, alle umgesetzt): `.planning/USTVA-KZ45-46-47-DESIGN.md`. Rechtsgrundlagen
->    primärquellen-verifiziert (§§ 18/19 UStG, gesetze-im-internet.de) + Merkel-Eintrag.
-> 3. **v2.18.0 — Fristen-Karte:** UStVA-Frist erscheint jetzt auch für Kleinunternehmer,
->    wenn im Meldezeitraum 3837/3835 bebucht sind (§ 18 Abs. 4a UStG).
-> **OFFEN (Christin-Visual):** UStVA-Karte im Browser mit einer § 13b-Buchung ansehen
-> (neue Zeilen 45/46/47, Drittland-Feld). **Deploy-Weg jetzt rsync** (Memory
-> openbilanz-deploy-hetzner; rsync ggf. `apt-get install rsync`). **Stamp-Gotcha:**
-> version.js trägt konventionsgemäß den VORGÄNGER-Commit-Hash — nach dem Commit NICHT
-> nachstempeln. **Nächste Kandidaten:** Glossar-Etappe 2 (weitere Konten-Texte),
-> BACKLOG-Rest ist extern blockiert (E-Rechnung-Echtdaten, KoSIT/Mustang-Java, VIES).
+## Stand (was ist erledigt, was offen)
+- **Audit-Welle 1 ✅ ABGESCHLOSSEN:** 6 Dimensionen parallel + adversarisch verifiziert →
+  4 echte Bugs (0 False-Positives), alle gefixt, je atomarer Commit + Test, **302 Tests grün**,
+  Branch **gepusht** (`feat/skr04-glossar-vollabdeckung`, in-sync mit origin). Findings in Merkel,
+  Tätigkeitsbericht gesendet.
+- **Audit-Welle 2 ⏸ GESTOPPT (Flotten-Pause):** lief ~30s, KEINE Ergebnisse gesichert
+  (same-session-resume nach Restart nicht möglich) → beim Neustart **neu fahren**.
+- **Eigener Fund H2 (high, reproduziert, NICHT gefixt):** doppelte Rechnungsnummern.
 
-*(Älterer Stand darunter: 2026-06-10, v2.15.0.)*
+## Erledigte Fixes Welle 1 (alle gepusht, mit Datei:Zeile)
+1. `d4795ad` **taxonomie.js:118** (high) — `ukv.1` XBRL-Element `grossTradingProfit`→`grossOpProfit`.
+   COGS-Zweig hat kein grossTradingProfit (nur GKV/operatingTC) → UKV-E-Bilanz wurde von
+   ERiC/Arelle abgelehnt. Gegen amtliche XSD (de-gaap-ci 6.9) verifiziert.
+2. `4fec497` **ausgangsrechnung.js:40/127** (high) — steuerfreie/innergem. Erlöse von Konto 4180
+   (§24 Durchschnittssätze!) getrennt auf 4125 (innergem. §4 Nr.1b) / 4150 (§4 Nr.2-7).
+3. `a11d29e` **steuer.js:191** (medium) — Soli auf festgesetzte KSt NACH §26-Anrechnung
+   (war auf Brutto-KSt). §3 Abs.1 Nr.1 SolzG. Reihenfolge KSt→Anrechnung→Soli.
+4. `da4e7bf` **importe.js:95** (low) — IBKR "Broker Interest Paid" (amount<0) → 7300 statt 7100.
+5. `c713620` CHANGELOG [Unreleased] dokumentiert.
 
-> ✅ **KOMPLETT-REVIEW + NEUE FÄLLE (Christin-Auftrag) ERLEDIGT, v2.15.0 — committet, getaggt,
-> gepusht (origin/main in sync) und auf openbilanz.de DEPLOYT (rsync + Container-Restart,
-> live verifiziert: version.js 2.15.0, Fälle 6d/6e/6f im app.js):**
-> 1. **EB-/Übernahme-Automatik — 2 echte Bugs gefunden & behoben** (`public/app.js`,
->    `eroeffnungsPlan`): (a) Vorjahres-Jahresergebnis ging beim Saldenvortrag verloren
->    (P.A.V wird nie in werte.passiva gespeichert) → jetzt 9000 an 2970 bzw. 2978 an 9000;
->    (b) nicht eingeforderte ausstehende Einlagen fehlten → jetzt 2910 an 9000 (sonst setzt
->    `uebernehmeSalden` app.js:~5100 das volle 2900 als eingefordert an). Plus EBK-9000-
->    Aufgeh-Warnung in der Vorschau, Hilfe-Fall 2 erweitert.
-> 2. **Code-Review (Sonnet-Agent, 16 Findings):** umgesetzt: baumSummen-Null-Kinder
->    (berechnung.js), num()-Tausenderpunkte (3 Module), getrennter GewSt-Verlusttopf
->    (steuer.js + UI-Feld `verlustvortragGewSt`), Storno-Paar-Asymmetrie (closing.js +
->    monatsTrend), MT940-Jahrhundertfenster, Store-Klon/ID-Kollision/IDB-Delete-Rückgabe,
->    Arelle-Tempdatei. NICHT umgesetzt (bewusst, niedrig): unescape-Deprecation
->    pruefkette.js:44, xrechnung-ubl-Rundungsformel-Stil, Mini-XML-Parser-Verschachtelung
->    (importe.js, dokumentiertes Limit), Dateinamen-Sanitizer-Konsistenz app.js (prüfen bei
->    Gelegenheit), GuV-blatt()-Tiefe (Architektur-Notiz).
-> 3. **Rechts-Review (Webrecherche, Stand 06/2026):** 15 Themen verifiziert — alles korrekt
->    (KSt-Stufenplan 15→10 %, GWG 800 €, § 19 25k/100k, § 20 800k, Taxonomie 6.9, BMF
->    22.02.2022, Soli, § 10d 70 %, 8 J. Belege, § 325). **Einziger Mangel behoben:**
->    E-Rechnungs-Übergangsfristen waren pauschal „bis 31.12.2027" → präzisiert (alle bis
->    31.12.2026, ≤ 800k bis 31.12.2027) in app.js-Hilfe + E-RECHNUNG.md. Alles in Merkel.
-> 4. **Neue Buchungshilfe-Fälle 6d/6e/6f** (app.js renderHilfe): Bitcoin-Mining (eigener
->    Strom/Strom vom Gesellschafter, BMF 06.03.2025 + 27.02.2018), Stromverkauf/PV
->    (19 %, Marktprämie BMF 31.03.2025, 20-%-GewSt-Grenze), Vermietung an Unternehmen
->    inkl. Herstellungskosten (§ 255 HGB, 0700→0240, 4820 Eigenleistungen, § 9-Option).
->    + 4 neue Glossar-Einträge. Rechtsgrundlagen per 2. Recherche-Agent verifiziert.
-> 5. **Textreview:** Sie→Du vereinheitlicht (~20 Stellen), außer/ausser, Typografie.
-> **Offen/Nächste Schritte:** README-Feature-Liste prüfen ob 6d-6f erwähnt werden sollen
-> (🟡-Regel beachten); CONTRIBUTING.md-ASCII-Fließtext ist Grenzfall (nicht angefasst).
+## Offene Punkte / Blocker (für nächste Session)
+### 🔴 H2 — Doppelte Rechnungsnummern bei Jahres-Rücksprung (high, REPRODUZIERT)
+`ausgangsrechnung.js` `vergebeNummer`/`naechsteNummer` halten nur EINEN Zähler `{jahr, naechste}`.
+Bei Rückdatierung ins Vorjahr + Rücksprung → Reset auf 1 → DOPPELNUMMER. Reproduziert:
+`[2026-01,2026-02,2025-12,2026-03,2026-04]` → `RE-2026-0001/0002` DOPPELT. Verletzt §14 Abs.4 Nr.4
+UStG (Einmaligkeit) + GoBD. **Fix = Datenmodell-Änderung (Zähler PRO JAHR, rückwärtskompatibel
+self-migrating)** → R22-kritisch, **adversarisches Review vor Merge** nötig.
+### ⏸ Welle 2 neu fahren
+Script liegt (gestoppt): `.../workflows/scripts/openbilanz-korrektheits-audit-welle2-wf_edd32ce4-d32.js`.
+Dimensionen: E-Rechnung (xrechnung-ubl/cii, EN 16931), DATEV/GDPdU+GoBD, Belegnummern,
+Mandanten-Datenintegrität (store-idb/migration), FX/Rundung, USt-VA-Kennzahlen-Tiefe.
+Neu starten via `Workflow({scriptPath: "<obiger Pfad>"})` (frischer Run, kein Resume).
+### ⏸ Folgepunkt aus Fix #B: UStVA-Kz-41
+ustva.js erfasst steuerfreie innergem. Lieferungen (Kz 41) nicht aus Buchungskonten (4125/4150),
+nur aus manueller Eingabe `opt.steuerfrei`. Feature-Add, Design nötig.
 
-> ✅ **RE-REVIEW (Christin) ERLEDIGT, v2.14.3 live:** Delta v2.13.1→v2.14.2 regressionsfrei
-> (Zahllast-Äquivalenz + Konflikt-Warnung tiefgeprüft). Fach-Review der 65 Glossar-Texte: 9
-> korrigiert — gewichtig: 0135 Software-AfA (BMF 22.02.2022: 1 Jahr), 7000 § 8b-Streubesitz
-> (<10 % VOLL steuerpflichtig), 7600 KSt-Pfad konkret. Plus 3 Code-NIEDRIGs (alleKonten-1x,
-> EOF-Newline, Fristen-Kommentar). **Learning: eigene Rechtstexte wie Code behandeln — immer
-> zweites Augenpaar.** 0 offene Findings über alle Prüfungen.
+## GATED auf Christin (im Hub-Ledger als awaiting_operator)
+- **v2.22.0 Release-Zeremonie** Go/No-Go (Branch fertig, 302 grün, FF-fähig, 20 Commits vor main).
+  Stamp-Konvention entschieden: **Parent-Konvention beibehalten** (Self-Reference; `npm run stamp`
+  nach FF-Merge überschreibt version.js konventionskonform; KEIN force-push).
+- **#13 LICENSE** korrekter Copyright-Inhaber der GmbH?
+- **Findings-Datei** `.planning/RELEASE-REVIEW-2026-06-14-FINDINGS.md` (untracked) committen ja/nein?
 
-> ✅ **NACHARBEIT (Christin „alle Findings umsetzen") ERLEDIGT, v2.14.2 live:** Eltern-/Unterposten-
-> Konflikt-Warnung in `pruefe()`, 2910-Haben-Hinweis in BuchungsPruefung, Glossar 2980 (BilMoG-
-> Altfall), § 10d nachverifiziert (Normtext 70 % VERIFIED ab VZ 2024; 60 %-Rückkehr 2028 LIKELY,
-> Wiedervorlage-Kommentar in steuer.js), `__kontoDdBound`→Modul-Variable.
-> **Alle drei Prüfungen (T-0161-Audit, Komplett-Review, Rechts-Review): 0 offene umsetzbare Findings.**
-
-> ✅ **RECHTLICHES REVIEW (Christin-Auftrag) ERLEDIGT, v2.14.1 live.** 28 Rechtswerte gegen
-> Primärquellen verifiziert (2 Sonnet-Recherche-Agenten, gesetze-im-internet.de + Cross-Check
-> DATEV-SKR04/sevDesk/Lexware/BMF): 26 [VERIFIED] ohne Abweichung. **1 echter Fehler behoben:**
-> UStVA § 13b — Steuerbetrag lief als „Kz 84" (amtlich = Bemessungsgrundlage), Kz 85/67 fehlten
-> (Zahllast war ergebnisgleich korrekt). **1 Präzisierung:** § 264-Aufstellungsfrist 6/3 Monate je
-> Größenklasse. Deliverable `.planning/RECHTS-REVIEW.md` + 2 Merkel-Einträge. Offen/beobachten:
-> § 10d-70%-Befristung Ende VZ 2027 nur [LIKELY] belegbar (kein Handlungsbedarf).
-
-> ✅ **T3 ERLEDIGT + LIVE (v2.14.0, Christin-GO):** SKR04-Konten-Glossar — `shared/skr04-glossar.js`
-> (64 häufigste Konten, eigene §-gestützte Texte, kein DATEV-Copy), Glossar-View durchsucht den
-> vollen 1024er-Kontenrahmen (Nr/Name/Erklärtext, Treffer gedeckelt), Zuordnungs-Label faktisch aus
-> SKR04-Daten. 3 Tests (Verwaisen-Schutz). **Etappe 2 (optional, später):** weitere Konten-Texte in
-> TEXTE ergänzen — Verwaisen-Test sichert ab. **Damit sind T1+T2+T3, Audit T-0161 und das
-> Komplett-Review (v2.13.1) ALLE abgeschlossen.** OFFEN (Christin-Visual): Glossar im Browser ansehen.
-
-> ✅ **KOMPLETT-REVIEW (Christin-Auftrag 2026-06-10) DURCHGEFÜHRT + ALLE FUNDE GEFIXT, live v2.13.1.**
-> 3 Review-Subagenten (Security/Architektur/Tests-Doku). Behoben: Pfad-Traversal (`lib/store.js`
-> sicher), Content-Disposition-Header-Injection (`server.js` sendText), SHA-256-Pin (setup-pdf-lib.sh);
-> globales `unhandledrejection`-Netz + boot/speichereStill-`.catch` + vorjahrLaedt-Deadlock; Dead-Code
-> (kontoOpt, unterschrift-pdf-Load); DRITTQUELLEN (ERPNext-GPLv3 + vendored Libs) + CHANGELOG-Footer;
-> 13 neue Tests (CAMT/IBKR-Parser via DOMParser-Shim, obz-Krypto, bankKontoVorschlag, closing).
-> BEWUSST OFFEN (NIEDRIG/kein Bug): `window.__kontoDdBound`-Flag (korrekt, nur Stil); store-idb-Test nur
-> mit fake-indexeddb (Migration ist abgedeckt); setup-taxonomie/pyodide ohne Hash-Pin (große amtliche
-> Multi-File-Assets). Server-Security-Fixes betreffen Selbst-Hoster (Git), nicht die statische Website.
-
-> Heute zusätzlich (nach Audit): **T2** geführte Umbuchung (v2.12.0, `shared/umbuchung.js`). **4 Christin-
-> Requests** (HUB-REQUESTS.md) verify-first abgearbeitet: Bankimport-Dropdown+Löschen (bereits live v2.9.0),
-> Fristen-Übermittlung (v2.7.0), 2900/2910-Ausweis (v2.11.x, audit-bestätigt) — alle bereits da; **EINE
-> echte Lücke gefixt:** „davon eingezahlt" fehlte im Bilanz-Ausweis+PDF (nur Eingabe-Karte hatte es) →
-> ergänzt in **v2.13.0** (kapitalAusweisZeilen + bilanz-pdf.js). Status pro Request in HUB-REQUESTS.md ## STATUS.
-
-> ✅ **CODEX-VOLL-AUDIT (T-0161) ERLEDIGT + LIVE.** 1 kritischer Bug gefunden+behoben: § 268 Abs. 3
-> HGB — überschuldete GmbH (negatives EK) meldete Bilanz fälschlich unausgeglichen (negatives P.A
-> doppelt gezählt). Fix `Math.max(P.A,0)` in `summePassiva` (berechnung.js), v2.11.1 (Commit
-> `9d88867`), live verifiziert. Bestehender Test war auf das Bug-Verhalten geschrieben (inkonsistente
-> Bücher) → mitkorrigiert + Regression-Test. Rest des Rechenkerns + alle 1024 SKR04-Konten (902
-> generierte systematisch, 0 Fehlzuordnung) + §272/Bankimport/Rundung/PDF: sauber. Codex-Refute-Konsens.
-> Deliverable: `.planning/OPENBILANZ-AUDIT.md` (Commit `7170dfc`) + Report `~/Report/`. An Christin via
-> vdyofkr8 gemeldet. **Aktiver Auftrag jetzt: T2 → T3 (unten).**
-
-Frische Session: lies zuerst dieses Doc + Memory `project-open-tasks.md`. Resume-Hinweise: `check_messages` zuerst;
-an Christin meldet man via Orchestrator-Peer **vdyofkr8** (`send_message`). Pro fertigem Schritt live deployen
-(tar-Weg s.u.) + öffentlich verifizieren + an vdyofkr8 melden. **SPARMODUS** aktiv (nur Christin-angeforderte/
-kritische Arbeit). Versionsregel: MAJOR bleibt 2. **Tags pushen: `git push origin --tags`** (--follow-tags pusht
-leichtgewichtige Tags NICHT — Stolperstein, s. Memory openbilanz-versionierungsregel).
-
-## Heute erledigt + LIVE (5 Releases, alle Christin-Brake)
-- **v2.8.0** Vollständiger SKR04-Kontenrahmen (122→1024 Konten buchbar, 902 Zusatzkonten aus ERPNext-Quelle,
-  HGB-zugeordnet, kuratierte Vorrang). + Refute fand Bilanz-Bruch (Math.abs bei Kontra-Konten) → Abschluss-Logik
-  nach `public/shared/kontenabschluss.js` extrahiert + vorzeichenrichtig.
-- **v2.9.0** Bankimport: aufklappbares SKR04-Dropdown (lazy `<select>`, kontoDropdown/bindeKontoDropdowns) +
-  Zeilen-Löschen-Button (camtDel).
-- **v2.10.0** §272 gezeichnetes Kapital: offener Nettoausweis am BILDSCHIRM (kapitalAusweisZeilen).
-- **v2.11.0** Ausstehende Einlagen BUCHBAR (Konto **2910**): verpuffte vorher → jetzt korrekt als nicht
-  eingefordert erfasst, Bilanz gleicht aus. kapitalRechnen(kapital,modus) + uebernehmeSalden selbstkonsistent.
-  R22-Codex fand Sticky-State/Phantom-Aktiva-Blocker → behoben. Buchungshilfe in der Kapital-Karte.
-
-## (HISTORIE — ERLEDIGT, s. oben) CODEX-VOLL-AUDIT (Christin, Brake, KRITISCH)
-**Auftrag (Hub/Christin 19:03–19:07 MESZ):** „Lass CODEX ausführlich über ALLE Berechnungen, Konten und Angaben
-in OpenBilanz laufen — alle Konten und Angaben müssen von Claude UND Codex genehmigt sein."
-- **4-Augen pro Position:** Codex-Refute versucht jede Buchung/Kontenzuordnung/Rechnung zu widerlegen, DU (Claude)
-  prüfst gegen. Bestätigt erst wenn BEIDE freigeben.
-- **Fix-Loop:** Codex-Finding + du stimmst zu → erst Recheck (Codex kann irren), wenn bestätigt SOFORT fixen, dann
-  erneut beide prüfen bis grün. **Eindeutige Fehler = sofort fixen. Strittiges/Mehrdeutiges (HGB/SKR04-Auslegung,
-  riskante Buchungslogik-Änderung, Claude/Codex uneins) = NICHT eigenmächtig → über Hub an Christin vorlegen
-  (Optionen + Empfehlung).**
-- **Umfang (mind.):** SKR04-Konten-Mappings (voller Kontenrahmen, 1460 Geldtransit, 6420, Umbuchungen), §272
-  gezeichnetes Kapital + ausstehende Einlagen (2910, Eröffnungsbuchungen + Nettoausweis), Bilanzsummen/Aktiv=Passiv/
-  GuV-Summen/Saldenkonsistenz, CAMT.053/MT940-Bankimport-Verbuchung, alle Rechen-/Rundungslogik, PDF-Zahlen.
-- **Deliverable:** Audit-Doc **`.planning/OPENBILANZ-AUDIT.md`** (Sign-off-Tabelle: Position | Claude-Verdict |
-  Codex-Verdict | Status ✅/⚠️/❌ | Begründung) + committen. Report nach `~/Report/` + Kurzfazit an Hub (geprüft/
-  gefixt/offen). **DATEV NICHT scrapen** — Korrektheit aus HGB (§272 gemeinfrei) + SKR04-Fakten + eigener Logik.
-- **Codex-Sparring:** `general-purpose` Subagent mit Refute-Prompt (codex-worker nicht im Agent-Tool verfügbar).
-  Subagent dem Hub melden (POST /api/agent-subagents), in Tätigkeitsbericht als reviewer.
-- **Reihenfolge:** Audit über den FERTIGEN Stand. T2/T3 unten ggf. ZUERST bauen, dann Audit über alles — ODER mit
-  Christin/Hub klären, ob Audit jetzt über den Ist-Stand (T1+§272+Bankimport sind fertig) und T2/T3 separat.
-  Empfehlung: Audit kann JETZT über den fertigen Kern laufen (T1/§272/Bankimport); T2/T3 danach + nachauditieren.
-
-### Audit-Addenda (Christin 19:07/19:09 MESZ)
-- **Recherche bei Abweichung:** nicht raten — gründlich belegen. PRIMÄR Gesetz/gemeinfrei (HGB §§242ff/266/272,
-  EStG/AO, GoB, amtlicher SKR04). CROSS-CHECK DATEV-Hilfecenter/Literatur NUR zum Verifizieren welche Behandlung
-  korrekt ist (Fakten/Recht frei). **COPYRIGHT hart:** DATEV-Prosa NIE wörtlich/umformuliert kopieren — Produkt-/
-  Glossar-/Merkel-Texte = EIGENER Text, aufs Gesetz gestützt, mit Quelle (§/URL+Datum).
-- **Merkel-Pflicht:** jede substanzielle Recherche → `POST http://192.168.20.81:8000/ingest {title,text,source_url,tags[]}`
-  (Quelle+Datum+Tags+[[Verlinkung]]).
-- **Sparmodus:** Recherche bounded (pro Abweichung, kein Blanket-Crawl), Teilarbeit ggf. auf Sonnet/Gateway,
-  Audit-Kernurteil bleibt bei Claude+Codex.
-- **Ticket = T-0161.** FIX statt nur reporten: Codex-Finding + Claude-Recheck-gegen-echten-Code bestätigt →
-  direkt fixen (atomarer Commit); Falsch-Positive verwerfen + im Doc begründen. **ERST Merkel durchsuchen**
-  (`GET http://192.168.20.81:8000/search?q=…` — Schlaubi hat DATEV evtl. schon geharvestet), nur Fehlendes holen.
-  DATEV-Ref: doc 1029183 + Suche „ausstehende einlagen buchen und ausweisen". Audit-Doc-Spalten zusätzlich:
-  „Fix angewandt (Commit)" + „Quelle DATEV/Gesetz".
-
-## Queue T2/T3 (GO, nicht Brake)
-- ✅ **T2 ERLEDIGT + LIVE (v2.12.0, Commit `134e344`).** Geführte Umbuchung zw. eigenen Konten:
-  neue Karte „Geld umbuchen" im Buchhaltungs-Modus, erzeugt aus „von → nach + Betrag" automatisch
-  den korrekten Satz (Aktiv an Aktiv: Soll=Ziel, Haben=Quelle), optional über Geldtransit 1460
-  (2 Sätze, nettet auf 0). Logik in testbarem Modul `public/shared/umbuchung.js` (4 Tests, 250 grün);
-  jede Buchung läuft zusätzlich durch BuchungsPruefung. Live verifiziert (umbuchung.js HTTP200,
-  app.js umbAdd). OFFEN (Christin-Visual): Maske im Browser bedienen.
-- ⏳ **T3 OFFEN (nächster Task) — durchsuchbares SKR04-Glossar.** Eigene kurze Erklärung je Konto
-  (KEIN DATEV-Copy, research-rigor; Texte aufs Gesetz/HGB gestützt mit Quelle). View 'glossar' +
-  GLOSSAR-Array existieren bereits, globale Suche findet SKR04 schon. **Content-lastig, etappenweise
-  (erst ~40 häufigste Konten).** SPARMODUS-Hinweis: content/research-lastig → bevorzugt Sonnet/Haiku +
-  niedriger Effort, etappenweise; unter Sparmodus zunächst ZURÜCKGESTELLT (an Christin gemeldet),
-  zieht eine Session auf „weiter mit T3". RESUME: GLOSSAR-Array + view 'glossar' im app.js suchen,
-  Batch der häufigsten Konten mit eigenen Kurztexten (§/HGB-Beleg) ergänzen, Findings→Merkel.
-- **Blockiert:** Reddit oprctx4 (403, Text-Paste nötig).
-
-## Schlüssel-Dateien
-- `public/shared/kontenabschluss.js` — salden2werte (Abschluss-Aggregation, vorzeichenrichtig, 2900/2910-Kapital).
-- `public/shared/berechnung.js` — kapitalRechnen(kapital,modus) §272, berechne() Bilanz/GuV.
-- `public/shared/skr04.js` + `skr04-voll.js` (902 generiert, tools/gen-skr04-voll.js) + `tools/skr04-erpnext-source.json` (gitignored, GPL-Quelle).
-- `public/app.js` — uebernehmeSalden (~4976), kapitalAusweisZeilen, camtVorschau, kontoDropdown, [data-pfad]-Handler (~1631).
-- `public/shared/bilanz-pdf.js` — PDF-Bilanz (§272-Nettoausweis Z.108).
-
-## Deploy + Verify
-`tar -C public -czf - --exclude=pyodide --exclude=taxonomie --exclude=wheels --exclude=.git --exclude=rechtliche-links.json . | ssh root@openbilanz.de 'tar -xzf - -C /root/openbilanz/site/app && cd /root/openbilanz/site && docker compose restart'`
-Verify: `curl -s https://openbilanz.de/app/shared/version.js | grep APP`. UI nicht autonom prüfbar → Christin-Visual.
+## Resume-Anleitung
+Repo `/home/dev/GmbH-Verwaltung`, Branch `feat/skr04-glossar-vollabdeckung`.
+Tests: `node tests/run.js` (302 grün). Beim Neustart **SPARSAM** anlaufen (Orchestrator-Direktive:
+Tiering/niedriger Effort, nicht sofort Vollgas). Reihenfolge: (1) H2-Fix mit Review, (2) Welle 2,
+(3) UStVA-Kz-41. Release-Zeremonie NUR auf Christin-Go. Durable Details: Memory
+`project-open-tasks.md`. Melde-Weg Christin: Orchestrator-Peer (CWD /home/dev/orchestrator).
