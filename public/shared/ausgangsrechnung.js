@@ -37,7 +37,8 @@
     forderungLuL:     '1200',  /* Forderungen aus Lieferungen und Leistungen */
     erloese19:        '4400',  /* Erlöse 19 % USt */
     erloese7:         '4300',  /* Erlöse 7 % USt */
-    erloeseSteuerfrei:'4180',  /* Steuerfreie Erlöse § 4 Nr. 1 b (innergem. Lieferung) */
+    erloeseInnergem:  '4125',  /* Steuerfreie innergem. Lieferung § 4 Nr. 1b UStG */
+    erloeseSteuerfrei:'4150',  /* Sonstige steuerfreie Umsätze (z. B. § 4 Nr. 2-7 UStG) */
     erloese13b:       '4336',  /* Steuerschuldnerschaft des Leistungsempfängers */
     ust19:            '3806',  /* Umsatzsteuer 19 % (SKR04) */
     ust7:             '3801'   /* Umsatzsteuer 7 % (SKR04) */
@@ -124,7 +125,10 @@
     if (besonderheit === 'REVERSE_CHARGE_13b' || besonderheit === 'INNERGEM_LEISTUNG') {
       return { erlos: KTO.erloese13b, ust: null };
     }
-    if (besonderheit === 'INNERGEM_LIEFERUNG' || besonderheit === 'STEUERFREI_§4') {
+    if (besonderheit === 'INNERGEM_LIEFERUNG') {
+      return { erlos: KTO.erloeseInnergem, ust: null };
+    }
+    if (besonderheit === 'STEUERFREI_§4') {
       return { erlos: KTO.erloeseSteuerfrei, ust: null };
     }
     if (besonderheit === 'KLEINUNTERNEHMER_19') {

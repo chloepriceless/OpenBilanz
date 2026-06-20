@@ -1690,6 +1690,24 @@ test('Ausgangsrechnung: Buchungssatz §19 Kleinunternehmer — keine USt-Trennun
   eq(bu[0].haben, '4400', 'Erlöse-Konto');
 });
 
+test('Ausgangsrechnung: innergem. Lieferung auf 4125, sonstige steuerfreie auf 4150 (nicht §24-Konto 4180)', function () {
+  // SKR04: 4125 = innergem. Lieferung § 4 Nr. 1b, 4150 = sonstige steuerfreie § 4 Nr. 2-7,
+  // 4180 = Durchschnittssätze § 24 UStG (Land-/Forstwirtschaft) — für eine GmbH nie korrekt.
+  var rIG = { nummer: 'RE-2026-0010', datum: '2026-05-20', besonderheit: 'INNERGEM_LIEFERUNG',
+    kundeSnapshot: { name: 'EU Kunde' },
+    positionen: [{ bezeichnung: 'Ware', menge: 1, einheit: 'C62', einzelpreis: 1000, ustSatz: 0 }] };
+  var buIG = Ausgangsrechnung.buchungenAusRechnung(rIG, 'TS');
+  eq(buIG.length, 1, 'innergem. Lieferung: eine Buchung, keine USt');
+  eq(buIG[0].haben, '4125', 'innergem. Lieferung auf 4125 (§ 4 Nr. 1b)');
+  ok(buIG[0].haben !== '4180', 'NICHT auf das §24-Durchschnittssatzkonto 4180');
+
+  var rSF = { nummer: 'RE-2026-0011', datum: '2026-05-20', besonderheit: 'STEUERFREI_§4',
+    kundeSnapshot: { name: 'Inland Kunde' },
+    positionen: [{ bezeichnung: 'Leistung', menge: 1, einheit: 'C62', einzelpreis: 500, ustSatz: 0 }] };
+  var buSF = Ausgangsrechnung.buchungenAusRechnung(rSF, 'TS');
+  eq(buSF[0].haben, '4150', 'sonstige steuerfreie auf 4150 (§ 4 Nr. 2-7)');
+});
+
 test('Ausgangsrechnung: Buchungssatz Mix 19/7 — getrennte Buchungen pro Satz', function () {
   var r = { nummer: 'RE-2026-0004', datum: '2026-05-20', besonderheit: 'NORMAL',
     kundeSnapshot: { name: 'Kunde KG' },
