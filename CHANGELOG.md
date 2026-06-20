@@ -29,6 +29,22 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
   Storno-Seiten (Original + Gegenbuchung) aus dem Zeitraum ausgeschlossen.
 - **IBKR-Import:** ausländische Quellensteuer wird auf Konto 7639 (anrechenbare
   ausländische Quellensteuer) gebucht statt auf 7600 (Körperschaftsteuer).
+- **E-Bilanz (UKV) wurde von ERiC/Arelle abgelehnt:** Die Umsatzerlöse im
+  Umsatzkostenverfahren (`ukv.1`) waren auf das in der amtlichen Kerntaxonomie
+  de-gaap-ci 6.9 nicht existierende Element `…operatingCOGS.grossTradingProfit.netSales`
+  gemappt (`grossTradingProfit` gibt es nur im GKV-Zweig `operatingTC`). Jetzt
+  korrekt auf `…operatingCOGS.grossOpProfit.netSales` — gegen die amtliche XSD
+  verifiziert.
+- **Solidaritätszuschlag bei ausländischer Quellensteuer zu hoch:** Der Soli wurde
+  auf die tarifliche Brutto-KSt berechnet; die Anrechnung nach § 26 KStG minderte
+  nur die KSt, nicht die Soli-Basis. Bemessungsgrundlage ist nach § 3 Abs. 1 Nr. 1
+  SolzG die *festgesetzte* KSt — der Soli wird jetzt auf die um die Anrechnung
+  geminderte KSt bemessen.
+- **Steuerfreie/innergemeinschaftliche Ausgangsrechnungen auf falschem Konto:**
+  Der Buchungsautomat buchte steuerfreie und innergem. Lieferungen auf SKR04-Konto
+  4180 (Durchschnittssätze § 24 UStG, Land-/Forstwirtschaft). Jetzt korrekt
+  getrennt: innergem. Lieferung → 4125 (§ 4 Nr. 1b UStG), sonstige steuerfreie
+  Umsätze → 4150 (§ 4 Nr. 2-7 UStG).
 
 ### Sicherheit / Robustheit
 - **E-Bilanz-Validierung gehärtet** (`lib/validate.js`): doppelter Callback im
