@@ -92,7 +92,9 @@
       if (!amount) return;
       var typ = attr(c, 'type');
       var hint = /dividend/i.test(typ) ? '7010'
-        : /interest/i.test(typ) ? '7100'
+        // Zinsen richtungsabhängig: Habenzins = Ertrag 7100, Schuldzins
+        // (z. B. IBKR "Broker Interest Paid", amount < 0) = Aufwand 7300.
+        : /interest/i.test(typ) ? (amount > 0 ? '7100' : '7300')
         // Quellensteuer = anrechenbare ausländische Quellensteuer (7639), NICHT
         // Körperschaftsteuer-Aufwand (7600).
         : /withhold|tax/i.test(typ) ? '7639' : '6300';

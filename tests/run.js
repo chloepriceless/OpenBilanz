@@ -317,6 +317,19 @@ test('Importe.parseIbkrFlex: Trade + Dividende + Quellensteuer korrekt gemappt',
 test('Importe.parseIbkrFlex: leere Datei wird abgewiesen', function () {
   ok(Importe.parseIbkrFlex('<FlexQueryResponse></FlexQueryResponse>').fehler, 'keine Trades -> Fehler');
 });
+test('Importe.parseIbkrFlex: Zinsaufwand (Broker Interest Paid, amount<0) -> 7300, Habenzins -> 7100', function () {
+  var xml = '<FlexQueryResponse><FlexStatements><FlexStatement><CashTransactions>' +
+    '<CashTransaction type="Broker Interest Paid" amount="-12.34" dateTime="20250131" description="Margin"/>' +
+    '<CashTransaction type="Credit Interest" amount="5.00" dateTime="20250131" description="Cash"/>' +
+    '</CashTransactions></FlexStatement></FlexStatements></FlexQueryResponse>';
+  var r = Importe.parseIbkrFlex(xml);
+  ok(!r.fehler, 'kein Fehler');
+  var paid = r.tx.filter(function (t) { return /Broker Interest Paid/.test(t.zweck); })[0];
+  eq(paid.kontoHint, '7300', 'Schuldzins (amount<0) -> Aufwandskonto 7300, nicht Ertrag 7100');
+  eq(paid.eingang, false, 'Ausgang');
+  var credit = r.tx.filter(function (t) { return /Credit Interest/.test(t.zweck); })[0];
+  eq(credit.kontoHint, '7100', 'Habenzins (amount>0) -> Ertragskonto 7100');
+});
 
 /* ---- Bank-Gegenkonto-Heuristik (bankKontoVorschlag) ------------------ */
 test('Importe.bankKontoVorschlag: eingebaute Regeln treffen', function () {
