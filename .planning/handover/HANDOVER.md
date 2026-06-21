@@ -9,12 +9,16 @@ des Steuer-/Bilanz-Kerns (Flotten-Aktivierung, Quality-First, Workflow-Fan-out).
 
 ## Stand (was ist erledigt, was offen)
 - **Audit-Welle 1 ✅ ABGESCHLOSSEN:** 6 Dimensionen parallel + adversarisch verifiziert →
-  4 echte Bugs (0 False-Positives), alle gefixt, je atomarer Commit + Test, **302 Tests grün**,
-  Branch **gepusht** (`feat/skr04-glossar-vollabdeckung`, in-sync mit origin). Findings in Merkel,
+  4 echte Bugs (0 False-Positives), alle gefixt, je atomarer Commit + Test. Findings in Merkel,
   Tätigkeitsbericht gesendet.
-- **Audit-Welle 2 ⏸ GESTOPPT (Flotten-Pause):** lief ~30s, KEINE Ergebnisse gesichert
-  (same-session-resume nach Restart nicht möglich) → beim Neustart **neu fahren**.
-- **Eigener Fund H2 (high, reproduziert, NICHT gefixt):** doppelte Rechnungsnummern.
+- **H2 ✅ GEFIXT (Session 2026-06-21, Commit 207eb7e, gepusht):** doppelte Rechnungsnummern bei
+  Jahres-Rücksprung. Datenmodell Pro-Jahr-Zähler, self-migrating, adversarisch refute-reviewt
+  (Datenverlust-Befund 1:1 behoben). **307 Tests grün** (UTC/Berlin/LA). Branch in-sync mit origin.
+- **Audit-Welle 2 ⏸ TEILWEISE (maßvoll, kein Fan-out):** Dimension **E-Rechnung** auditiert →
+  2 verifizierte Fixes (Commit f076e8f): CII-XSD-Reihenfolge (BillingSpecifiedPeriod vor PaymentTerms)
+  + IBAN-als-Zahl-Crash. 1 False Positive abgewehrt (ExemptionReason-Reihenfolge war korrekt). Offen:
+  E-Rechnungs-Reste (MEDIUM Rundung, LOW StNr/PDF-Klartext) + Dimensionen DATEV/FX/Mandanten-Integrität.
+  Voller Workflow-Fan-out bräuchte Opt-in. Details in Memory project-open-tasks.md (Abschnitt Welle 2).
 
 ## Erledigte Fixes Welle 1 (alle gepusht, mit Datei:Zeile)
 1. `d4795ad` **taxonomie.js:118** (high) — `ukv.1` XBRL-Element `grossTradingProfit`→`grossOpProfit`.
@@ -39,9 +43,9 @@ Script liegt (gestoppt): `.../workflows/scripts/openbilanz-korrektheits-audit-we
 Dimensionen: E-Rechnung (xrechnung-ubl/cii, EN 16931), DATEV/GDPdU+GoBD, Belegnummern,
 Mandanten-Datenintegrität (store-idb/migration), FX/Rundung, USt-VA-Kennzahlen-Tiefe.
 Neu starten via `Workflow({scriptPath: "<obiger Pfad>"})` (frischer Run, kein Resume).
-### ⏸ Folgepunkt aus Fix #B: UStVA-Kz-41
-ustva.js erfasst steuerfreie innergem. Lieferungen (Kz 41) nicht aus Buchungskonten (4125/4150),
-nur aus manueller Eingabe `opt.steuerfrei`. Feature-Add, Design nötig.
+### ✅ Folgepunkt aus Fix #B: UStVA-Kz-41 — ERLEDIGT (Commit f329714, gepusht)
+Bugfix kz44→kz43 (amtlich Kz 43 für „steuerfrei mit Vorsteuer") + Feature Kz 41 (4125, ZM-Hinweis) /
+Kz 43 (4150). Kleinunternehmer-Sonderfall behoben. 311 Tests grün. Amtlich verifiziert → Merkel.
 
 ## GATED auf Christin (im Hub-Ledger als awaiting_operator)
 - **v2.22.0 Release-Zeremonie** Go/No-Go (Branch fertig, 302 grün, FF-fähig, 20 Commits vor main).
