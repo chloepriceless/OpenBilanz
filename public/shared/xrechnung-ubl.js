@@ -306,7 +306,7 @@
   function renderPayment(rechnung, eigene) {
     var b = eigene.bank || {};
     if (!b.iban) return '';
-    var fa = tag('cbc:ID', esc(b.iban.replace(/\s+/g, '')));
+    var fa = tag('cbc:ID', esc(String(b.iban).replace(/\s+/g, '')));
     if (b.bic) fa += tag('cac:FinancialInstitutionBranch',
       tag('cbc:ID', esc(b.bic)));
     /* PaymentMeansCode 58 = SEPA credit transfer. */

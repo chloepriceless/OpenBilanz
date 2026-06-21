@@ -1885,6 +1885,29 @@ test('XRechnung-CII: Datum ISO → CII-102-Format YYYYMMDD', function () {
   ok(/format="102">20260519</.test(xml), 'Leistungsdatum im 102-Format');
 });
 
+/* XSD-Sequenz in ram:ApplicableHeaderTradeSettlement: BillingSpecifiedPeriod
+ * MUSS vor SpecifiedTradePaymentTerms stehen (sonst cvc-complex-type.2.4). */
+test('XRechnung-CII: BillingSpecifiedPeriod steht vor SpecifiedTradePaymentTerms', function () {
+  var r = basisRechnung({ leistungszeitraumVon: '2026-05-01', leistungszeitraumBis: '2026-05-31',
+    zahlungsbedingungen: '30 Tage netto', faelligkeit: '2026-06-19' });
+  var xml = XRechnungCII.render(r, EIGENE_TEST);
+  var iP = xml.indexOf('BillingSpecifiedPeriod');
+  var iT = xml.indexOf('SpecifiedTradePaymentTerms');
+  ok(iP >= 0 && iT >= 0, 'beide Elemente vorhanden');
+  ok(iP < iT, 'BillingSpecifiedPeriod (@' + iP + ') vor SpecifiedTradePaymentTerms (@' + iT + ')');
+});
+
+/* IBAN als Zahl (z. B. aus importierten/persistierten Stammdaten) darf den
+ * Renderer nicht crashen. */
+test('E-Rechnung: IBAN als Zahl crasht weder CII noch UBL', function () {
+  var eig = JSON.parse(JSON.stringify(EIGENE_TEST));
+  eig.bank.iban = 1234567890123456;
+  var cii = XRechnungCII.render(basisRechnung(), eig);
+  var ubl = XRechnungUBL.render(basisRechnung(), eig);
+  ok(cii.indexOf('1234567890123456') >= 0, 'CII rendert die IBAN');
+  ok(ubl.indexOf('1234567890123456') >= 0, 'UBL rendert die IBAN');
+});
+
 /* ---- USt-ID-Strukturprüfung ------------------------------------------ */
 test('UstId: DE — ISO 7064 MOD 11-10 erkennt valide Nummer', function () {
   eq(UstId.pruefe('DE123456788').ok, true, 'konstruiertes valides Beispiel');

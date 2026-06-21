@@ -65,6 +65,16 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
   Zusammenfassenden Meldung nach § 18a UStG), Kz 43 (aus 4150 + manuell). Für
   Kleinunternehmer werden Kz 41/43 unterdrückt (§ 4 Nr. 1b ist nach § 19 nicht
   anwendbar) und ein klarstellender Hinweis ausgegeben.
+- **ZUGFeRD/XRechnung-CII erzeugte schema-ungültiges XML:** In
+  `ram:ApplicableHeaderTradeSettlement` stand `SpecifiedTradePaymentTerms` vor
+  `ram:BillingSpecifiedPeriod` — die UN/CEFACT-CII-Sequenz verlangt den
+  Leistungszeitraum zuerst. Jede CII-/ZUGFeRD-Rechnung mit Leistungszeitraum UND
+  Zahlungsbedingungen wurde dadurch von einem KoSIT-/Mustang-Validator abgelehnt
+  (`cvc-complex-type.2.4`). Reihenfolge korrigiert (gegen das EN-16931-CII-
+  Referenzbeispiel verifiziert).
+- **E-Rechnung crashte bei numerischer IBAN:** War die IBAN in den Stammdaten als
+  Zahl statt String gespeichert (z. B. aus importierten Daten), warf der CII- und
+  UBL-Renderer `b.iban.replace is not a function`. Jetzt defensiv `String(...)`.
 
 ### Sicherheit / Robustheit
 - **E-Bilanz-Validierung gehärtet** (`lib/validate.js`): doppelter Callback im

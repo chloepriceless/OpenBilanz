@@ -142,7 +142,7 @@
     var inner = '';
     inner += tag('ram:TypeCode', '58');
     /* PayeePartyCreditorFinancialAccount enthält IBAN + optional BIC. */
-    var acc = tag('ram:IBANID', esc(b.iban.replace(/\s+/g, '')));
+    var acc = tag('ram:IBANID', esc(String(b.iban).replace(/\s+/g, '')));
     inner += tag('ram:PayeePartyCreditorFinancialAccount', acc);
     if (b.bic) {
       inner += tag('ram:PayeeSpecifiedCreditorFinancialInstitution',
@@ -209,6 +209,15 @@
     sett += tag('ram:InvoiceCurrencyCode', CURRENCY);
     sett += renderPayment(rechnung, eigene);
     sett += renderHeaderTax(rechnung);
+    /* XSD-Sequenz von ram:ApplicableHeaderTradeSettlement: BillingSpecifiedPeriod
+     * steht VOR SpecifiedTradePaymentTerms (verifiziert gegen das EN-16931-CII-
+     * Referenzbeispiel). Vertauscht erzeugt das XML einen cvc-complex-type.2.4-
+     * Schemafehler bei jeder Rechnung mit Leistungszeitraum + Zahlungsbedingungen. */
+    if (rechnung.leistungszeitraumVon && rechnung.leistungszeitraumBis) {
+      sett += tag('ram:BillingSpecifiedPeriod',
+        tag('ram:StartDateTime', dtTag(rechnung.leistungszeitraumVon)) +
+        tag('ram:EndDateTime',   dtTag(rechnung.leistungszeitraumBis)));
+    }
     if (rechnung.zahlungsbedingungen || rechnung.faelligkeit) {
       var pt = '';
       if (rechnung.zahlungsbedingungen) {
@@ -218,11 +227,6 @@
         pt += tag('ram:DueDateDateTime', dtTag(rechnung.faelligkeit));
       }
       sett += tag('ram:SpecifiedTradePaymentTerms', pt);
-    }
-    if (rechnung.leistungszeitraumVon && rechnung.leistungszeitraumBis) {
-      sett += tag('ram:BillingSpecifiedPeriod',
-        tag('ram:StartDateTime', dtTag(rechnung.leistungszeitraumVon)) +
-        tag('ram:EndDateTime',   dtTag(rechnung.leistungszeitraumBis)));
     }
     /* SummationMonetarySummation */
     sett += tag('ram:SpecifiedTradeSettlementHeaderMonetarySummation',
