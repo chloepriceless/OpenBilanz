@@ -2689,7 +2689,8 @@ function renderUstva(m) {
       (u.kz85 ? zeile('85', 'Steuer auf andere Leistungen (§ 13b Abs. 2 UStG)', u.kz85) : '') +
       (u.kz89 ? zeile('89', 'Innergemeinschaftliche Erwerbe 19 % (Bemessungsgrundlage, netto)', u.kz89) : '') +
       (u.ustErwerbGebucht ? zeile('', 'Steuer auf innergemeinschaftliche Erwerbe (Konto 3804)', u.ustErwerbGebucht) : '') +
-      (u.kz44 ? zeile('44', 'Steuerfreie Umsätze mit Vorsteuerabzug', u.kz44) : '') +
+      (u.kz41 ? zeile('41', 'Innergemeinschaftliche Lieferungen (§ 4 Nr. 1b UStG, an Abnehmer mit USt-IdNr.)', u.kz41) : '') +
+      (u.kz43 ? zeile('43', 'Weitere steuerfreie Umsätze mit Vorsteuerabzug (Ausfuhr, § 4 Nr. 2-7 UStG)', u.kz43) : '') +
       (u.kz48 ? zeile('48', 'Steuerfreie Umsätze ohne Vorsteuerabzug', u.kz48) : '') +
       (u.kz45 ? zeile('45', 'Übrige nicht steuerbare Umsätze (Leistungsort nicht im Inland)', u.kz45) : '') +
       zeile('', '= Umsatzsteuer', Berechnung.cent(u.ustBerechnet + u.kz85 + u.kz47 + u.ustErwerbGebucht), { summe: true }) +

@@ -1011,6 +1011,41 @@ test('UStVA: steuerfreie Umsätze ohne Vorsteuerabzug melden Kz 48 + Hinweis', f
   ok(u.hinweise.some(function (h) { return h.indexOf('Vorsteueraufteilung') >= 0; }),
      'Hinweis auf Vorsteueraufteilung § 15 Abs. 4');
 });
+/* Folgepunkt aus Welle-1-Fix #B: innergem. Lieferungen (4125) und steuerfreie
+ * Umsätze mit Vorsteuerabzug (4150) fließen jetzt in die UStVA. */
+test('UStVA: innergem. Lieferung (Konto 4125) meldet Kz 41 + ZM-Hinweis', function () {
+  var bu = [{ datum: '2026-03-10', soll: '1200', haben: '4125', betrag: 5000 }];
+  var u = Ustva.berechne(bu, null, null);
+  eq(u.kz41, 5000, 'Kz 41 = innergem. Lieferungen aus 4125');
+  eq(u.kz43, 0, 'Kz 43 unberührt');
+  ok(u.hinweise.some(function (h) { return h.indexOf('Zusammenfassenden Meldung') >= 0; }),
+     'Hinweis auf ZM-Pflicht (§ 18a UStG)');
+});
+test('UStVA: steuerfreie Umsätze mit Vorsteuerabzug melden Kz 43 (Konto 4150 + manuell)', function () {
+  var bu = [{ datum: '2026-04-01', soll: '1200', haben: '4150', betrag: 500 }];
+  var u = Ustva.berechne(bu, null, null, { steuerfrei: { mitVorsteuer: 200 } });
+  eq(u.kz43, 700, 'Kz 43 = gebucht (4150) + manuell');
+  ok(u.kz44 === undefined, 'Kz 44 wird nicht mehr (falsch) ausgegeben');
+  ok(u.hinweise.some(function (h) { return h.indexOf('doppelt in Kz 43') >= 0; }),
+     'Doppelerfassungs-Hinweis (gebucht + manuell)');
+});
+test('UStVA: nur manuell erfasste steuerfreie Umsätze mit Vorsteuer landen in Kz 43', function () {
+  var u = Ustva.berechne([], null, null, { steuerfrei: { mitVorsteuer: 3000 } });
+  eq(u.kz43, 3000, 'Kz 43 (vormals fälschlich Kz 44)');
+  eq(u.kz41, 0, 'kein Kz 41 ohne 4125-Buchung');
+});
+/* Kleinunternehmer (§ 19): § 4 Nr. 1b nicht anwendbar → keine Kz 41/43, keine
+ * vorgegaukelte ZM-Pflicht; stattdessen ein klarstellender Hinweis. */
+test('UStVA: Kleinunternehmer meldet keine Kz 41/43 für 4125/4150 (§ 19)', function () {
+  var bu = [{ datum: '2026-03-10', soll: '1200', haben: '4125', betrag: 5000 }];
+  var u = Ustva.berechne(bu, null, null, { kleinunternehmer: true });
+  eq(u.kz41, 0, 'keine Kz 41 für Kleinunternehmer');
+  eq(u.kz43, 0, 'keine Kz 43 für Kleinunternehmer');
+  ok(!u.hinweise.some(function (h) { return h.indexOf('Zusammenfassenden Meldung') >= 0; }),
+     'keine ZM-Pflicht vorgegaukelt');
+  ok(u.hinweise.some(function (h) { return h.indexOf('§ 4 Nr. 1b UStG) nicht anwendbar') >= 0; }),
+     'klarstellender § 19-Hinweis');
+});
 test('UStVA: gebuchte § 13b-Beträge (3837/1407) fließen in Kz 46/47/67', function () {
   // Auslands-SaaS, korrekt gebucht: Aufwand netto + Steuer-/Vorsteuer-Paar.
   var bu = [

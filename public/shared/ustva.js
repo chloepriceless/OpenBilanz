@@ -47,7 +47,7 @@
   /* berechne(buchungen, von, bis, optionen)
    *   buchungen: [ { datum, soll, haben, betrag } ]
    *   von, bis:  ISO-Datum (einschließend), leer = unbegrenzt
-   * Rückgabe: { kz81, kz86, ust19, ust7, kz84, kz44, kz48, ustBerechnet,
+   * Rückgabe: { kz81, kz86, ust19, ust7, kz84, kz41, kz43, kz48, ustBerechnet,
    *             ustGebucht, kz66, kz83, versteuerungsart, kleinunternehmer,
    *             hinweise: [String] } */
   function berechne(buchungen, von, bis, optionen) {
@@ -108,9 +108,21 @@
     var kz46 = cent(kz47 / 0.19);
     var kz84 = cent(n(rc.netto19) + n(rc.netto7) + drittNetto);
     var kz85 = cent(manuellSteuer + drittSteuer);
-    /* § 4 UStG - steuerfreie Umsätze (rein nachrichtlich). */
-    var kz44 = cent(n(sf.mitVorsteuer));    // steuerfrei MIT Vorsteuerabzug
-    var kz48 = cent(n(sf.ohneVorsteuer));   // steuerfrei OHNE Vorsteuerabzug
+    /* § 4 UStG - steuerfreie Umsätze. Aus den Buchungskonten (gebuchte
+     * Ausgangsrechnungen) gezogen, plus manuell nacherfasste Beträge (additiv,
+     * analog zur § 13b-Mechanik). Amtliche Vordruckzeilen (BMF-Vordruckmuster):
+     *   Kz 41 = innergem. Lieferungen § 4 Nr. 1b an Abnehmer mit USt-IdNr
+     *           (Konto 4125) - zusätzlich ZM-pflichtig (§ 18a UStG).
+     *   Kz 43 = weitere steuerfreie Umsätze MIT Vorsteuerabzug, z. B.
+     *           Ausfuhrlieferungen / § 4 Nr. 2-7 UStG (Konto 4150) + manuell.
+     *   Kz 48 = steuerfreie Umsätze OHNE Vorsteuerabzug (§ 4 Nr. 8-29, § 19) -
+     *           manuell (kein Standard-Erlöskonto im Buchungsautomat).
+     * (Kz 44 = innergem. Lieferung NEUER Fahrzeuge an Abnehmer ohne USt-IdNr -
+     * seltener Sonderfall, hier nicht abgebildet.) */
+    var sfMitGebucht = hs('4150');
+    var kz41 = cent(hs('4125'));                          // innergem. Lieferungen
+    var kz43 = cent(sfMitGebucht + n(sf.mitVorsteuer));   // weitere steuerfrei mit VSt
+    var kz48 = cent(n(sf.ohneVorsteuer));                 // steuerfrei ohne VSt
     /* Kz 45 - übrige nicht steuerbare Umsätze (Leistungsort nicht im Inland):
      * 4338 (Drittland) + 4339 (anderes EU-Land, kein § 3a-Abs.-2-Fall).
      * Die EU-B2B-Leistungen nach § 3a Abs. 2 (Konto 4336) gehören dagegen in
@@ -139,6 +151,13 @@
       kz66 = 0;
       kz67 = 0;
       kz61 = 0;
+      /* Ein Kleinunternehmer kann die Steuerbefreiung § 4 Nr. 1b (innergem.
+       * Lieferung) und den Vorsteuerabzug nicht in Anspruch nehmen (§ 19 Abs. 1
+       * UStG); auf 4125/4150 gebuchte Beträge sind reine § 19-Umsätze, keine
+       * Kz-41-/Kz-43-/ZM-pflichtigen Lieferungen. */
+      var sfKleinRoh = cent(kz41 + kz43);
+      kz41 = 0;
+      kz43 = 0;
       kz83 = cent(kz85 + kz47 + ustErwerbGebucht);
       hinweise.push('Kleinunternehmer (§ 19 UStG): Es wird keine Umsatzsteuer ' +
         'ausgewiesen und kein Vorsteuerabzug geltend gemacht; eine ' +
@@ -151,6 +170,14 @@
           ' EUR) wird auch als Kleinunternehmer geschuldet - die Voranmeldung ist ' +
           'insoweit abzugeben (§ 18 Abs. 4a UStG). Die auf 1407/1404 gebuchte ' +
           'Vorsteuer ist NICHT abziehbar (§ 15 Abs. 2 UStG).');
+      }
+      if (sfKleinRoh > 0) {
+        hinweise.push('Als Kleinunternehmer (§ 19 UStG) ist die Steuerbefreiung für ' +
+          'innergemeinschaftliche Lieferungen (§ 4 Nr. 1b UStG) nicht anwendbar und ' +
+          'es besteht kein Vorsteuerabzug. Auf den Konten 4125/4150 gebuchte Beträge (' +
+          sfKleinRoh.toFixed(2).replace('.', ',') + ' EUR) sind reine § 19-Umsätze - ' +
+          'keine Kz-41-/Kz-43-Lieferungen und ohne Zusammenfassende Meldung. Buchung/' +
+          'Zuordnung prüfen.');
       }
     } else {
       /* Kz 67 = § 13b-Vorsteuer, getrennt von Kz 66 (nur allgemeine Vorsteuer
@@ -231,10 +258,24 @@
         'Kz 45 enthalten. Werden diese Umsätze über das OSS-Verfahren erklärt, ' +
         'gehören sie nicht in die Voranmeldung - Kz 45 dann manuell kürzen.');
     }
+    if (kz41 > 0) {
+      hinweise.push('Innergemeinschaftliche Lieferungen (Kz 41: ' +
+        kz41.toFixed(2).replace('.', ',') + ' EUR, Konto 4125) sind zusätzlich in ' +
+        'der Zusammenfassenden Meldung (§ 18a UStG) an das Bundeszentralamt für ' +
+        'Steuern zu melden; die USt-IdNr des Abnehmers muss zum Leistungszeitpunkt ' +
+        'gültig sein, sonst entfällt die Steuerbefreiung.');
+    }
+    if (kz43 > 0 && sfMitGebucht > 0 && n(sf.mitVorsteuer) > 0) {
+      hinweise.push('Steuerfreie Umsätze mit Vorsteuerabzug (Kz 43): Es sind sowohl ' +
+        'Beträge auf Konto 4150 GEBUCHT (' + cent(sfMitGebucht).toFixed(2).replace('.', ',') +
+        ' EUR) als auch manuell eingetragen (' + cent(n(sf.mitVorsteuer)).toFixed(2).replace('.', ',') +
+        ' EUR). Das manuelle Feld ist nur für NICHT gebuchte Umsätze gedacht - sonst ' +
+        'erscheint derselbe Umsatz doppelt in Kz 43.');
+    }
     return {
       kz81: kz81, kz86: kz86, ust19: ust19, ust7: ust7,
       kz45: kz45, kz46: kz46, kz47: kz47,
-      kz84: kz84, kz85: kz85, kz44: kz44, kz48: kz48,
+      kz84: kz84, kz85: kz85, kz41: kz41, kz43: kz43, kz48: kz48,
       kz89: kz89, kz61: kz61,
       ust13bGebucht: ust13bGebucht, vst13bGebucht: vst13bGebucht,
       ustErwerbGebucht: ustErwerbGebucht, vstErwerbGebucht: vstErwerbGebucht,

@@ -55,6 +55,16 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
   bestehende Zählerstände self-migrating. Das Stammdaten-Feld „Nächste Nummer"
   bezieht sich nun eindeutig auf das laufende Jahr; ein Nummernschema ohne
   `{NR}`-Platzhalter wird beim Speichern abgelehnt.
+- **UStVA: steuerfreie Umsätze in falscher Vordruckzeile / innergem. Lieferungen
+  fehlten.** „Steuerfreie Umsätze mit Vorsteuerabzug" wurden unter Kennzahl 44
+  gemeldet — amtlich (BMF-Vordruckmuster) ist das Kz 43; Kz 44 ist der Sonderfall
+  „innergem. Lieferung neuer Fahrzeuge an Abnehmer ohne USt-IdNr." Zudem fielen
+  innergemeinschaftliche Lieferungen (§ 4 Nr. 1b, Konto 4125) und steuerfreie
+  Umsätze nach § 4 Nr. 2-7 (Konto 4150) ganz aus der Voranmeldung. Jetzt:
+  Kz 41 (innergem. Lieferungen, aus 4125, mit Hinweis auf die Pflicht zur
+  Zusammenfassenden Meldung nach § 18a UStG), Kz 43 (aus 4150 + manuell). Für
+  Kleinunternehmer werden Kz 41/43 unterdrückt (§ 4 Nr. 1b ist nach § 19 nicht
+  anwendbar) und ein klarstellender Hinweis ausgegeben.
 
 ### Sicherheit / Robustheit
 - **E-Bilanz-Validierung gehärtet** (`lib/validate.js`): doppelter Callback im
