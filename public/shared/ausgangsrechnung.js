@@ -56,11 +56,41 @@
   }
   function cent(n) { return Math.round((num(n) + Number.EPSILON) * 100) / 100; }
 
+  /* Schlüssel im Pro-Jahr-Zähler. Schemata MIT {JAHR} bekommen je Kalenderjahr
+   * einen eigenen, lückenlosen Kreis; Schemata OHNE {JAHR} (durchlaufende
+   * Nummerierung) teilen sich den gemeinsamen Schlüssel '*'. */
+  function zaehlerKey(schema, datum) {
+    return /\{JAHR\}/.test(String(schema || 'RE-{JAHR}-{NR:04}'))
+      ? String(jahrAus(datum)) : '*';
+  }
+  /* Migriert das alte Single-Zähler-Modell { jahr, naechste } self-migrating
+   * (idempotent) auf den Pro-Jahr-Zähler { zaehler: { <jahr>: <naechste> } }.
+   * Behebt H2: ein globaler Zähler wurde bei Rücksprung ins schon-begonnene
+   * Jahr fälschlich auf 1 zurückgesetzt → Doppelnummer (§ 14 Abs. 4 Nr. 4 UStG).
+   * Greift genau einmal — sobald `zaehler` existiert, ist es ein No-Op. */
+  function migriereNummern(rn) {
+    if (rn && (!rn.zaehler || typeof rn.zaehler !== 'object')) {
+      rn.zaehler = {};
+      /* Alten Single-Zähler übernehmen. Bei {JAHR}-Schema ohne gültiges `jahr`
+       * (Altzustand des UI-Zweitbefunds: `naechste` wurde ohne `jahr` gesetzt)
+       * den manuell gesetzten Startwert auf das laufende Kalenderjahr RETTEN,
+       * statt ihn zu verwerfen — sonst lautloser Verlust + Reset-auf-1 mit
+       * Doppelnummern-Potenzial (§ 14 Abs. 4 Nr. 4 UStG / GoBD). */
+      if (rn.naechste > 0) {
+        var key = /\{JAHR\}/.test(String(rn.schema || 'RE-{JAHR}-{NR:04}'))
+          ? String(rn.jahr > 0 ? rn.jahr : new Date().getFullYear()) : '*';
+        rn.zaehler[key] = rn.naechste;
+      }
+    }
+    return rn;
+  }
+
   function defaults(u) {
     var d = u || {};
     if (!d.kunden)         d.kunden = [];
     if (!d.rechnungsnummern) d.rechnungsnummern = { schema: 'RE-{JAHR}-{NR:04}',
-                                                     naechste: 1, jahr: 0 };
+                                                     zaehler: {} };
+    migriereNummern(d.rechnungsnummern);
     if (!d.rechnungsAngaben) d.rechnungsAngaben = {};
     return d;
   }
@@ -105,19 +135,22 @@
     var d = defaults(u);
     var rn = d.rechnungsnummern;
     var j = jahrAus(datum);
-    var nr = (rn.jahr === j) ? rn.naechste : 1;
+    var nr = rn.zaehler[zaehlerKey(rn.schema, datum)] || 1;
     return formatNummer(rn.schema, j, nr);
   }
-  /* Tatsächlicher Vergabevorgang: Zähler weiterstellen, neue Nummer
-   * zurückgeben. Stellt Jahreswechsel um. */
+  /* Tatsächlicher Vergabevorgang: Zähler des betroffenen Jahres weiterstellen,
+   * neue Nummer zurückgeben. Jeder Kalenderjahr-Kreis (bzw. der durchlaufende
+   * Kreis bei Schemata ohne {JAHR}) zählt unabhängig — ein Rücksprung ins
+   * Vorjahr stellt NUR dessen Zähler weiter und lässt das laufende Jahr
+   * unberührt (kein fälschlicher Reset → keine Doppelnummer). */
   function vergebeNummer(u, datum) {
     var d = defaults(u);
     var rn = d.rechnungsnummern;
     var j = jahrAus(datum);
-    if (rn.jahr !== j) { rn.jahr = j; rn.naechste = 1; }
-    var nummer = formatNummer(rn.schema, j, rn.naechste);
-    rn.naechste = (rn.naechste || 1) + 1;
-    return nummer;
+    var key = zaehlerKey(rn.schema, datum);
+    var nr = rn.zaehler[key] || 1;
+    rn.zaehler[key] = nr + 1;
+    return formatNummer(rn.schema, j, nr);
   }
   /* Wählt das passende Erlös-/USt-Konto für eine Position abhängig von der
    * Steuerlogik der Rechnung und vom Steuersatz der Position. */

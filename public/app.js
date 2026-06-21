@@ -4122,15 +4122,29 @@ function renderKunden(m) {
   html += '</div>';
 
   /* --- Rechnungsnummernkreis -------------------------------------------- */
+  /* Pro-Jahr-Zähler: das Feld „Nächste Nummer" bezieht sich auf das laufende
+   * Kalenderjahr (bzw. den durchlaufenden Kreis bei Schemata ohne {JAHR}). */
+  var nrLj      = new Date().getFullYear();
+  var nrObj     = (u && u.rechnungsnummern) || {};
+  var nrSchema  = nrObj.schema || 'RE-{JAHR}-{NR:04}';
+  var nrProJahr = /\{JAHR\}/.test(nrSchema);
+  var nrKey     = nrProJahr ? String(nrLj) : '*';
+  var nrNaechste = (nrObj.zaehler && nrObj.zaehler[nrKey] > 0) ? nrObj.zaehler[nrKey]
+                 : ((nrObj.jahr === nrLj && nrObj.naechste > 0) ? nrObj.naechste : 1);
+  var nrLabel   = nrProJahr ? ('Nächste Nummer (Jahr ' + nrLj + ')')
+                            : 'Nächste Nummer (durchlaufend)';
   html += '<div class="karte"><h2>Rechnungsnummernkreis</h2>' +
           '<div class="karte-hint">§ 14 Abs. 4 Nr. 4 UStG verlangt eine ' +
           'einmalig vergebene Rechnungsnummer. Platzhalter: ' +
           '<code>{JAHR}</code> für das Rechnungsjahr, <code>{NR:04}</code> für ' +
-          'die nächste Nummer mit vier Stellen führender Null. Beim Jahreswechsel ' +
-          'wird der Zähler automatisch zurückgesetzt.</div>' +
+          'die nächste Nummer mit vier Stellen führender Null. Mit <code>{JAHR}</code> ' +
+          'führt jedes Kalenderjahr einen eigenen, lückenlosen Kreis — auch bei ' +
+          'nachträglich rückdatierten Rechnungen entsteht keine Doppelnummer.</div>' +
           '<div class="gitter g2">' +
           fv('rechnungsnummern.schema',    'Nummernschema', 'z. B. RE-{JAHR}-{NR:04}') +
-          fv('rechnungsnummern.naechste',  'Nächste Nummer', 'einmalig manuell anpassbar, z. B. nach Migration', 'number') +
+          feldWrap(nrLabel, 'einmalig manuell anpassbar, z. B. nach Migration',
+            '<input data-u="rechnungsnummern.naechste" type="number" min="1" value="' +
+            esc(nrNaechste) + '">') +
           '</div>' +
           '<div class="btn-reihe"><button class="btn" id="nrSpeichern">' +
           'Nummernkreis speichern</button></div>' +
@@ -4187,12 +4201,25 @@ function renderKunden(m) {
   /* Nummernkreis speichern */
   m.querySelector('#nrSpeichern').onclick = function () {
     var un = JSON.parse(JSON.stringify(u));
-    un.rechnungsnummern = un.rechnungsnummern || {};
-    un.rechnungsnummern.schema = m.querySelector('[data-u="rechnungsnummern.schema"]').value.trim()
+    /* Altdaten erst self-migrating auf den Pro-Jahr-Zähler heben, damit
+     * historische Jahres-Zählerstände nicht durch das Speichern verloren gehen. */
+    Ausgangsrechnung.defaults(un);
+    var schema = m.querySelector('[data-u="rechnungsnummern.schema"]').value.trim()
       || 'RE-{JAHR}-{NR:04}';
+    /* Ohne {NR}-Platzhalter wäre jede Rechnungsnummer identisch — § 14 Abs. 4
+     * Nr. 4 UStG verlangt eine einmalig vergebene Nummer. Schema ablehnen. */
+    if (!/\{NR(?::\d+)?\}/.test(schema)) {
+      alert('Das Nummernschema muss den Platzhalter {NR} (z. B. {NR:04}) für die '
+        + 'fortlaufende Nummer enthalten — sonst wäre keine Rechnungsnummer eindeutig.');
+      return;
+    }
+    un.rechnungsnummern.schema = schema;
     var n = parseInt(m.querySelector('[data-u="rechnungsnummern.naechste"]').value, 10);
     if (!(n > 0)) n = 1;
-    un.rechnungsnummern.naechste = n;
+    /* „Nächste Nummer" bezieht sich auf das laufende Jahr (bzw. den
+     * durchlaufenden Kreis bei Schemata ohne {JAHR}). */
+    var key = /\{JAHR\}/.test(schema) ? String(new Date().getFullYear()) : '*';
+    un.rechnungsnummern.zaehler[key] = n;
     Store.speichereUnternehmen(un).then(function (g) {
       if (g && !g.fehler) { S.unternehmen = g; hinweisToast('Nummernkreis gespeichert.'); }
     });

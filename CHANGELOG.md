@@ -45,6 +45,16 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
   4180 (Durchschnittssätze § 24 UStG, Land-/Forstwirtschaft). Jetzt korrekt
   getrennt: innergem. Lieferung → 4125 (§ 4 Nr. 1b UStG), sonstige steuerfreie
   Umsätze → 4150 (§ 4 Nr. 2-7 UStG).
+- **Doppelte Rechnungsnummern bei Jahres-Rücksprung:** Der Rechnungsnummernkreis
+  führte nur einen globalen Zähler und setzte ihn bei jedem Jahreswechsel auf 1
+  zurück. Wurde nach Rechnungen des laufenden Jahres eine Rechnung ins Vorjahr
+  rückdatiert und danach wieder im laufenden Jahr fortgefahren, vergab der Zähler
+  bereits benutzte Nummern erneut (Verstoß gegen § 14 Abs. 4 Nr. 4 UStG /
+  GoBD). Jetzt führt jedes Kalenderjahr einen eigenen, lückenlosen Kreis
+  (Schemata ohne `{JAHR}` einen durchlaufenden) — das Datenmodell migriert
+  bestehende Zählerstände self-migrating. Das Stammdaten-Feld „Nächste Nummer"
+  bezieht sich nun eindeutig auf das laufende Jahr; ein Nummernschema ohne
+  `{NR}`-Platzhalter wird beim Speichern abgelehnt.
 
 ### Sicherheit / Robustheit
 - **E-Bilanz-Validierung gehärtet** (`lib/validate.js`): doppelter Callback im

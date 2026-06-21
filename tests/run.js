@@ -1650,16 +1650,68 @@ test('Ausgangsrechnung: vergebeNummer ist lückenlos und springt am Jahreswechse
   eq(Ausgangsrechnung.vergebeNummer(u, '2026-05-20'), 'RE-2026-0001', 'erste 2026');
   eq(Ausgangsrechnung.vergebeNummer(u, '2026-06-01'), 'RE-2026-0002', 'zweite 2026');
   eq(Ausgangsrechnung.vergebeNummer(u, '2026-12-31'), 'RE-2026-0003', 'dritte 2026');
-  eq(Ausgangsrechnung.vergebeNummer(u, '2027-01-02'), 'RE-2027-0001', 'reset bei Jahreswechsel');
-  eq(u.rechnungsnummern.naechste, 2, 'Zähler steht auf 2');
-  eq(u.rechnungsnummern.jahr, 2027, 'Jahr aktualisiert');
+  eq(Ausgangsrechnung.vergebeNummer(u, '2027-01-02'), 'RE-2027-0001', 'eigener Kreis je Jahr');
+  eq(u.rechnungsnummern.zaehler['2026'], 4, 'Zähler 2026 steht auf 4');
+  eq(u.rechnungsnummern.zaehler['2027'], 2, 'Zähler 2027 steht auf 2');
+});
+
+/* H2-Regression (§ 14 Abs. 4 Nr. 4 UStG): Rückdatierung ins Vorjahr + Rücksprung
+ * ins schon-begonnene Jahr darf KEINE Doppelnummer erzeugen. */
+test('Ausgangsrechnung: H2 — Jahres-Rücksprung erzeugt keine Doppelnummer', function () {
+  var u = {};
+  var seq = ['2026-01-15', '2026-02-15', '2025-12-20', '2026-03-10', '2026-04-05'];
+  var nums = seq.map(function (d) { return Ausgangsrechnung.vergebeNummer(u, d); });
+  eq(nums.join(','),
+     'RE-2026-0001,RE-2026-0002,RE-2025-0001,RE-2026-0003,RE-2026-0004',
+     'Vorjahr-Einschub stellt nur den 2025er-Kreis weiter, 2026 läuft lückenlos fort');
+  var uniq = nums.filter(function (n, i) { return nums.indexOf(n) === i; });
+  eq(uniq.length, nums.length, 'alle vergebenen Nummern sind paarweise verschieden');
+});
+
+/* Self-migrating: altes Single-Zähler-Modell { jahr, naechste } übernimmt den
+ * Stand in den richtigen Jahres-Kreis. */
+test('Ausgangsrechnung: Migration Single-Zähler -> Pro-Jahr', function () {
+  var u = { rechnungsnummern: { schema: 'RE-{JAHR}-{NR:04}', naechste: 5, jahr: 2026 } };
+  eq(Ausgangsrechnung.vergebeNummer(u, '2026-05-20'), 'RE-2026-0005', 'setzt bei 5 fort (kein Reset auf 1)');
+  eq(Ausgangsrechnung.vergebeNummer(u, '2025-11-01'), 'RE-2025-0001', 'Vorjahr startet eigenen Kreis');
+  eq(u.rechnungsnummern.zaehler['2026'], 6, '2026-Kreis fortgeschrieben');
 });
 
 test('Ausgangsrechnung: naechsteNummer mutiert nicht (Vorschau)', function () {
   var u = { rechnungsnummern: { schema: 'RE-{JAHR}-{NR:04}', naechste: 5, jahr: 2026 } };
   eq(Ausgangsrechnung.naechsteNummer(u, '2026-05-20'), 'RE-2026-0005', 'Vorschau 5');
   eq(Ausgangsrechnung.naechsteNummer(u, '2026-05-20'), 'RE-2026-0005', 'noch immer 5 (keine Mutation)');
-  eq(u.rechnungsnummern.naechste, 5, 'Zähler unverändert');
+  eq(u.rechnungsnummern.zaehler['2026'], 5, 'Zähler unverändert');
+});
+
+/* Schema ohne {JAHR}: durchlaufende Nummerierung, kein Jahres-Reset. */
+test('Ausgangsrechnung: Schema ohne {JAHR} zählt durchlaufend über Jahresgrenzen', function () {
+  var u = { rechnungsnummern: { schema: 'R{NR:05}', zaehler: {} } };
+  eq(Ausgangsrechnung.vergebeNummer(u, '2026-12-30'), 'R00001', 'erste');
+  eq(Ausgangsrechnung.vergebeNummer(u, '2027-01-02'), 'R00002', 'kein Reset im neuen Jahr');
+  eq(Ausgangsrechnung.vergebeNummer(u, '2026-06-01'), 'R00003', 'Rücksprung zählt im selben Kreis weiter');
+  eq(u.rechnungsnummern.zaehler['*'], 4, 'gemeinsamer Zähler steht auf 4');
+});
+
+/* Migration rettet einen manuell gesetzten Startwert OHNE `jahr` (Altzustand des
+ * UI-Zweitbefunds) auf das laufende Jahr, statt ihn zu verwerfen → kein Reset
+ * auf 1, keine Doppelnummer (§ 14 Abs. 4 Nr. 4 UStG). */
+test('Ausgangsrechnung: Migration rettet naechste ohne jahr aufs laufende Jahr', function () {
+  var lj = String(new Date().getFullYear());
+  var u = { rechnungsnummern: { schema: 'RE-{JAHR}-{NR:04}', naechste: 48 } };
+  Ausgangsrechnung.defaults(u);
+  eq(u.rechnungsnummern.zaehler[lj], 48, 'Startwert 48 ins laufende Jahr gerettet');
+  eq(Ausgangsrechnung.vergebeNummer(u, lj + '-03-01'), 'RE-' + lj + '-0048',
+     'erste Vergabe setzt bei 48 fort, kein Reset auf 1');
+});
+
+/* Migration ist idempotent: wiederholtes defaults() verändert den Zähler nicht. */
+test('Ausgangsrechnung: Migration ist idempotent', function () {
+  var u = { rechnungsnummern: { schema: 'RE-{JAHR}-{NR:04}', naechste: 3, jahr: 2026 } };
+  Ausgangsrechnung.defaults(u);
+  eq(u.rechnungsnummern.zaehler['2026'], 3, 'einmal migriert');
+  Ausgangsrechnung.defaults(u);
+  eq(u.rechnungsnummern.zaehler['2026'], 3, 'zweiter Aufruf ist No-Op');
 });
 
 test('Ausgangsrechnung: eigeneAusUnternehmen — rechnungsAngaben überschreibt Hauptfelder', function () {
