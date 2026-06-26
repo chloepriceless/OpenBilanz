@@ -3044,12 +3044,15 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
       };
       req.onsuccess = function () {
         var db = req.result;
-        var t = db.transaction(['unternehmen', 'abschluesse'], 'readwrite');
+        var t = db.transaction(['unternehmen', 'abschluesse', 'meta'], 'readwrite');
         if (daten.unternehmen) {
           var u = JSON.parse(JSON.stringify(daten.unternehmen)); u._id = 'singleton';
           t.objectStore('unternehmen').put(u);
         }
         (daten.abschluesse || []).forEach(function (a) { t.objectStore('abschluesse').put(a); });
+        /* Optional: v1-meta-Einträge vorbelegen (z. B. eine bestehende backup-Zeile),
+         * um zu prüfen, dass die Migration meta rein ADDITIV behandelt. */
+        (daten.meta || []).forEach(function (m) { t.objectStore('meta').put(m); });
         t.oncomplete = function () { db.close(); resolve(); };
         t.onerror = function () { reject(t.error); };
       };
@@ -3117,6 +3120,166 @@ test('Importprotokoll: istWiederholung erkennt bekannten Datei-Hash', function (
       eq(r[0].length, 1, 'standard sieht nur eigenen');
       eq(r[1].length, 1, 'firma2 sieht nur eigenen');
       eq(r[2], null, 'Quergriff auf fremden Abschluss -> null');
+    });
+  });
+
+  /* G1: v1-Nutzer mit Abschlüssen, aber NIE Stammdaten gespeichert. Realer
+   * Zustand. Alle Abschlüsse müssen verlustfrei nach 'standard' (Name-Fallback
+   * 'Standard') wandern; Mandant + Backup-Hinweis werden angelegt. */
+  test('IDB v1->v2: Abschlüsse OHNE Unternehmen -> standard, verlustfrei, Name Standard', function () {
+    return frischeIDB({
+      abschluesse: [
+        { id: 'A-x', stichtag: '2024-12-31', art: 'JAHRESABSCHLUSS', buchungen: [{ k: 1 }, { k: 2 }] },
+        { id: 'A-y', stichtag: '2022-12-31', art: 'EROEFFNUNGSBILANZ' }
+      ]
+    }).then(function () {
+      return Promise.all([
+        StoreIDB.listeMandanten(),
+        StoreIDB.ladeUnternehmen('standard'),
+        StoreIDB.listeAbschluesse('standard'),
+        StoreIDB.getMeta('mandantenMigrationHinweis')
+      ]);
+    }).then(function (r) {
+      var mand = r[0], unt = r[1], absl = r[2], flag = r[3];
+      eq(mand.length, 1, 'genau ein Mandant trotz fehlendem Unternehmen');
+      eq(mand[0].id, 'standard', 'Mandant-id standard');
+      eq(mand[0].name, 'Standard', 'Name-Fallback Standard (kein Unternehmen)');
+      eq(unt, null, 'kein Unternehmen vorhanden (nicht erfunden)');
+      eq(absl.length, 2, 'beide Abschlüsse erhalten (verlustfrei)');
+      eq(absl.map(function (a) { return a.id; }).sort().join(','), 'A-x,A-y', 'beide ids erhalten');
+      ok(absl.every(function (a) { return a.mandantId === 'standard'; }), 'mandantId gesetzt');
+      var ax = absl.filter(function (a) { return a.id === 'A-x'; })[0];
+      ok(ax.buchungen && ax.buchungen.length === 2, 'Nutzdaten (buchungen) erhalten');
+      ok(flag, 'Backup-Hinweis-Flag gesetzt (echte Daten waren vorhanden)');
+    });
+  });
+
+  /* G2: Mandantenname-Fallback-Kette name || firma || 'Standard'. firma-Fallback
+   * + (zweiter Lauf) weder name noch firma -> 'Standard'. */
+  test('IDB v1->v2: Mandantenname-Fallback (firma, dann Standard)', function () {
+    return frischeIDB({
+      unternehmen: { firma: 'Firma AG', rechtsform: 'AG' },
+      abschluesse: [{ id: 'A-f', stichtag: '2024-12-31' }]
+    }).then(function () {
+      return StoreIDB.listeMandanten();
+    }).then(function (mand) {
+      eq(mand.length, 1, 'ein Mandant (firma-Fall)');
+      eq(mand[0].name, 'Firma AG', 'Mandantenname aus firma (name fehlt)');
+      return frischeIDB({
+        unternehmen: { rechtsform: 'GmbH' },   /* weder name noch firma */
+        abschluesse: [{ id: 'A-n', stichtag: '2024-12-31' }]
+      });
+    }).then(function () {
+      return Promise.all([StoreIDB.listeMandanten(), StoreIDB.ladeUnternehmen('standard')]);
+    }).then(function (r) {
+      eq(r[0][0].name, 'Standard', 'Name-Fallback Standard (weder name noch firma)');
+      ok(r[1] && r[1].rechtsform === 'GmbH', 'Unternehmensfelder dennoch erhalten');
+    });
+  });
+
+  /* G3: Migration ist auf 'meta' rein ADDITIV — eine bestehende v1-backup-Zeile
+   * (ungesicherte-Änderungen-Zähler / Export-Zeitpunkt) darf NICHT überschrieben
+   * werden, während der Backup-Hinweis zusätzlich gesetzt wird. */
+  test('IDB v1->v2: bestehende meta-backup-Zeile überlebt Migration unverändert', function () {
+    return frischeIDB({
+      unternehmen: { name: 'Meta GmbH' },
+      abschluesse: [{ id: 'A-m', stichtag: '2024-12-31' }],
+      meta: [{ key: 'backup', value: { exportiertAm: '2024-03-01T00:00:00.000Z', aenderungen: 7 } }]
+    }).then(function () {
+      return Promise.all([StoreIDB.backupStatus(), StoreIDB.getMeta('mandantenMigrationHinweis')]);
+    }).then(function (r) {
+      var bk = r[0], flag = r[1];
+      eq(bk.exportiertAm, '2024-03-01T00:00:00.000Z', 'Export-Zeitpunkt unverändert');
+      eq(bk.aenderungen, 7, 'Änderungszähler unverändert (nicht geclobbert)');
+      ok(flag, 'Backup-Hinweis zusätzlich gesetzt (additiv)');
+    });
+  });
+
+  /* G4: IDB-Versions-Idempotenz (≠ Pure-Transform-Idempotenz). Nach der Migration
+   * ist die DB v2 -> erneutes Öffnen darf migriereV1zuV2 NICHT noch einmal
+   * auslösen (Flag-Zeitstempel stabil, kein Doppel-Mandant, Daten stabil). */
+  test('IDB v1->v2: Re-Open nach Migration läuft Migration NICHT erneut', function () {
+    var ersteZeit;
+    return frischeIDB({
+      unternehmen: { name: 'Idem GmbH' },
+      abschluesse: [{ id: 'A-i1', stichtag: '2024-12-31' }, { id: 'A-i2', stichtag: '2023-12-31' }]
+    }).then(function () {
+      return StoreIDB.getMeta('mandantenMigrationHinweis');
+    }).then(function (flag) {
+      ersteZeit = flag && flag.zeit;
+      ok(ersteZeit, 'Migration lief einmal (Flag mit Zeit)');
+      StoreIDB._resetCache();                 /* erzwingt frisches offen() auf v2-DB */
+      return StoreIDB.init();                  /* würde bei Re-Migration neu stempeln */
+    }).then(function () {
+      return Promise.all([
+        StoreIDB.listeMandanten(),
+        StoreIDB.listeAbschluesse('standard'),
+        StoreIDB.getMeta('mandantenMigrationHinweis')
+      ]);
+    }).then(function (r) {
+      eq(r[0].length, 1, 'weiterhin genau ein Mandant (keine Re-Migration)');
+      eq(r[1].length, 2, 'beide Abschlüsse stabil');
+      eq(r[2] && r[2].zeit, ersteZeit, 'Flag-Zeitstempel unverändert (Migration nicht erneut gelaufen)');
+    });
+  });
+
+  /* G5: v1-Nutzer mit Stammdaten, aber NIE einem Abschluss — häufiger realer
+   * Zustand. Hier setzt hatDaten allein der u-Zweig (Cursor bleibt leer); der
+   * else-if(hatDaten)-Pfad (store-idb.js:62) muss dennoch Mandant + Flag anlegen. */
+  test('IDB v1->v2: Unternehmen OHNE Abschlüsse -> Mandant aus Unternehmen, leere Abschlussliste', function () {
+    return frischeIDB({
+      unternehmen: { name: 'Solo GmbH', rechtsform: 'GmbH' }
+      /* keine abschluesse */
+    }).then(function () {
+      return Promise.all([
+        StoreIDB.listeMandanten(),
+        StoreIDB.ladeUnternehmen('standard'),
+        StoreIDB.listeAbschluesse('standard'),
+        StoreIDB.getMeta('mandantenMigrationHinweis')
+      ]);
+    }).then(function (r) {
+      var mand = r[0], unt = r[1], absl = r[2], flag = r[3];
+      eq(mand.length, 1, 'genau ein Mandant trotz fehlender Abschlüsse');
+      eq(mand[0].name, 'Solo GmbH', 'Mandantenname aus Unternehmen');
+      ok(unt && unt.name === 'Solo GmbH', 'Unternehmen unter standard erhalten');
+      eq(absl.length, 0, 'leere Abschlussliste (nichts erfunden)');
+      ok(flag, 'Backup-Hinweis-Flag gesetzt (Stammdaten = echte Daten)');
+    });
+  });
+
+  /* G6: Regressions-Pin (Refute-Befund 2026-06-26). Ein Abschluss mit BEREITS
+   * gesetzter, fremder mandantId konnte in einer v1-DB nur via crafted Import
+   * (v1-schreibeSnapshot schrieb Abschlüsse verbatim) landen. Die Migration
+   * ERHÄLT ihn (Guard if(!mandantId), store-idb.js:60) — sie droppt ihn NICHT.
+   * Dokumentiert zugleich das Ist-Verhalten: der Fremd-Satz ist weiterhin über
+   * seine mandantId auffindbar, bleibt aber ohne mandanten-Index-Eintrag (Waise,
+   * via Backup-Restore voll wiederherstellbar). Pin gegen versehentliches Löschen
+   * bei künftigen Migrations-Refactors. */
+  test('IDB v1->v2: Abschluss mit fremder mandantId wird ERHALTEN (nicht gedroppt)', function () {
+    return frischeIDB({
+      unternehmen: { name: 'Haupt GmbH' },
+      abschluesse: [
+        { id: 'A-std', stichtag: '2024-12-31' },                       /* normal -> standard */
+        { id: 'A-fremd', stichtag: '2024-12-31', mandantId: 'fremd', buchungen: [{ z: 9 }] }
+      ]
+    }).then(function () {
+      return Promise.all([
+        StoreIDB.listeMandanten(),
+        StoreIDB.listeAbschluesse('standard'),
+        StoreIDB.listeAbschluesse('fremd'),
+        StoreIDB.leseSnapshot()
+      ]);
+    }).then(function (r) {
+      var mand = r[0], stdA = r[1], fremdA = r[2], snap = r[3];
+      eq(stdA.length, 1, 'standard hat nur den eigenen Abschluss');
+      eq(fremdA.length, 1, 'Fremd-Abschluss bleibt über seine mandantId auffindbar (nicht verloren)');
+      eq(fremdA[0].id, 'A-fremd', 'korrekte id');
+      ok(fremdA[0].buchungen && fremdA[0].buchungen.length === 1, 'Nutzdaten des Fremd-Satzes erhalten');
+      /* Ist-Verhalten: Fremd-Mandant bleibt verwaist (kein Index-Eintrag) ... */
+      eq(mand.length, 1, 'nur standard im Mandanten-Index (Fremd-Mandant verwaist)');
+      eq(mand[0].id, 'standard', 'der eine Mandant ist standard');
+      /* ... aber der Voll-Snapshot enthält JEDEN Abschluss -> Backup-Restore stellt ihn wieder her. */
+      eq(snap.abschluesse.length, 2, 'Voll-Backup enthält beide Abschlüsse (verlustfrei sicherbar)');
     });
   });
 })();
