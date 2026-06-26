@@ -82,6 +82,14 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
   Leistungsempfängers nach § 13b UStG.") auf dem PDF — aus derselben
   STEUERLOGIK wie die eingebettete CII/UBL-XML, damit Beleg und Rechnung
   denselben Hinweis tragen.
+- **E-Rechnung verlor die Verkäufer-Steuernummer (BT-32):** Das UBL-Format gab
+  die Steuernummer nie aus, das CII-Format nur ohne USt-IdNr. Eine GmbH mit nur
+  einer Steuernummer (ohne USt-IdNr) erzeugte so eine UBL-Rechnung ganz ohne
+  steuerliche Pflichtangabe nach § 14 Abs. 4 UStG; bei gepflegter USt-IdNr fiel
+  die Steuernummer in beiden Formaten weg. Jetzt wird die Steuernummer
+  unabhängig von der USt-IdNr als zweite Steuerregistrierung ausgegeben
+  (`TaxScheme/ID=FC` bzw. `schemeID=FC`) — beide Angaben dürfen nach EN 16931
+  (BT-31/BT-32) koexistieren und erfüllen die KoSIT-Regel BR-DE-16.
 
 ### Sicherheit / Robustheit
 - **E-Bilanz-Validierung gehärtet** (`lib/validate.js`): doppelter Callback im
