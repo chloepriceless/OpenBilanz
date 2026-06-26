@@ -75,6 +75,13 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 - **E-Rechnung crashte bei numerischer IBAN:** War die IBAN in den Stammdaten als
   Zahl statt String gespeichert (z. B. aus importierten Daten), warf der CII- und
   UBL-Renderer `b.iban.replace is not a function`. Jetzt defensiv `String(...)`.
+- **ZUGFeRD-Hybrid-PDF zeigte den internen Steuerschalter statt Klartext:** Der
+  sichtbare Beleg druckte bei Sonderfällen den Roh-Bezeichner (z. B.
+  `REVERSE_CHARGE_13b`) statt des umsatzsteuerlichen Pflichthinweises. Jetzt
+  steht der §-14-taugliche Klartext (z. B. „Steuerschuldnerschaft des
+  Leistungsempfängers nach § 13b UStG.") auf dem PDF — aus derselben
+  STEUERLOGIK wie die eingebettete CII/UBL-XML, damit Beleg und Rechnung
+  denselben Hinweis tragen.
 
 ### Sicherheit / Robustheit
 - **E-Bilanz-Validierung gehärtet** (`lib/validate.js`): doppelter Callback im

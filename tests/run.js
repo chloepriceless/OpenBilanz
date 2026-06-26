@@ -1573,6 +1573,57 @@ test('E-Rechnung: Bytes ohne PDF-Magic → klare Fehlermeldung', function () {
       });
     });
   });
+
+  /* steuerHinweisText(): §-14-tauglicher Klartext statt Roh-Enum auf dem
+   * SICHTBAREN Beleg (Welle-2-Audit LOW #6). Quelle = dieselbe STEUERLOGIK wie
+   * die CII/UBL-XML (eine Quelle der Wahrheit), damit Beleg und eingebettete
+   * Rechnung denselben Hinweis tragen. */
+  test('ZUGFeRD-PDF: steuerHinweisText zieht §14-Klartext aus der STEUERLOGIK (kein Roh-Enum)', function () {
+    Object.keys(XRechnungUBL.STEUERLOGIK).forEach(function (schalter) {
+      var aus = ZP.steuerHinweisText(schalter);
+      if (schalter === 'NORMAL') {
+        eq(aus, '', 'NORMAL → kein Hinweis');
+      } else {
+        eq(aus, XRechnungUBL.STEUERLOGIK[schalter].hinweis, schalter + ': PDF-Hinweis = XML-Hinweis (eine Quelle)');
+        ok(aus.indexOf(schalter) === -1, schalter + ': Roh-Enum-Bezeichner taucht NICHT im Klartext auf');
+      }
+    });
+  });
+
+  test('ZUGFeRD-PDF: steuerHinweisText — leer/NORMAL ohne Hinweis, unbekannter Schalter mit Fallback', function () {
+    eq(ZP.steuerHinweisText(''), '', 'leer → kein Hinweis');
+    eq(ZP.steuerHinweisText(undefined), '', 'undefined → kein Hinweis');
+    eq(ZP.steuerHinweisText('NORMAL'), '', 'NORMAL → kein Hinweis');
+    var fb = ZP.steuerHinweisText('UNBEKANNT_XYZ');
+    ok(/UNBEKANNT_XYZ/.test(fb) && /siehe XML/.test(fb), 'unbekannt → Roh-Wert + XML-Verweis als Fallback');
+  });
+
+  test('ZUGFeRD-PDF: erzeuge() mit §13b zeigt KEIN Roh-Enum mehr im sichtbaren PDF-Content', function () {
+    var zlib = require('zlib');
+    var rechnung = { nummer: '2026-RC-009', datum: '2026-05-12', netto: 100, ust: 0, brutto: 100,
+      besonderheit: 'REVERSE_CHARGE_13b',
+      kundeSnapshot: { name: 'Kunde GmbH', strasse: 'Gasse 2', plz: '10115', ort: 'Berlin', land: 'DE', ustId: 'DE123456789' },
+      positionen: [{ bezeichnung: 'Leistung', menge: 1, einheit: 'C62', einzelpreis: 100, ustSatz: 19 }] };
+    var eigene = { name: 'Test GmbH', strasse: 'Weg 1', plz: '04229', ort: 'Leipzig', land: 'DE', ustId: 'DE123456788' };
+    return ZP.erzeuge(rechnung, eigene, FIXTURE_CII).then(function (bytes) {
+      var buf = Buffer.from(bytes);
+      ok(buf.length > 1000, 'Hybrid-PDF erzeugt (' + buf.length + ' Bytes)');
+      /* Content-Streams inflaten; reines ASCII-Suchmuster ist encoding-robust
+       * (kein Oktal-Escape-/WinAnsi-Problem). Das alte Roh-Enum darf weg sein. */
+      var sichtbar = '', idx = 0;
+      while (true) {
+        var s = buf.indexOf('stream', idx); if (s < 0) break;
+        var d = s + 6; if (buf[d] === 0x0d) d++; if (buf[d] === 0x0a) d++;
+        var e = buf.indexOf('endstream', d); if (e < 0) break;
+        var chunk = buf.slice(d, e);
+        try { sichtbar += zlib.inflateSync(chunk).toString('latin1'); }
+        catch (_) { try { sichtbar += zlib.inflateRawSync(chunk).toString('latin1'); } catch (_2) {} }
+        idx = e + 9;
+      }
+      ok(sichtbar.indexOf('Steuerlicher Hinweis: REVERSE_CHARGE_13b') === -1,
+         'Roh-Enum-Hinweis nicht mehr im sichtbaren PDF-Content');
+    });
+  });
 })();
 
 /* ---- Ausgangsrechnung: XRechnung-UBL-Renderer ------------------------ */

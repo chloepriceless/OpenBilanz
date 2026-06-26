@@ -27,10 +27,13 @@
  * fremden Netzen).
  * ========================================================================= */
 (function (root, factory) {
-  var api = factory();
+  var UBL = (typeof module !== 'undefined' && module.exports) ?
+    require('./xrechnung-ubl.js') :
+    (typeof self !== 'undefined' ? self : this).XRechnungUBL;
+  var api = factory(UBL);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ZugferdPdf = api;
-})(typeof self !== 'undefined' ? self : this, function () {
+})(typeof self !== 'undefined' ? self : this, function (UBL) {
   'use strict';
 
   /* ---- pdf-lib-Verfügbarkeit prüfen / lazy laden ----------------------- */
@@ -116,6 +119,18 @@
     return String(s == null ? '' : s).replace(/[^\x20-\xff]/g, '?');
   }
 
+  /* Liefert den §-14-tauglichen Klartext-Hinweis zu einer Steuer-Besonderheit
+   * aus DERSELBEN STEUERLOGIK wie die CII/UBL-XML (eine Quelle der Wahrheit).
+   * Leerstring, wenn kein Hinweis nötig ist (NORMAL/leer). Bei unbekanntem
+   * Schalter oder fehlendem UBL-Modul: Roh-Wert + XML-Verweis als Fallback —
+   * auf einem Pflichtbeleg ist ein Hinweis mit Verweis besser als gar keiner. */
+  function steuerHinweisText(besonderheit) {
+    if (!besonderheit || besonderheit === 'NORMAL') return '';
+    var stl = (UBL && UBL.STEUERLOGIK && UBL.STEUERLOGIK[besonderheit]) || null;
+    if (stl && stl.hinweis) return stl.hinweis;
+    return 'Steuerlicher Hinweis: ' + besonderheit + ' — siehe XML.';
+  }
+
   /* ---- Layout-Zeichnen ------------------------------------------------- */
 
   function zeichneRechnung(pdfDoc, page, font, fontBold, rechnung, eigene) {
@@ -187,9 +202,11 @@
     page.drawText('Brutto:', { x: W - marginX - 200, y: y, size: 11, font: fontBold });
     page.drawText(geld(rechnung.brutto || 0), { x: W - marginX - 80, y: y, size: 11, font: fontBold });
     y -= 24;
-    /* Steuerhinweis */
-    if (rechnung.besonderheit && rechnung.besonderheit !== 'NORMAL') {
-      schreibe('Steuerlicher Hinweis: ' + rechnung.besonderheit + ' — siehe XML.', { size: 9 });
+    /* Steuerhinweis — §-14-tauglicher Klartext aus der STEUERLOGIK
+     * (s. steuerHinweisText), nicht das Roh-Enum drucken. */
+    var stHinweis = steuerHinweisText(rechnung.besonderheit);
+    if (stHinweis) {
+      schreibe(stHinweis, { size: 9 });
       y -= lineH;
     }
     if (rechnung.zahlungsbedingungen) {
@@ -252,5 +269,6 @@
     });
   }
 
-  return { erzeuge: erzeuge, ladePdfLib: ladePdfLib, istVerfuegbar: istVerfuegbar };
+  return { erzeuge: erzeuge, ladePdfLib: ladePdfLib, istVerfuegbar: istVerfuegbar,
+           steuerHinweisText: steuerHinweisText };
 });
