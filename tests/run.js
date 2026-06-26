@@ -1283,6 +1283,16 @@ test('DATEV-Export: Rückimport ergibt dieselbe Buchung (Roundtrip)', function (
   eq(r.buchungen[0].betrag, 1190, 'Betrag erhalten');
   eq(r.buchungen[0].datum, '2026-03-15', 'Belegdatum erhalten');
 });
+test('DATEV-Export: Buchung ohne Belegdatum nutzt Wirtschaftsjahr-Ende als TTMM (statt verstümmelt)', function () {
+  var a = { bezeichnung: 'JA 2026', gjVon: '2026-01-01', gjBis: '2026-12-31',
+    buchungen: [ { datum: '', soll: '1800', haben: '4400', betrag: 500, text: 'Ohne Datum' } ] };
+  var zeile = Datev.erzeuge(a, {}).replace(/^﻿/, '').replace(/\r\n$/, '').split('\r\n')[2];
+  eq(zeile.split(';')[9], '3112', 'Belegdatum = TTMM des Wirtschaftsjahr-Endes (31.12.), nicht "23"');
+  /* Roundtrip: das Fallback-Datum liest sich als 31.12. des Wirtschaftsjahres zurück. */
+  var r = Datev.parse(Datev.erzeuge(a, {}));
+  ok(!r.fehler && r.buchungen.length === 1, 'Stapel mit Fallback-Datum bleibt einlesbar');
+  eq(r.buchungen[0].datum, '2026-12-31', 'Fallback-Belegdatum = Wirtschaftsjahr-Ende');
+});
 
 /* ---- Journal-Export CSV / JSON --------------------------------------- */
 test('Journal-Export: CSV mit Kopfzeile und einer Zeile je Buchung', function () {

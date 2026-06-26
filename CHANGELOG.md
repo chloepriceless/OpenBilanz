@@ -90,6 +90,13 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
   unabhängig von der USt-IdNr als zweite Steuerregistrierung ausgegeben
   (`TaxScheme/ID=FC` bzw. `schemeID=FC`) — beide Angaben dürfen nach EN 16931
   (BT-31/BT-32) koexistieren und erfüllen die KoSIT-Regel BR-DE-16.
+- **DATEV-Export: verstümmeltes Belegdatum bei Buchungen ohne eigenes Datum.**
+  Als Fallback diente das Wirtschaftsjahr-Ende, aber im kompakten `YYYYMMDD`-
+  Format, während die TTMM-Extraktion das ISO-Format `YYYY-MM-DD` erwartete.
+  Eine Buchung ohne Datum (von der Plausi-Prüfung nur als Warnung behandelt)
+  erhielt so ein ungültiges Belegdatum (`23` statt `3112`), das der DATEV-
+  Import des Steuerberaters ablehnt. Das Datum wird jetzt formatrobust
+  normalisiert.
 
 ### Sicherheit / Robustheit
 - **E-Bilanz-Validierung gehärtet** (`lib/validate.js`): doppelter Callback im

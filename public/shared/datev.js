@@ -46,6 +46,15 @@
     return isNaN(v) ? 0 : v;
   }
 
+  /* DATEV-Belegdatum TTMM aus einem Datum — toleriert ISO 'YYYY-MM-DD' UND das
+   * kompakte 'YYYYMMDD' (das Fallback-Stichtagsdatum liegt kompakt vor). Liefert
+   * Leerstring, wenn kein vollständiges Datum vorhanden ist. */
+  function ttmmAus(datum) {
+    var d = String(datum || '').replace(/\D/g, '');
+    if (d.length < 8) return '';
+    return d.slice(6, 8) + d.slice(4, 6);
+  }
+
   function parse(text) {
     var roh = String(text || '').replace(/^﻿/, '')
       .replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -136,8 +145,10 @@
     var zeilen = [];
     bu.forEach(function (b) {
       if (!b || !b.betrag) return;
-      var dd = String(b.datum || bis);
-      var ttmm = dd.slice(8, 10) + dd.slice(5, 7);
+      /* Belegdatum aus der Buchung (ISO), Fallback Wirtschaftsjahr-Ende (kompakt).
+       * ttmmAus toleriert beide Formate — ohne das ergäbe das kompakte Fallback
+       * ein verstümmeltes Belegdatum (Welle-2-Audit: '23' statt '3112'). */
+      var ttmm = ttmmAus(b.datum) || ttmmAus(bis);
       var umsatz = (Math.round(Math.abs(Number(b.betrag)) * 100) / 100).toFixed(2)
         .replace('.', ',');
       zeilen.push([umsatz, '"S"', '"EUR"', '', '', '', b.soll, b.haben, '',
