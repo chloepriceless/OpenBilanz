@@ -25,12 +25,12 @@
  *
  * Ergebnis:
  *   stichtagswertEur:  der nach § 256a anzusetzende Wert in EUR
- *   delta:             Differenz stichtagswertEur - buchwertEur
- *                       > 0  Ertrag aus Waehrungsumrechnung
- *                       < 0  Aufwand aus Waehrungsumrechnung
- *                       = 0  keine Buchung
+ *   delta:             Differenz stichtagswertEur - buchwertEur (reine Wertaenderung)
+ *   guvWirkung:        GuV-wirksamer Betrag: > 0 Ertrag, < 0 Aufwand, = 0 keine
+ *                       Buchung. Bei Schulden gegenlaeufig zu delta (ein Anstieg
+ *                       der Schuld ist Aufwand, ein Rueckgang Ertrag).
  *   regel:            'kurzfristig' | 'langfristig-niederstwert'
- *                       | 'langfristig-hoechstwert' | 'unveraendert'
+ *                       | 'langfristig-hoechstwert' | 'unveraendert' | 'kurs-fehlt'
  *   begruendung:      kurzer Begruendungssatz fuer das Buchungsjournal
  * ========================================================================= */
 (function (root, factory) {
@@ -55,6 +55,18 @@
     var monate = +o.restlaufzeitMonate;
     if (!isFinite(monate)) monate = 0;
     var stichtagsWertVoll = rd(fw * kurs);
+
+    // Ohne gueltigen Stichtagskurs KEINE Bewertung erzwingen: mit kurs <= 0 waere
+    // stichtagsWertVoll 0, und der kurzfristige Zweig schriebe den gesamten
+    // Buchwert auf 0 ab. Buchwert unveraendert lassen + das fehlende Datum melden.
+    if (!(kurs > 0)) {
+      return {
+        stichtagswertEur: rd(buchwert), delta: 0, guvWirkung: 0,
+        regel: 'kurs-fehlt',
+        begruendung: 'Kein gueltiger Devisenkassamittelkurs am Stichtag ' +
+          'angegeben - keine Umrechnung vorgenommen.'
+      };
+    }
 
     var kurzfristig = monate <= 12;
     var wert, regel, begr;

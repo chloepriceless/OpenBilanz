@@ -99,6 +99,12 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
   normalisiert.
 
 ### Sicherheit / Robustheit
+- **Fremdwährungs-Stichtagsbewertung gehärtet** (`fx.js`, § 256a HGB): Bei
+  fehlendem oder ungültigem Devisenkassamittelkurs (≤ 0) wurde der Bestand im
+  kurzfristigen Zweig auf 0 abgewertet (Totalabschreibung durch einen fehlenden
+  Eingabewert). Jetzt bleibt der Buchwert unverändert und es wird kein Kurswert
+  angesetzt (Regel `kurs-fehlt`). Die Rechenlogik selbst (kurz-/langfristig,
+  Niederst-/Höchstwertprinzip) ist gegen § 256a/§ 253/§ 252 HGB geprüft.
 - **E-Bilanz-Validierung gehärtet** (`lib/validate.js`): doppelter Callback im
   Arelle-Spawn abgesichert (verhinderte einen möglichen „headers already
   sent"-Crash); die Taxonomie-Suche durchsucht nicht mehr das world-writable

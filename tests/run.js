@@ -2138,6 +2138,17 @@ test('Fx: langfristige Verbindlichkeit folgt Höchstwertprinzip', function () {
   eq(stab.delta, 0, 'keine Abwertung der Schuld');
   eq(stab.regel, 'unveraendert', '');
 });
+test('Fx: ohne gültigen Stichtagskurs keine (Null-)Bewertung — Buchwert bleibt', function () {
+  // Ein fehlender/ungültiger Kurs darf NICHT den gesamten Buchwert auf 0 abschreiben.
+  ['', 0, -1, undefined, NaN].forEach(function (k) {
+    var r = Fx.stichtagsbewertung({ art: 'vermoegen', buchwertEur: 11000,
+      fwBetrag: 10000, kursStichtag: k, restlaufzeitMonate: 6 });
+    eq(r.stichtagswertEur, 11000, 'Buchwert bleibt bei Kurs=' + k);
+    eq(r.delta, 0, 'keine Buchung bei Kurs=' + k);
+    eq(r.guvWirkung, 0, 'keine GuV-Wirkung bei Kurs=' + k);
+    eq(r.regel, 'kurs-fehlt', 'Regel kurs-fehlt bei Kurs=' + k);
+  });
+});
 
 /* ---- Command-Palette: Fuzzy-Suche ----------------------------------- */
 test('Palette: fuzzy findet Subsequence', function () {
