@@ -197,11 +197,20 @@
     /* PartyName ist optional, hilft aber bei der Lesbarkeit. */
     p += tag('cac:PartyName', tag('cbc:Name', esc(e.name || '')));
     p += renderAddress(e);
-    /* PartyTaxScheme: USt-IdNr. */
+    /* PartyTaxScheme: USt-IdNr. (BT-31, TaxScheme/ID=VAT) und/oder Steuernummer
+     * (BT-32, TaxScheme/ID≠VAT, hier FC wie im CII). Beide dürfen koexistieren;
+     * die KoSIT-XRechnung-Visualisierung unterscheidet BT-31/BT-32 genau über
+     * VAT vs. nicht-VAT. Ohne den FC-Block verlöre eine GmbH ohne USt-IdNr
+     * (nur StNr) ihre einzige § 14-Steuer-ID im UBL-Format. */
     if (e.ustId) {
       p += tag('cac:PartyTaxScheme',
         tag('cbc:CompanyID', esc(String(e.ustId).replace(/\s+/g, ''))) +
         tag('cac:TaxScheme', tag('cbc:ID', 'VAT')));
+    }
+    if (e.stNr) {
+      p += tag('cac:PartyTaxScheme',
+        tag('cbc:CompanyID', esc(e.stNr)) +
+        tag('cac:TaxScheme', tag('cbc:ID', 'FC')));
     }
     /* PartyLegalEntity: rechtliche Firmenbezeichnung + ggf. HR-Nr. */
     var legal = tag('cbc:RegistrationName', esc(e.name || ''));
@@ -280,6 +289,11 @@
     return rechnung.positionen.map(function (p, i) {
       var menge = num(p.menge);
       var preis = num(p.einzelpreis);
+      /* LineExtensionAmount = round(menge*preis, 2). EN-16931-Core kennt KEINE
+       * harte Zeilen-Multiplikationsregel (BR-CO-* prüfen nur Dokumentsummen);
+       * das strengste CIUS PEPPOL-EN16931-R120 prüft qty*preis mit Toleranz
+       * 0.02 — round(.,2) weicht höchstens 0.005 ab, ist also stets konform.
+       * BaseQuantity bleibt Default 1, keine Zeilen-Zu/-Abschläge. */
       var nettoP = Math.round((menge * preis + Number.EPSILON) * 100) / 100;
       var satz = standard ? num(p.ustSatz) : 0;
       var einheit = String(p.einheit || 'C62');

@@ -1724,6 +1724,44 @@ test('XRechnung-UBL: SEPA-PaymentMeans wenn IBAN angegeben', function () {
   ok(/DE89370400440532013000/.test(xml), 'IBAN ohne Leerzeichen im XML');
 });
 
+/* Seller-Steuer-IDs: USt-IdNr (BT-31, TaxScheme/ID=VAT bzw. schemeID=VA) und
+ * Steuernummer (BT-32, ≠VAT bzw. FC) müssen koexistieren können. Diskriminator
+ * VAT vs. nicht-VAT gemäß der offiziellen KoSIT-XRechnung-Visualisierung.
+ * (Welle-2-Audit: UBL verlor die Seller-StNr ganz, beide Formate unterdrückten
+ * sie bei vorhandener USt-IdNr.) */
+function ublSellerBlock(xml) {
+  var m = xml.match(/<cac:AccountingSupplierParty>([\s\S]*?)<\/cac:AccountingSupplierParty>/);
+  return m ? m[1] : '';
+}
+function ciiSellerBlock(xml) {
+  var m = xml.match(/<ram:SellerTradeParty>([\s\S]*?)<\/ram:SellerTradeParty>/);
+  return m ? m[1] : '';
+}
+
+test('XRechnung-UBL: Seller mit NUR Steuernummer → BT-32 (FC) statt Datenverlust', function () {
+  var e = Object.assign({}, EIGENE_TEST, { ustId: '', stNr: '231/123/12345' });
+  var seller = ublSellerBlock(XRechnungUBL.render(basisRechnung(), e));
+  ok(/<cbc:CompanyID>231\/123\/12345<\/cbc:CompanyID><cac:TaxScheme><cbc:ID>FC<\/cbc:ID>/.test(seller),
+     'Steuernummer als FC-PartyTaxScheme (BT-32)');
+  ok(!/<cbc:ID>VAT<\/cbc:ID>/.test(seller), 'kein VAT-PartyTaxScheme beim Seller ohne USt-IdNr');
+});
+
+test('XRechnung-UBL: Seller mit USt-IdNr UND Steuernummer gibt beide aus (BT-31 + BT-32)', function () {
+  var e = Object.assign({}, EIGENE_TEST, { ustId: 'DE298765432', stNr: '231/123/12345' });
+  var seller = ublSellerBlock(XRechnungUBL.render(basisRechnung(), e));
+  ok(/<cbc:CompanyID>DE298765432<\/cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT<\/cbc:ID>/.test(seller),
+     'USt-IdNr als VAT (BT-31)');
+  ok(/<cbc:CompanyID>231\/123\/12345<\/cbc:CompanyID><cac:TaxScheme><cbc:ID>FC<\/cbc:ID>/.test(seller),
+     'Steuernummer als FC (BT-32)');
+});
+
+test('XRechnung-CII: Seller mit USt-IdNr UND Steuernummer gibt beide aus (VA + FC)', function () {
+  var e = Object.assign({}, EIGENE_TEST, { ustId: 'DE298765432', stNr: '231/123/12345' });
+  var seller = ciiSellerBlock(XRechnungCII.render(basisRechnung(), e));
+  ok(/schemeID="VA">DE298765432</.test(seller), 'USt-IdNr als VA');
+  ok(/schemeID="FC">231\/123\/12345</.test(seller), 'Steuernummer als FC');
+});
+
 /* ---- Ausgangsrechnung: Nummernkreis + Buchungsautomat ---------------- */
 test('Ausgangsrechnung: Nummernschema RE-{JAHR}-{NR:04} füllt mit Nullen', function () {
   eq(Ausgangsrechnung.formatNummer('RE-{JAHR}-{NR:04}', 2026, 7), 'RE-2026-0007', 'NR:04');

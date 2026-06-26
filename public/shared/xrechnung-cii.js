@@ -76,12 +76,15 @@
     if (p.ort) addr += tag('ram:CityName', esc(p.ort));
     addr += tag('ram:CountryID', esc(p.land || 'DE'));
     body += tag('ram:PostalTradeAddress', addr);
-    /* Steuerregistrierungen: USt-ID (schemeID=VA) und/oder Steuernummer (schemeID=FC) */
+    /* Steuerregistrierungen: USt-IdNr. (BT-31, schemeID=VA) und/oder Steuernummer
+     * (BT-32, schemeID=FC). Beide dürfen koexistieren (EN 16931 BT-31/BT-32 je
+     * 0..1) — die Steuernummer wird daher unabhängig von der USt-IdNr ausgegeben,
+     * sonst verlöre eine GmbH ohne USt-IdNr (nur StNr) ihre einzige § 14-Steuer-ID. */
     if (p.ustId) {
       body += tag('ram:SpecifiedTaxRegistration',
         tag('ram:ID', esc(String(p.ustId).replace(/\s+/g, '')), { schemeID: 'VA' }));
     }
-    if (isSeller && p.stNr && !p.ustId) {
+    if (isSeller && p.stNr) {
       body += tag('ram:SpecifiedTaxRegistration',
         tag('ram:ID', esc(p.stNr), { schemeID: 'FC' }));
     }
