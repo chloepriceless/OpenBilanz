@@ -1,49 +1,53 @@
 # HANDOVER — OpenBilanz (Pfenni / gmbh-verwaltung)
 
-_Letzte Aktualisierung: 2026-06-26 ~12:30 (Session Welle-2-Dimensionen, vor Self-Recycle)._
+_Letzte Aktualisierung: 2026-10-25 ~22:45 (Mac, Session „mach weiter von der Übergabe“)._
 
 ## Aufgabe & Ziel
-Stehender Christin-Auftrag (via Hub): OpenBilanz autonom weiterentwickeln —
-Korrektheit sichern, Features, Rechts-Recherche → Merkel, atomic commits.
-Grenze: KEINE echten Buchungen/Geldbewegungen/Firmen-Mail ohne Codex-4-Augen +
-Christin-Final-OK. Diese Session: **Audit-Welle 2** weitgehend abgeschlossen.
+GitHub-Issues #1–#4 von OpenBilanz (github.com/chloepriceless/OpenBilanz) abarbeiten, inkl. Abgleich
+der Gegenprüfungen. Grenze: KEINE echten Buchungen/Geldbewegungen/Firmen-Mail ohne 4-Augen + Christin-OK.
+Push, Issues schließen, Merge nach main und Release nur auf Christin-Go.
 
-## Stand (Branch `feat/skr04-glossar-vollabdeckung`, in-sync mit origin, 327 Tests grün UTC/Berlin/LA)
-Welle-2 KOMPLETT durch; autonomous_open=0 (nur noch Christin-gatete Punkte offen, s.u.).
-- `508be7e` (2026-06-26) Mandanten-IDB-Migration v1→v2 Datenerhalt: Audit + 6 neue Tests (3→9), refute-reviewt.
-Vorherige Session 7 Commits, alle gepusht, je test-verifiziert:
-- `82af688` LOW #6 — ZUGFeRD-PDF zeigt §14-Klartext statt Roh-Steuerschalter (DRY aus STEUERLOGIK).
-- `ded59cd` LOW #5 + MEDIUM #3 — Verkäufer-StNr (BT-32) in UBL+CII (§14-Verlust behoben); MEDIUM #3
-  Zeilensumme als False Positive verifiziert. Adversarisch reviewt (MERGEABLE 4/4 [VERIFIED], KoSIT BR-DE-16).
-- `1273135` CHANGELOG Verkäufer-StNr.
-- `54a7c03` DATEV-Datum-Fallback-Fix (verstümmeltes TTMM bei Buchung ohne Datum).
-- `2c6ec02` Handover-Zwischenstand.
-- `92fe759` FX-Härtung (§ 256a HGB: kein Stichtagskurs → keine Null-Abwertung) + Doku.
+## Stand — Branch `fix/github-issues-1-4` (lokal, NICHT gepusht), 329 Tests grün (UTC/Berlin/LA)
+Basis: `feat/skr04-glossar-vollabdeckung` (1964015, = origin) → darauf:
+- `5d30935` #2 #3 #4: GuV vollständig in XBRL, GCD-Härtefall-Feldname, Liberation-Download (Vorsession).
+- `31fbcef` GJ-Beginn-Plausi las `a.geschaeftsjahrVon` statt `a.gjVon` (Warnung kam nie).
+- `ec424cd` **#1 offene Buchungen im Journal bearbeiten** — `BuchungsPruefung.bearbeite()`
+  (public/shared/buchungspruefung.js), Inline-Zeile + Handler in public/app.js (`BuEditId`, `bue*`-IDs),
+  Änderungsprotokoll mit Alt→Neu, SW-Cache v8. E2E per Playwright verifiziert.
+- `de8ba41` geführte Umbuchung zeigt Plausi-Hinweise jetzt per confirm (verwarf sie vorher).
+- `e3bd0c0` E-Bilanz: Bilanz-Unterposten neben römischem Wert als NIL (Arelle calcInconsistency),
+  offene Einlagen B.II als `receiv.other.unpaidCapital`, NIL ohne decimals. Arelle: 5 Bilanz- + 4 GuV-Fälle sauber.
+- `2cb85fd` setup-pdf-lib.sh: Lizenzdatei in Vorhanden-Prüfung.
+- `ee43da8` Storno einer Eröffnungsbuchung ohne 9000-Hinweis bearbeitbar.
+- `ac8e403` setup-pdf-lib.sh: nur fehlende Lizenz → nur LICENSE nachladen, offline Warnung statt Abbruch.
 
-## Welle-2-Fortschritt — ✅ KOMPLETT DURCH (alle Dimensionen erledigt)
-- ✅ E-Rechnung (LOW #5/#6, MEDIUM #3) — durch.
-- ✅ DATEV/GoBD-Export — durch (DATEV-Datum-Bug gefixt, GDPdU sauber, S/H-Hardcode als nicht-auslösbar verifiziert).
-- ✅ FX/Rundung — durch (fx.js-Logik §256a verifiziert korrekt, kurs-fehlt-Härtung; ABER fx.js noch NICHT
-  in UI integriert = Feature-Gap, kein Bug — für Christin/Roadmap notiert).
-- ✅ **Mandanten-Datenintegrität (store-idb-Migration v1→v2)** — durch (Commit 508be7e, 327 grün UTC/Berlin/LA).
-  Logik auditiert (kein Bug), refute-reviewt; 6 neue Datenerhalt-Tests (3→9). Fremd-mandantId-Divergenz
-  via v1-Import erreichbar aber wiederherstellbar → kein Fix (R12), Regressions-Pin gesetzt.
-  Audit-Doc: .planning/IDB-MIGRATION-AUDIT-2026-06-26.md.
+## Gegenprüfung
+Codex im Nutzungslimit bis 26.10. 02:30 → Hook (`.git/codex-reviews/<sha>.md`) prüfte per Claude.
+Abgearbeitet: 5d30935 (2 bestätigt+gefixt, 1 widerlegt per Calc-Linkbase), 31fbcef (gefixt in de8ba41),
+ec424cd (P3 9000 gefixt; P3 „E2E nicht im Repo“ bewusst offen: Repo ist zero-dependency, kein UI-Test-Setup).
+2cb85fd: P3 Offline-Abbruch → gefixt in ac8e403. ee43da8: ohne Befund.
+e3bd0c0: P3 wirkungslose Testzusicherung → gefixt in nächstem Commit; ungeprüfte Punkte nachgeholt
+(B.II.4 + offene Einlagen, Kleinst/microbilg-Shell: Arelle ohne Befund). **Offen/ungeprüft:** ob ERiC
+NIL-Unterposten in seiner Rechenprüfung wie XBRL 2.1 auslässt — nur mit ERiC testbar.
+Optional nach 02:30: echte Codex-Läufe nachholen (`codex review --base feat/skr04-glossar-vollabdeckung`).
 
-## GATED auf Christin (im Hub-Ledger als awaiting_operator)
-- **v2.22.0 Release-Zeremonie** Go/No-Go (Branch fertig, FF-fähig, 32 Commits vor main).
-  Stamp-Konvention: Parent beibehalten (`npm run stamp` nach FF-Merge, KEIN force-push). Vor dem Lauf Codex-vetten.
-- **#13 LICENSE** korrekter Copyright-Inhaber der GmbH?
-- **Findings-Datei** `.planning/RELEASE-REVIEW-2026-06-14-FINDINGS.md` (untracked) committen ja/nein?
+## Werkzeuge (Mac)
+- Arelle-venv + entpackte Taxonomie 6.9 aus Vorsession:
+  `/private/tmp/claude-501/-Users-christin-Projects-GmbH-Verwaltung/5217922b-61d3-4e72-a67b-b0c9ecbfdfd0/scratchpad/`
+  (`arelle-venv/`, `tax/`, `gen/check.sh <scratch> <dir>`). /private/tmp — kann verschwinden.
+- Playwright: `require('/Users/christin/Projects/mispel-demo/node_modules/playwright')`;
+  App lokal: `python3 -m http.server 8765 --bind 127.0.0.1 --directory public`;
+  Onboarding vorher per `markiereOnboardingGesehen(); dialogZu();` wegklicken.
+- Merkel-Eintrag: „OpenBilanz 25.10.2026: Buchung bearbeiten (#1) + E-Bilanz-Calc-Regeln“.
 
-## Resume-Anleitung
-Repo `/home/dev/GmbH-Verwaltung`, Branch `feat/skr04-glossar-vollabdeckung`.
-Tests: `node tests/run.js` (321 grün) — auch `TZ=Europe/Berlin` / `TZ=America/Los_Angeles`.
-**Autonomer Backlog LEER (autonomous_open=0).** Welle-2 vollständig durch. Offen nur Christin-gatete Punkte
-(s.o. „GATED auf Christin"): v2.22.0-Release-Zeremonie Go/No-Go · #13 LICENSE-Copyright · Findings-Datei
-committen ja/nein. Release-Zeremonie NUR auf Christin-Go (vor dem Lauf Codex-vetten, R22 prozesskritisch).
-Bei freiem Kontext + Christin-Go fehlt: nächste sinnvolle Weiterentwicklung (Feature/Rechts-Recherche) NEU
-aufsetzen — aber NICHT den gateten Release-Branch weiter aufblähen, bevor v2.22.0 raus ist.
-Durable Details: Memory `project-open-tasks.md`.
-Melde-Weg Christin: Orchestrator-Peer (CWD /home/dev/orchestrator). Hub localhost:7890.
-Merkel: POST http://192.168.20.81:8000/ingest.
+## Offen / GATED auf Christin
+- Push von `fix/github-issues-1-4`, Issues #1–#4 kommentieren/schließen.
+- Weiter offen aus Juni: v2.22.0-Release-Zeremonie (Basis-Branch 32+ Commits vor main) · #13 LICENSE-Copyright ·
+  `.planning/RELEASE-REVIEW-2026-06-14-FINDINGS.md` (untracked) committen ja/nein.
+- Feature-Gap (kein Bug): fx.js nicht in UI integriert.
+
+## Resume
+```
+cd ~/Projects/GmbH-Verwaltung && git switch fix/github-issues-1-4 && npm test
+ls -t .git/codex-reviews/ | head     # offene Review-Dateien lesen
+```
