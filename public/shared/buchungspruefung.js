@@ -135,9 +135,12 @@
       neu[feld] = v;
     });
 
+    // 9000 erlaubt bei Eroeffnungsbuchungen und bei Stornobuchungen: deren Konten
+    // sind gesperrt und spiegeln das Original (Storno einer Eroeffnungsbuchung
+    // traegt selbst kein eroeffnung-Kennzeichen).
     var pr = pruefe(neu, {
       beginn: kontext.beginn, stichtag: kontext.stichtag,
-      erlaubeEbk: kontext.erlaubeEbk || !!alt.eroeffnung
+      erlaubeEbk: kontext.erlaubeEbk || !!alt.eroeffnung || !!alt.stornoVon
     });
     // Doppelte Meldung vermeiden, wenn mehrere gesperrte Felder geaendert wurden
     f = f.filter(function (x, i) { return f.indexOf(x) === i; }).concat(pr.fehler);

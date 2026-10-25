@@ -2760,6 +2760,10 @@ test('BuchungsPruefung.bearbeite: Eröffnungsbuchung darf 9000 behalten', functi
   eq(r.ok, true, '');
   ok(!r.warnungen.some(function (w) { return /9000/.test(w); }), 'kein EBK-Hinweis');
   eq(r.buchung.eroeffnung, true, '');
+  var st = BuchungsPruefung.bearbeite(
+    { id: 'B-S', datum: '2026-01-02', betrag: 500, soll: '9000', haben: '1800', stornoVon: 'B-EB-1-0' },
+    { text: 'Storno: Eröffnung Bank' });
+  ok(!st.warnungen.some(function (w) { return /9000/.test(w); }), 'Storno einer EB: kein EBK-Hinweis');
 });
 
 /* ---- Fristen-Dashboard ----------------------------------------------- */
