@@ -3597,7 +3597,7 @@ function renderBuchhaltung(m) {
     };
     var weiter = function () {
       var pr = BuchungsPruefung.pruefe(b, {
-        beginn: a.geschaeftsjahrVon, stichtag: a.stichtag, erlaubeEbk: false
+        beginn: a.gjVon, stichtag: a.stichtag, erlaubeEbk: false
       });
       if (!pr.ok) { alert('Buchung nicht plausibel:\n• ' + pr.fehler.join('\n• ')); return; }
       if (pr.warnungen.length) {
@@ -3645,7 +3645,7 @@ function renderBuchhaltung(m) {
     // Jede erzeugte Buchung zusätzlich gegen die normale Buchungsprüfung laufen lassen.
     for (var i = 0; i < r.buchungen.length; i++) {
       var pr = BuchungsPruefung.pruefe(r.buchungen[i], {
-        beginn: a.geschaeftsjahrVon, stichtag: a.stichtag, erlaubeEbk: false
+        beginn: a.gjVon, stichtag: a.stichtag, erlaubeEbk: false
       });
       if (!pr.ok) { alert('Umbuchung nicht plausibel:\n• ' + pr.fehler.join('\n• ')); return; }
     }

@@ -30,6 +30,10 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 - **`tools/setup-pdf-lib.sh`: Liberation-Fonts 404** (GitHub #2): Die Schriften
   kommen jetzt aus dem Release-Tarball `liberation-fonts-ttf-2.1.5` mit
   SHA-256-Pin; die OFL-Lizenz wird mit abgelegt.
+- **Buchung vor Geschäftsjahresbeginn ohne Hinweis:** Die Buchungserfassung und die
+  geführte Umbuchung lasen den Beginn aus dem nicht existierenden Feld
+  `geschaeftsjahrVon` statt `gjVon`; die Warnung „Buchungsdatum liegt vor dem
+  Geschäftsjahresbeginn“ kam deshalb nie.
 - **Tausenderzahlen ohne Komma** wurden falsch geparst: `num()` interpretierte
   `"2.500.000"` als 2,5, `"12.500"` als 12,5 und `"1.000"` als 1 — Datenkorruption
   bei ganzzahligen Tausenderbeträgen. Jetzt werden reine 3er-Punktgruppierungen als
