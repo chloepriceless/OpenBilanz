@@ -41,6 +41,17 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 - **`tools/setup-pdf-lib.sh`: Liberation-Fonts 404** (GitHub #2): Die Schriften
   kommen jetzt aus dem Release-Tarball `liberation-fonts-ttf-2.1.5` mit
   SHA-256-Pin; die OFL-Lizenz wird mit abgelegt.
+- **E-Bilanz: Arelle-`calcInconsistency` bei Bilanzwerten auf römischer Ebene:**
+  Der Buchhaltungsmodus bucht auf I./II./III.-Ebene (z. B. Wertpapiere B.III); die
+  Unterposten gingen dann mit 0 hinaus, und die Rechenregel der Taxonomie schlug fehl
+  (10.000 gemeldet, Summe 0). Solche Unterposten werden jetzt als NIL übermittelt
+  (zählen in der Summenprüfung nicht mit, Mussfelder bleiben erhalten). Eingeforderte,
+  nicht eingezahlte Einlagen in B.II erscheinen als eigener Summand
+  `receiv.other.unpaidCapital`. NIL-Fakten tragen kein `decimals` mehr (XBRL 2.1
+  § 4.6.3). Geprüft mit Arelle gegen die Kerntaxonomie 6.9 ohne Befund.
+- **`tools/setup-pdf-lib.sh`: OFL-Lizenztext fehlte bei vorhandenen Schriften:** Lagen
+  die TTFs schon vor, wurde `LiberationSans-LICENSE.txt` nie angelegt, obwohl
+  `LIZENZEN.md` darauf verweist. Fehlt die Lizenzdatei, lädt das Skript jetzt neu.
 - **Buchung vor Geschäftsjahresbeginn ohne Hinweis:** Die Buchungserfassung und die
   geführte Umbuchung lasen den Beginn aus dem nicht existierenden Feld
   `geschaeftsjahrVon` statt `gjVon`; die Warnung „Buchungsdatum liegt vor dem

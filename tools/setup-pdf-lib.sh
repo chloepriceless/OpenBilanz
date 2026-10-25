@@ -85,7 +85,10 @@ FONT_BOLD="$VENDOR_DIR/LiberationSans-Bold.ttf"
 LIB_VERSION="2.1.5"
 LIB_TGZ_URL="https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-$LIB_VERSION.tar.gz"
 LIB_TGZ_SHA256="7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0"
-if [ -f "$FONT_FILE" ] && [ -f "$FONT_BOLD" ]; then
+FONT_LIZENZ="$VENDOR_DIR/LiberationSans-LICENSE.txt"
+# Lizenzdatei gehoert zur Vollstaendigkeit: fehlt sie (Alt-Installation, Schrift
+# von Hand abgelegt), wird neu geladen - LIZENZEN.md verweist auf den Volltext.
+if [ -f "$FONT_FILE" ] && [ -f "$FONT_BOLD" ] && [ -f "$FONT_LIZENZ" ]; then
   echo "  Liberation Sans bereits vorhanden — uebersprungen."
 else
   echo "  Lade Liberation Sans $LIB_VERSION (SIL-OFL) ..."
@@ -105,7 +108,7 @@ else
   cp "$LIB_TMP/$LIB_DIR/LiberationSans-Regular.ttf" "$FONT_FILE"
   cp "$LIB_TMP/$LIB_DIR/LiberationSans-Bold.ttf" "$FONT_BOLD"
   # Die OFL verlangt, dass die Lizenz die Schrift begleitet.
-  cp "$LIB_TMP/$LIB_DIR/LICENSE" "$VENDOR_DIR/LiberationSans-LICENSE.txt"
+  cp "$LIB_TMP/$LIB_DIR/LICENSE" "$FONT_LIZENZ"
   echo "  Liberation Sans geladen + SHA-256 verifiziert."
 fi
 
