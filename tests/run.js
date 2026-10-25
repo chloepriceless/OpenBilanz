@@ -959,7 +959,8 @@ test('XBRL: eingeforderte offene Einlagen als Summand von B.II (receiv.other.unp
   var y = bilanzXbrl({ 'B.II': 4000 }, kap);
   eq(bsFakt(y, 'bs.ass.currAss.receiv'), 9000, '');
   eq(bsFakt(y, 'bs.ass.currAss.receiv.other.unpaidCapital'), 'NIL', 'römisch erfasst -> NIL');
-  eq(bilanzXbrl({ 'B.II.1': 5000 }).indexOf('unpaidCapital"'), -1, 'ohne offene Einlagen kein Fakt');
+  eq(bsFakt(bilanzXbrl({ 'B.II.1': 5000 }), 'bs.ass.currAss.receiv.other.unpaidCapital'), undefined,
+    'ohne offene Einlagen kein Fakt');
 });
 test('Taxonomie: alle verwendeten Elementnamen stehen in der amtlichen 6.9-XSD', function () {
   // Nur mit lokalem Taxonomie-Paket (tools/setup-taxonomie.sh) und unzip pruefbar.
