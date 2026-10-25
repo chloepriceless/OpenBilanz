@@ -15,7 +15,7 @@
  * ========================================================================= */
 'use strict';
 
-var CACHE = 'openbilanz-v7';
+var CACHE = 'openbilanz-v8';
 
 // Vollständiger Modulbestand von public/shared/ — sonst fehlen Module beim
 // Offline-Start (Network-First fällt offline auf den Cache zurück). Bei einem

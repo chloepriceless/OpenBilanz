@@ -222,9 +222,12 @@ dessen Kapitalblock.
 
 Buchungen lassen sich **festschreiben** (§ 146 AO). Festgeschriebene Buchungen
 sind unveränderlich und nicht mehr löschbar; eine Korrektur erfolgt
-ausschließlich über eine **Stornobuchung** (Soll/Haben getauscht). Jede
-Festschreibung und jeder Storno wird in einem **Änderungsprotokoll** des
-Abschlusses vermerkt.
+ausschließlich über eine **Stornobuchung** (Soll/Haben getauscht). Noch nicht
+festgeschriebene Buchungen lassen sich im Journal **bearbeiten** (Datum, Text,
+Konten, Betrag) — etwa zum Umkontieren nach einem Bankimport; bei einer
+Stornobuchung bleiben Konten und Betrag an das Original gebunden. Jede
+Festschreibung, jeder Storno und jede Änderung wird mit Alt- und Neuwert in
+einem **Änderungsprotokoll** des Abschlusses vermerkt.
 
 ### Buchungshilfe
 

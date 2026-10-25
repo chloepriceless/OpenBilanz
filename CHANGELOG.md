@@ -11,6 +11,17 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 
 ## [Unreleased]
 
+### Hinzugefügt
+- **Offene Buchungen bearbeiten** (GitHub #1): Nicht festgeschriebene Buchungen
+  haben im Journal neben „löschen“ jetzt „bearbeiten“. Datum, Text, Soll-/Haben-Konto
+  und Betrag lassen sich direkt in der Zeile ändern (Enter speichert, Esc bricht ab),
+  statt die Buchung zu löschen und neu zu erfassen — gerade nach Bankimporten mit
+  falschem Kontovorschlag. Die Änderung läuft durch dieselbe Plausibilitätsprüfung
+  wie die Erfassung und wird mit Alt- und Neuwert im Änderungsprotokoll vermerkt.
+  ID, Beleg und Importkennzeichen bleiben erhalten. Festgeschriebene Buchungen bleiben
+  unveränderlich (Korrektur per Storno); bei einer Stornobuchung sind nur Datum und
+  Text änderbar.
+
 ### Behoben
 - **E-Bilanz: Finanzergebnis fehlte in XBRL und Werteübersicht** (GitHub #3): Die
   GuV-Posten 9.–13. (GKV) bzw. 8.–12. (UKV), u. a. „Zinsen und ähnliche

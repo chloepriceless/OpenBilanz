@@ -2661,6 +2661,57 @@ test('BuchungsPruefung: EBK 9000 ohne Erlaubnis warnt', function () {
   ok(!r2.warnungen.some(function (w) { return /9000/.test(w); }), 'mit Erlaubnis kein Hinweis');
 });
 
+/* ---- Offene Buchung bearbeiten (GitHub #1) ---------------------------- */
+test('BuchungsPruefung.bearbeite: Umkontieren einer offenen Buchung, Rest bleibt', function () {
+  var alt = { id: 'B-CAMT-1-0', datum: '2026-03-15', betrag: 119, text: 'Telekom',
+    soll: '6300', haben: '1800', beleg: { name: 'r.pdf', sha256: 'ab' } };
+  var r = BuchungsPruefung.bearbeite(alt, { soll: '6805', betrag: '119.004', text: 'Telekom',
+    datum: '2026-03-15', haben: '1800' }, { beginn: '2026-01-01', stichtag: '2026-12-31' });
+  eq(r.ok, true, 'ok');
+  eq(r.buchung.soll, '6805', 'neues Soll');
+  eq(r.buchung.betrag, 119, 'auf Cent gerundet');
+  eq(r.buchung.id, 'B-CAMT-1-0', 'id bleibt');
+  eq(r.buchung.beleg.sha256, 'ab', 'Beleg bleibt');
+  eq(r.aenderungen.length, 1, 'nur das Soll-Konto zählt als Änderung');
+  eq(r.aenderungen[0].feld, 'soll', '');
+  eq(r.aenderungen[0].alt, '6300', '');
+  eq(alt.soll, '6300', 'Original unverändert');
+});
+test('BuchungsPruefung.bearbeite: festgeschriebene Buchung wird abgewiesen', function () {
+  var r = BuchungsPruefung.bearbeite(
+    { id: 'B-1', datum: '2026-03-15', betrag: 100, soll: '6815', haben: '1800', fest: true },
+    { betrag: 200 });
+  eq(r.ok, false, '');
+  ok(/festgeschrieben/.test(r.fehler[0]), r.fehler[0]);
+});
+test('BuchungsPruefung.bearbeite: ungültige Änderung läuft durch die Plausi', function () {
+  var alt = { id: 'B-1', datum: '2026-03-15', betrag: 100, soll: '6815', haben: '1800' };
+  eq(BuchungsPruefung.bearbeite(alt, { haben: '6815' }).ok, false, 'Soll = Haben');
+  eq(BuchungsPruefung.bearbeite(alt, { betrag: 0 }).ok, false, 'Betrag 0');
+  var w = BuchungsPruefung.bearbeite(alt, { datum: '2025-12-30' },
+    { beginn: '2026-01-01', stichtag: '2026-12-31' });
+  eq(w.ok, true, 'Datum vor GJ ist nur ein Hinweis');
+  ok(w.warnungen.some(function (x) { return /Geschaeftsjahresbeginn/.test(x); }), '');
+});
+test('BuchungsPruefung.bearbeite: Stornobuchung nur Datum/Text änderbar', function () {
+  var st = { id: 'B-2', datum: '2027-02-01', betrag: 100, soll: '1800', haben: '6815',
+    text: 'Storno: X', stornoVon: 'B-1' };
+  var r = BuchungsPruefung.bearbeite(st, { datum: '2026-12-31', text: 'Storno: X (Fehlbuchung)' });
+  eq(r.ok, true, 'Datum/Text erlaubt');
+  eq(r.aenderungen.length, 2, '');
+  var r2 = BuchungsPruefung.bearbeite(st, { betrag: 90, soll: '1810' });
+  eq(r2.ok, false, 'Betrag/Konto gesperrt');
+  eq(r2.fehler.length, 1, 'eine Meldung, nicht je Feld');
+});
+test('BuchungsPruefung.bearbeite: Eröffnungsbuchung darf 9000 behalten', function () {
+  var r = BuchungsPruefung.bearbeite(
+    { id: 'B-EB-1-0', datum: '2026-01-01', betrag: 500, soll: '1800', haben: '9000',
+      eroeffnung: true }, { betrag: 550 });
+  eq(r.ok, true, '');
+  ok(!r.warnungen.some(function (w) { return /9000/.test(w); }), 'kein EBK-Hinweis');
+  eq(r.buchung.eroeffnung, true, '');
+});
+
 /* ---- Fristen-Dashboard ----------------------------------------------- */
 test('Fristen: JA-Aufstellung 6 Monate nach Stichtag', function () {
   var u = {}, abs = [{ id: 'A', art: 'JAHRESABSCHLUSS', stichtag: '2025-12-31',

@@ -16,6 +16,7 @@ window.OPENBILANZ_MODE = (function () {
 var Store = StoreAdapter.waehle();   /* Website: IndexedDB - Selbst-Hosting: Node-API */
 var BackupHandle = null;             /* gemerktes Datei-Handle der .obz-Sicherung */
 var SitzungsPasswort = null;         /* optionales Backup-Passwort, nur im Sitzungsspeicher */
+var BuEditId = null;                 /* id der offenen Buchung, die im Journal bearbeitet wird */
 
 /* Loest einen Datei-Download im Browser aus. */
 function ladeDatei(inhalt, name, mime) {
@@ -3267,12 +3268,29 @@ function renderBuchhaltung(m) {
         else if (b.stornoVon) aktion = '<span class="bu-tag">Storno</span>';
         else aktion = '<span class="btn btn-sm" data-storno="' + esc(b.id) + '">stornieren</span>';
       } else {
-        aktion = '<span class="btn btn-sm btn-gefahr" data-del="' + i + '">löschen</span>';
+        aktion = '<span class="btn btn-sm" data-bu-edit="' + esc(b.id) + '">bearbeiten</span> ' +
+          '<span class="btn btn-sm btn-gefahr" data-del="' + i + '">löschen</span>';
       }
       var belegZelle = b.beleg
         ? '<span class="bu-tag" title="' + esc(b.beleg.sha256 || '') + '">📎 ' +
           esc(b.beleg.name || '—') + '</span>'
         : '<span class="bu-tag" style="opacity:0.5">—</span>';
+      if (!b.fest && b.id === BuEditId) {
+        // Inline-Bearbeitung; bei einer Stornobuchung spiegeln Konten und Betrag
+        // das Original und bleiben gesperrt.
+        var sperre = b.stornoVon ? ' disabled title="Stornobuchung: nur Datum und Text änderbar"' : '';
+        html += '<tr class="bu-edit"><td><input type="date" id="bueDatum" value="' +
+          esc(b.datum || '') + '"></td>' +
+          '<td><input id="bueText" value="' + esc(b.text || '') + '"></td>' +
+          '<td>' + kontoDropdown('id="bueSoll"' + sperre, b.soll) + '</td>' +
+          '<td>' + kontoDropdown('id="bueHaben"' + sperre, b.haben) + '</td>' +
+          '<td class="rechts"><input class="zahl" type="text" inputmode="decimal" id="bueBetrag" ' +
+          'value="' + esc(eingabeWert(b.betrag)) + '"' + sperre + '></td>' +
+          '<td>' + belegZelle + '</td>' +
+          '<td class="rechts"><span class="btn btn-sm btn-pri" id="bueOk">speichern</span> ' +
+          '<span class="btn btn-sm" id="bueAbbruch">abbrechen</span></td></tr>';
+        return;
+      }
       html += '<tr><td class="mono">' + (b.fest ? '🔒 ' : '') + datumDe(b.datum) + '</td>' +
         '<td>' + esc(b.text || '') + '</td>' +
         '<td class="mono">' + esc(b.soll) + '</td><td class="mono">' + esc(b.haben) + '</td>' +
@@ -3669,9 +3687,71 @@ function renderBuchhaltung(m) {
         });
       }
       a.buchungen.splice(idx, 1);
+      if (weg && weg.id === BuEditId) BuEditId = null;
       speichereStill().then(function () { renderBuchhaltung(m); });
     };
   });
+  /* Offene Buchung bearbeiten (GitHub #1): Konten, Betrag, Text, Datum direkt im
+   * Journal ändern statt löschen und neu erfassen. Festgeschriebene bleiben gesperrt. */
+  m.querySelectorAll('[data-bu-edit]').forEach(function (el) {
+    el.onclick = function () { BuEditId = el.dataset.buEdit; renderBuchhaltung(m); };
+  });
+  var bueOk = m.querySelector('#bueOk');
+  if (bueOk) {
+    var bueAbbruch = function () { BuEditId = null; renderBuchhaltung(m); };
+    bueOk.onclick = function () {
+      var idx = -1;
+      a.buchungen.forEach(function (b, i) { if (b.id === BuEditId) idx = i; });
+      if (idx < 0) { bueAbbruch(); return; }
+      var alt = a.buchungen[idx];
+      var felder = {
+        datum: document.getElementById('bueDatum').value,
+        text: document.getElementById('bueText').value
+      };
+      if (!alt.stornoVon) {
+        felder.soll = document.getElementById('bueSoll').value;
+        felder.haben = document.getElementById('bueHaben').value;
+        felder.betrag = Berechnung.num(document.getElementById('bueBetrag').value);
+      }
+      var r = BuchungsPruefung.bearbeite(alt, felder,
+        { beginn: a.gjVon, stichtag: a.stichtag });
+      if (!r.ok) { alert('Änderung nicht möglich:\n• ' + r.fehler.join('\n• ')); return; }
+      if (!r.aenderungen.length) { bueAbbruch(); return; }
+      if (r.warnungen.length) {
+        if (!confirm('Hinweise zur Buchung:\n• ' + r.warnungen.join('\n• ') +
+          '\n\nTrotzdem speichern?')) return;
+      }
+      a.buchungen[idx] = r.buchung;
+      var feldName = { datum: 'Datum', betrag: 'Betrag', text: 'Text', soll: 'Soll', haben: 'Haben' };
+      a.protokoll.push({ zeit: new Date().toISOString(),
+        text: 'Buchung „' + (alt.text || alt.id) + '" geändert: ' +
+          r.aenderungen.map(function (x) {
+            var w = function (v) {
+              if (x.feld === 'betrag') return geld(v);
+              if (x.feld === 'datum') return datumDe(v);
+              if (x.feld === 'text') return '„' + (v || '') + '"';
+              return v || '–';
+            };
+            return feldName[x.feld] + ' ' + w(x.alt) + ' → ' + w(x.neu);
+          }).join(', ') });
+      BuEditId = null;
+      speichereStill().then(function () {
+        hinweisToast('Buchung geändert.');
+        renderBuchhaltung(m);
+      });
+    };
+    m.querySelector('#bueAbbruch').onclick = bueAbbruch;
+    ['bueDatum', 'bueText', 'bueSoll', 'bueHaben', 'bueBetrag'].forEach(function (id) {
+      var x = document.getElementById(id);
+      if (!x) return;
+      x.onkeydown = function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); bueOk.click(); }
+        else if (e.key === 'Escape') { e.preventDefault(); bueAbbruch(); }
+      };
+    });
+    var bueFokus = document.getElementById('bueText');
+    if (bueFokus) { try { bueFokus.focus(); } catch (ex) {} }
+  }
   var regelAdd = m.querySelector('#regelAdd');
   if (regelAdd) regelAdd.onclick = function () {
     var muster = document.getElementById('regelMuster').value.trim();

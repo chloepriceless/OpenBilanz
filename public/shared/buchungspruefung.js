@@ -89,5 +89,61 @@
     return { ok: f.length === 0, fehler: f, warnungen: w };
   }
 
-  return { pruefe: pruefe };
+  /* Bearbeiten einer offenen (nicht festgeschriebenen) Buchung.
+   * felder: Teilmenge von { datum, betrag, text, soll, haben }.
+   * Festgeschriebene Buchungen sind unveraenderlich (§ 146 Abs. 4 AO) - dort
+   * bleibt nur die Stornobuchung. Bei einer Stornobuchung muessen Konten und
+   * Betrag die Originalbuchung spiegeln; aenderbar sind nur Datum und Text.
+   * Alle uebrigen Felder (id, beleg, eRechnungHash, eroeffnung ...) bleiben.
+   *
+   * Rueckgabe: { ok, fehler[], warnungen[], buchung, aenderungen[{feld, alt, neu}] }
+   *   buchung ist eine Kopie; das Original wird nicht veraendert. */
+  var BEARBEITBAR = ['datum', 'betrag', 'text', 'soll', 'haben'];
+
+  function bearbeite(alt, felder, kontext) {
+    kontext = kontext || {};
+    felder = felder || {};
+    if (!alt || typeof alt !== 'object') {
+      return { ok: false, fehler: ['Buchung fehlt'], warnungen: [], aenderungen: [] };
+    }
+    if (alt.fest) {
+      return { ok: false, warnungen: [], aenderungen: [], fehler: [
+        'Buchung ist festgeschrieben - Korrektur nur per Stornobuchung'] };
+    }
+    var neu = {}, k;
+    for (k in alt) if (Object.prototype.hasOwnProperty.call(alt, k)) neu[k] = alt[k];
+
+    var aenderungen = [], f = [];
+    BEARBEITBAR.forEach(function (feld) {
+      if (!Object.prototype.hasOwnProperty.call(felder, feld)) return;
+      var v = felder[feld];
+      var gleich;
+      if (feld === 'betrag') {
+        v = Math.round(+v * 100) / 100;
+        gleich = Math.abs(v - (+alt.betrag)) < 0.005;
+      } else {
+        v = v == null ? '' : String(v);
+        gleich = v === String(alt[feld] == null ? '' : alt[feld]);
+      }
+      if (gleich) return;
+      if (alt.stornoVon && feld !== 'datum' && feld !== 'text') {
+        f.push('Stornobuchung: Konten und Betrag spiegeln die Originalbuchung ' +
+          'und sind nicht aenderbar');
+        return;
+      }
+      aenderungen.push({ feld: feld, alt: alt[feld], neu: v });
+      neu[feld] = v;
+    });
+
+    var pr = pruefe(neu, {
+      beginn: kontext.beginn, stichtag: kontext.stichtag,
+      erlaubeEbk: kontext.erlaubeEbk || !!alt.eroeffnung
+    });
+    // Doppelte Meldung vermeiden, wenn mehrere gesperrte Felder geaendert wurden
+    f = f.filter(function (x, i) { return f.indexOf(x) === i; }).concat(pr.fehler);
+    return { ok: f.length === 0, fehler: f, warnungen: pr.warnungen,
+      buchung: neu, aenderungen: aenderungen };
+  }
+
+  return { pruefe: pruefe, bearbeite: bearbeite };
 });

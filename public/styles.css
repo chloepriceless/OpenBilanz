@@ -278,6 +278,12 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 
 /* ---- Arelle-Log (experimentelle Taxonomie-Pruefung) ---- */
 .bu-tag{font-size:11px;color:var(--ink-mut)}
+/* Inline-Bearbeitung einer offenen Buchung im Journal */
+.bu-edit td{padding:5px;background:var(--line-2)}
+.bu-edit input,.bu-edit select{padding:5px 7px;font-size:12.5px;min-width:0}
+.bu-edit select{max-width:220px}
+.bu-edit input.zahl{text-align:right;min-width:90px}
+.bu-edit [disabled]{background:var(--line-2);color:var(--ink-mut)}
 .arelle-log{font-family:monospace;font-size:11px;white-space:pre-wrap;
   max-height:340px;overflow:auto;background:var(--bg);padding:10px;
   border-radius:6px;border:1px solid var(--line);margin:0}
