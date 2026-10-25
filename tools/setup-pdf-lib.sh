@@ -86,15 +86,15 @@ LIB_VERSION="2.1.5"
 LIB_TGZ_URL="https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-$LIB_VERSION.tar.gz"
 LIB_TGZ_SHA256="7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0"
 FONT_LIZENZ="$VENDOR_DIR/LiberationSans-LICENSE.txt"
-# Lizenzdatei gehoert zur Vollstaendigkeit: fehlt sie (Alt-Installation, Schrift
-# von Hand abgelegt), wird neu geladen - LIZENZEN.md verweist auf den Volltext.
-if [ -f "$FONT_FILE" ] && [ -f "$FONT_BOLD" ] && [ -f "$FONT_LIZENZ" ]; then
-  echo "  Liberation Sans bereits vorhanden — uebersprungen."
-else
-  echo "  Lade Liberation Sans $LIB_VERSION (SIL-OFL) ..."
+LIB_DIR="liberation-fonts-ttf-$LIB_VERSION"
+# Laedt den Release-Tarball nach $LIB_TMP und prueft den SHA-256-Pin.
+# Rueckgabe: 0 = ok, 1 = Download fehlgeschlagen. Ein falscher Hash bricht
+# immer ab (Supply-Chain-Schutz). Explizite Returns, weil set -e in einer
+# Funktion im if-Kontext nicht greift.
+lade_liberation() {
   LIB_TMP="$(mktemp -d)"
   trap 'rm -rf "$LIB_TMP"' EXIT
-  curl -L --fail -o "$LIB_TMP/fonts.tar.gz" "$LIB_TGZ_URL"
+  curl -L --fail -o "$LIB_TMP/fonts.tar.gz" "$LIB_TGZ_URL" || return 1
   got=$(sha256 "$LIB_TMP/fonts.tar.gz")
   if [ "$got" != "$LIB_TGZ_SHA256" ]; then
     echo "  FEHLER: SHA-256 des Liberation-Tarballs stimmt nicht (Supply-Chain-Schutz)." >&2
@@ -102,9 +102,27 @@ else
     echo "    erhalten: $got" >&2
     exit 1
   fi
-  LIB_DIR="liberation-fonts-ttf-$LIB_VERSION"
   tar -xzf "$LIB_TMP/fonts.tar.gz" -C "$LIB_TMP" \
-    "$LIB_DIR/LiberationSans-Regular.ttf" "$LIB_DIR/LiberationSans-Bold.ttf" "$LIB_DIR/LICENSE"
+    "$LIB_DIR/LiberationSans-Regular.ttf" "$LIB_DIR/LiberationSans-Bold.ttf" "$LIB_DIR/LICENSE" ||
+    return 1
+}
+if [ -f "$FONT_FILE" ] && [ -f "$FONT_BOLD" ] && [ -f "$FONT_LIZENZ" ]; then
+  echo "  Liberation Sans bereits vorhanden — uebersprungen."
+elif [ -f "$FONT_FILE" ] && [ -f "$FONT_BOLD" ]; then
+  # Schriften da (Alt-Installation oder von Hand abgelegt), nur der OFL-Volltext
+  # fehlt: nur die Lizenz nachladen, vorhandene TTFs nicht anfassen. Ohne Netz
+  # kein Abbruch - die Schriften funktionieren, es fehlt nur der Volltext.
+  echo "  Liberation Sans vorhanden, OFL-Lizenztext fehlt — lade nach ..."
+  if lade_liberation; then
+    cp "$LIB_TMP/$LIB_DIR/LICENSE" "$FONT_LIZENZ"
+    echo "  OFL-Lizenztext abgelegt (SHA-256 verifiziert)."
+  else
+    echo "  WARNUNG: Download fehlgeschlagen — $FONT_LIZENZ fehlt weiter." >&2
+    echo "    Die OFL verlangt den Lizenztext neben der Schrift; spaeter erneut ausfuehren." >&2
+  fi
+else
+  echo "  Lade Liberation Sans $LIB_VERSION (SIL-OFL) ..."
+  lade_liberation || { echo "  FEHLER: Download von $LIB_TGZ_URL fehlgeschlagen." >&2; exit 1; }
   cp "$LIB_TMP/$LIB_DIR/LiberationSans-Regular.ttf" "$FONT_FILE"
   cp "$LIB_TMP/$LIB_DIR/LiberationSans-Bold.ttf" "$FONT_BOLD"
   # Die OFL verlangt, dass die Lizenz die Schrift begleitet.
