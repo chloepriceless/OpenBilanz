@@ -12,6 +12,24 @@ nachvollziehbar, welcher Programmstand einen Abschluss erzeugt hat.
 ## [Unreleased]
 
 ### Behoben
+- **E-Bilanz: Finanzergebnis fehlte in XBRL und Werteübersicht** (GitHub #3): Die
+  GuV-Posten 9.–13. (GKV) bzw. 8.–12. (UKV), u. a. „Zinsen und ähnliche
+  Aufwendungen“, hatten kein Taxonomie-Element und fielen still heraus. Die
+  Zuordnung deckt jetzt jeden Posten des § 275 HGB samt a/b-Unterposten ab; die
+  Kleinst-GuV nutzt die ismi.*-Elemente. Zusätzlich werden die Zwischensummen der
+  Taxonomie (Gesamtleistung, Rohergebnis, Betriebsergebnis, Finanzergebnis)
+  übergeben, damit die Rechenregeln aufgehen. GKV-Materialaufwand (5.) lag auf dem
+  Unterposten 5a. 20 Bilanzposten ohne Element (u. a. B.II.4 sonstige
+  Vermögensgegenstände, A.III.5, P.C.7) sind ergänzt. Geprüft mit Arelle gegen
+  die Kerntaxonomie 6.9 ohne Befund.
+- **E-Bilanz: Arelle-Fehler beim Härtefall-Feld** (GitHub #4): Das Element hieß
+  `genInfo.report.id.reportElements.transmissionNotYetPossible`; laut
+  `de-gcd-2025-04-01.xsd` lautet es
+  `genInfo.report.id.reportElement.reportElements.transmissionNotYetPossible`.
+  Folge waren `xmlSchema:elementUnexpected` und `xbrl:schemaImportMissing`.
+- **`tools/setup-pdf-lib.sh`: Liberation-Fonts 404** (GitHub #2): Die Schriften
+  kommen jetzt aus dem Release-Tarball `liberation-fonts-ttf-2.1.5` mit
+  SHA-256-Pin; die OFL-Lizenz wird mit abgelegt.
 - **Tausenderzahlen ohne Komma** wurden falsch geparst: `num()` interpretierte
   `"2.500.000"` als 2,5, `"12.500"` als 12,5 und `"1.000"` als 1 — Datenkorruption
   bei ganzzahligen Tausenderbeträgen. Jetzt werden reine 3er-Punktgruppierungen als

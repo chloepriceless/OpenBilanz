@@ -135,7 +135,8 @@
     warn.push('GCD-Auswahlfelder (Rechtsform, Bilanzart, GuV-Format, Rechnungslegungs' +
               'standard) sind je nach ERiC-/Taxonomie-Version als Auswahlwerte zu ergaenzen.');
     if (!istEB) {
-      gcd('genInfo.report.id.reportElements.transmissionNotYetPossible', 'D',
+      // Elementname laut de-gcd-2025-04-01.xsd (Issue #4): ...reportElement.reportElements...
+      gcd('genInfo.report.id.reportElement.reportElements.transmissionNotYetPossible', 'D',
         kn.length
           ? 'Zu den werthaltigen Positionen liegen unverdichtete Kontennachweise vor. ' +
             'Sie sind dieser Datei als Kontensalden-Aufstellung beigefügt; eine ' +
@@ -144,8 +145,7 @@
           : 'Der Abschluss wurde ohne kontengenaue Buchführung erstellt (Direkteingabe ' +
             'der Bilanz-/GuV-Positionen); unverdichtete Kontennachweise liegen nicht vor.');
       warn.push('Kontennachweis-Pflicht (§ 5b EStG i. d. F. JStG 2024): das Härtefall-Feld ' +
-        '"transmissionNotYetPossible" wurde gesetzt. Feldname und Datentyp gegen die ' +
-        'eingesetzte Taxonomie-XSD prüfen.');
+        '"transmissionNotYetPossible" wurde mit einer Erläuterung gesetzt.');
     }
 
     /* --- GAAP-Modul: Bilanz (Stichtagswerte, context I) --- */
@@ -185,11 +185,10 @@
     if (!istEB && r.guv.schema) {
       L.push('    <!-- GAAP-Modul: Gewinn- und Verlustrechnung -->');
       var emitG = {};
-      r.guv.schema.forEach(function (p) {
-        var el = Taxonomie.guvElement(p.id);
-        if (!el || emitG[el]) return;
-        emitG[el] = true;
-        if (r.guv.werte[p.id] != null) fakt(el, 'D', r.guv.werte[p.id]);
+      Taxonomie.guvFakten(r.guv.verfahren, r.guv.schema, r.guv.werte).forEach(function (f) {
+        if (emitG[f.el]) return;
+        emitG[f.el] = true;
+        fakt(f.el, 'D', f.wert);
       });
     }
 

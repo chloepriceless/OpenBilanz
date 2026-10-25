@@ -848,6 +848,97 @@ test('XBRL: Haertefall-Feld bei Direkteingabe ohne Buchungen', function () {
   var r = XBRL.erzeugeXBRL({ steuernummer: '1234567890123' }, ja);
   ok(r.xml.indexOf('transmissionNotYetPossible') >= 0, 'Haertefall-Feld gesetzt');
 });
+test('XBRL: Härtefall-Feld trägt den GCD-6.9-Elementnamen (Issue #4)', function () {
+  // Arelle: elementUnexpected + schemaImportMissing, weil ".reportElement" fehlte.
+  var ja = { art: 'JAHRESABSCHLUSS', stichtag: '2025-12-31',
+    werte: { aktiva: {}, passiva: {}, guv: {} } };
+  var x = XBRL.erzeugeXBRL({ steuernummer: '1234567890123' }, ja).xml;
+  ok(x.indexOf('<de-gcd:genInfo.report.id.reportElement.reportElements.transmissionNotYetPossible ') >= 0,
+     'amtlicher Elementname');
+  ok(x.indexOf('genInfo.report.id.reportElements.') < 0, 'kein Name ohne ".reportElement"');
+});
+
+/* ---- GuV vollständig in XBRL/Werteübersicht (Issue #3) ---------------- */
+function guvFakt(xml, el) {
+  var m = xml.match(new RegExp('<de-gaap-ci:' + el.replace(/\./g, '\\.') + ' [^>]*>([^<]*)<'));
+  return m ? Number(m[1]) : null;
+}
+test('XBRL: Finanzergebnis wird exportiert, Positionen ergeben den Jahresfehlbetrag (Issue #3)', function () {
+  var ja = { art: 'JAHRESABSCHLUSS', stichtag: '2025-12-31', gjVon: '2025-01-01', gjBis: '2025-12-31',
+    groessenklasse: 'KLEIN', guvVerfahren: 'GKV',
+    kapital: { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: {}, passiva: {}, guv: { 'gkv.6': 350, 'gkv.8': 210, 'gkv.13': 474.55 } } };
+  var x = XBRL.erzeugeXBRL({ steuernummer: '1234567890123' }, ja).xml;
+  eq(guvFakt(x, 'is.netIncome.regular.fin.netInterest.expenses'), 474.55, '13. Zinsen und ähnliche Aufwendungen');
+  eq(guvFakt(x, 'is.netIncome.regular.fin'), -474.55, 'Finanz- und Beteiligungsergebnis');
+  eq(guvFakt(x, 'is.netIncome.regular.operatingTC'), -560, 'Betriebsergebnis');
+  eq(guvFakt(x, 'is.netIncome.eat'), -1034.55, 'Ergebnis nach Steuern');
+  eq(guvFakt(x, 'is.netIncome'), -1034.55, 'Jahresfehlbetrag');
+  // Rechenregel der Taxonomie: eat = Betriebsergebnis + Finanzergebnis - Steuern
+  eq(Math.round((guvFakt(x, 'is.netIncome.regular.operatingTC') + guvFakt(x, 'is.netIncome.regular.fin') -
+     guvFakt(x, 'is.netIncome.tax')) * 100) / 100, guvFakt(x, 'is.netIncome.eat'), 'Summe = Ergebnis');
+});
+test('Taxonomie: jede GuV-Position (GKV/UKV/Kleinst, inkl. a/b) und jeder Bilanzposten hat ein Element', function () {
+  ['GKV', 'UKV', 'KLEINST'].forEach(function (v) {
+    Positionen.flach(Positionen.guvSchema(v)).forEach(function (p) {
+      ok(Taxonomie.guvElement(p.id), v + ': ' + p.id + ' ' + p.label + ' ohne Taxonomie-Element');
+    });
+  });
+  Positionen.flach(Positionen.AKTIVA).concat(Positionen.flach(Positionen.PASSIVA)).forEach(function (n) {
+    ok(Taxonomie.bilanzElement(n.id), n.id + ' ' + n.label + ' ohne Taxonomie-Element');
+  });
+});
+test('Taxonomie: guvFakten-Summen rechnen wie die GuV (alle Verfahren)', function () {
+  var faelle = {
+    GKV: { 'gkv.1': 10000, 'gkv.2': -500, 'gkv.4': 300, 'gkv.5a': 2000, 'gkv.5b': 1000, 'gkv.6a': 3000,
+      'gkv.6b': 600, 'gkv.7a': 400, 'gkv.8': 900, 'gkv.9': 50, 'gkv.10': 20, 'gkv.11': 30, 'gkv.12': 10,
+      'gkv.13': 474.55, 'gkv.14': 300, 'gkv.16': 40 },
+    UKV: { 'ukv.1': 10000, 'ukv.2': 6000, 'ukv.4': 500, 'ukv.5': 700, 'ukv.6': 100, 'ukv.7': 200,
+      'ukv.10': 30, 'ukv.12': 474.55, 'ukv.13': 300, 'ukv.15': 40 },
+    KLEINST: { 'kst.1': 5000, 'kst.2': 100, 'kst.3': 1000, 'kst.4': 350, 'kst.5': 200, 'kst.6': 684.55, 'kst.7': 300 }
+  };
+  Object.keys(faelle).forEach(function (v) {
+    var r = Berechnung.berechne({ art: 'JAHRESABSCHLUSS', guvVerfahren: v,
+      werte: { aktiva: {}, passiva: {}, guv: faelle[v] } });
+    var f = Taxonomie.guvFakten(r.guv.verfahren, r.guv.schema, r.guv.werte);
+    var nachEl = {};
+    f.forEach(function (x) { nachEl[x.el] = x.wert; });
+    var ergebnisEl = v === 'KLEINST' ? 'ismi.netIncome' : 'is.netIncome';
+    eq(nachEl[ergebnisEl], r.guv.jahresergebnis, v + ': Jahresergebnis');
+    if (v === 'KLEINST') return;
+    var betrieb = v === 'GKV' ? 'is.netIncome.regular.operatingTC' : 'is.netIncome.regular.operatingCOGS';
+    eq(Math.round((nachEl[betrieb] + nachEl['is.netIncome.regular.fin'] - nachEl['is.netIncome.tax'] -
+       nachEl['is.netIncome.otherTaxes']) * 100) / 100, r.guv.jahresergebnis, v + ': Teilergebnisse ergeben Jahresergebnis');
+  });
+});
+test('Taxonomie: alle verwendeten Elementnamen stehen in der amtlichen 6.9-XSD', function () {
+  // Nur mit lokalem Taxonomie-Paket (tools/setup-taxonomie.sh) und unzip pruefbar.
+  var fs = require('fs'), cp = require('child_process'), p = require('path');
+  var zip = p.join(__dirname, '..', 'taxonomie', 'taxonomy-6.9.zip');
+  if (!fs.existsSync(zip)) return;   // Paket nicht im Repo (53 MB) -> ueberspringen
+  function xsd(muster) {
+    return cp.execFileSync('unzip', ['-p', zip, muster], { maxBuffer: 64 * 1024 * 1024 }).toString('utf8');
+  }
+  var gaap = xsd('*/xbrl/de-gaap-ci-2025-04-01/de-gaap-ci-2025-04-01.xsd');
+  var gcd = xsd('*/xbrl/de-gcd-2025-04-01/de-gcd-2025-04-01.xsd');
+  var namen = [];
+  [Taxonomie.BILANZ, Taxonomie.KAPITAL, Taxonomie.GUV].forEach(function (m) {
+    Object.keys(m).forEach(function (k) { namen.push(m[k]); });
+  });
+  Object.keys(Taxonomie.GUV_SUMMEN).forEach(function (v) {
+    Taxonomie.GUV_SUMMEN[v].forEach(function (z) { namen.push(z.el); });
+  });
+  namen.forEach(function (n) {
+    ok(gaap.indexOf('name="' + n + '"') >= 0, 'de-gaap-ci-Element fehlt in der XSD: ' + n);
+  });
+  var ja = { art: 'JAHRESABSCHLUSS', stichtag: '2025-12-31',
+    werte: { aktiva: {}, passiva: {}, guv: {} } };
+  var x = XBRL.erzeugeXBRL({ name: 'T', strasse: 'S', plz: '1', ort: 'O', steuernummer: '1234567890123' }, ja).xml;
+  (x.match(/<de-gcd:[^ >]+/g) || []).forEach(function (t) {
+    var n = t.slice('<de-gcd:'.length);
+    ok(gcd.indexOf('name="' + n + '"') >= 0, 'de-gcd-Element fehlt in der XSD: ' + n);
+  });
+});
 
 /* ---- Steuerberechnung (vv-GmbH) -------------------------------------- */
 test('Steuer: § 8b - 95 % der Dividenden steuerfrei', function () {

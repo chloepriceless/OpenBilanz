@@ -2280,10 +2280,9 @@ function renderEbilanz(m) {
     html += werteZeile(n.nr + ' ' + n.label, el, seite[n.id] || 0);
   });
   if (a.art === 'JAHRESABSCHLUSS') {
-    Positionen.guvSchema(a.guvVerfahren).forEach(function (p) {
-      var el = Taxonomie.guvElement(p.id);
-      if (!el) return;
-      html += werteZeile(p.nr + ' ' + p.label, el, r.guv.werte[p.id] || 0);
+    Taxonomie.guvFakten(r.guv.verfahren, r.guv.schema, r.guv.werte).forEach(function (f) {
+      html += werteZeile(f.summe ? '= ' + f.label : (f.kind ? '\u00a0\u00a0' : '') + f.nr + ' ' + f.label,
+        f.el, f.wert);
     });
   }
   html += '</tbody></table></div>';

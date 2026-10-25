@@ -11,7 +11,7 @@
 #   - sRGB-IEC61966-2.1 ICC-Profil (Public Domain, ca. 3 KB)
 #   - Liberation Sans (SIL-OFL, freie Schrift, ca. 200 KB pro Schnitt)
 #
-# Voraussetzungen: curl, sha256sum (oder shasum -a 256).
+# Voraussetzungen: curl, tar, sha256sum (oder shasum -a 256).
 # Aufruf:  ./tools/setup-pdf-lib.sh
 # ===========================================================================
 set -eu
@@ -76,21 +76,37 @@ else
 fi
 
 # --- 3. Freie Schrift (Liberation Sans, SIL-OFL) ---------------------------
+# Unter src/ im Repo liegen nur die Font-Quellen (raw/main/src/*.ttf = 404,
+# Issue #2). Gebaute TTFs gibt es nur im Release-Tarball; der wird wie pdf-lib
+# per SHA-256 gepinnt. Link aus den Release-Notes:
+# https://github.com/liberationfonts/liberation-fonts/releases/tag/2.1.5
 FONT_FILE="$VENDOR_DIR/LiberationSans-Regular.ttf"
 FONT_BOLD="$VENDOR_DIR/LiberationSans-Bold.ttf"
-LIB_BASE="https://github.com/liberationfonts/liberation-fonts/raw/main/src/LiberationSans-Regular.ttf"
-LIB_BOLD="https://github.com/liberationfonts/liberation-fonts/raw/main/src/LiberationSans-Bold.ttf"
-if [ -f "$FONT_FILE" ]; then
-  echo "  Liberation Sans Regular bereits vorhanden — uebersprungen."
+LIB_VERSION="2.1.5"
+LIB_TGZ_URL="https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-$LIB_VERSION.tar.gz"
+LIB_TGZ_SHA256="7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0"
+if [ -f "$FONT_FILE" ] && [ -f "$FONT_BOLD" ]; then
+  echo "  Liberation Sans bereits vorhanden — uebersprungen."
 else
-  echo "  Lade Liberation Sans Regular (SIL-OFL) ..."
-  curl -L --fail -o "$FONT_FILE" "$LIB_BASE"
-fi
-if [ -f "$FONT_BOLD" ]; then
-  echo "  Liberation Sans Bold bereits vorhanden — uebersprungen."
-else
-  echo "  Lade Liberation Sans Bold (SIL-OFL) ..."
-  curl -L --fail -o "$FONT_BOLD" "$LIB_BOLD"
+  echo "  Lade Liberation Sans $LIB_VERSION (SIL-OFL) ..."
+  LIB_TMP="$(mktemp -d)"
+  trap 'rm -rf "$LIB_TMP"' EXIT
+  curl -L --fail -o "$LIB_TMP/fonts.tar.gz" "$LIB_TGZ_URL"
+  got=$(sha256 "$LIB_TMP/fonts.tar.gz")
+  if [ "$got" != "$LIB_TGZ_SHA256" ]; then
+    echo "  FEHLER: SHA-256 des Liberation-Tarballs stimmt nicht (Supply-Chain-Schutz)." >&2
+    echo "    erwartet: $LIB_TGZ_SHA256" >&2
+    echo "    erhalten: $got" >&2
+    exit 1
+  fi
+  LIB_DIR="liberation-fonts-ttf-$LIB_VERSION"
+  tar -xzf "$LIB_TMP/fonts.tar.gz" -C "$LIB_TMP" \
+    "$LIB_DIR/LiberationSans-Regular.ttf" "$LIB_DIR/LiberationSans-Bold.ttf" "$LIB_DIR/LICENSE"
+  cp "$LIB_TMP/$LIB_DIR/LiberationSans-Regular.ttf" "$FONT_FILE"
+  cp "$LIB_TMP/$LIB_DIR/LiberationSans-Bold.ttf" "$FONT_BOLD"
+  # Die OFL verlangt, dass die Lizenz die Schrift begleitet.
+  cp "$LIB_TMP/$LIB_DIR/LICENSE" "$VENDOR_DIR/LiberationSans-LICENSE.txt"
+  echo "  Liberation Sans geladen + SHA-256 verifiziert."
 fi
 
 # --- 4. Lizenzhinweise mit ablegen -----------------------------------------
@@ -110,8 +126,8 @@ aus dem Netz nachgeladen) - das ist Kernprinzip der OpenBilanz-Architektur.
 - Quelle: https://github.com/saucecontrol/Compact-ICC-Profiles
 
 ## LiberationSans-*.ttf
-- Lizenz: SIL Open Font License 1.1
-- Quelle: https://github.com/liberationfonts/liberation-fonts
+- Lizenz: SIL Open Font License 1.1 (Volltext: LiberationSans-LICENSE.txt)
+- Quelle: https://github.com/liberationfonts/liberation-fonts (Release 2.1.5)
 EOF
 
 echo ""
