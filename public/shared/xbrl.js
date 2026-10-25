@@ -23,11 +23,13 @@
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = factory(require('./taxonomie.js'), require('./berechnung.js'),
-      require('./skr04.js'), require('./version.js'));
+      require('./skr04.js'), require('./version.js'), require('./positionen.js'));
   } else {
-    root.Xbrl = factory(root.Taxonomie, root.Berechnung, root.SKR04, root.Version);
+    root.Xbrl = factory(root.Taxonomie, root.Berechnung, root.SKR04, root.Version,
+      root.Positionen);
   }
-})(typeof self !== 'undefined' ? self : this, function (Taxonomie, Berechnung, SKR04, Version) {
+})(typeof self !== 'undefined' ? self : this, function (Taxonomie, Berechnung, SKR04, Version,
+                                                      Positionen) {
   'use strict';
 
   var EBILANZ_NS = 'http://rzf.fin-nrw.de/RMS/EBilanz/2016/XMLSchema';
@@ -151,8 +153,9 @@
     /* --- GAAP-Modul: Bilanz (Stichtagswerte, context I) --- */
     function fakt(elem, ctx, wert) {
       if (wert == null || isNaN(Number(wert))) {
+        // NIL-Fakt ohne decimals/precision (XBRL 2.1 § 4.6.3)
         L.push('    <de-gaap-ci:' + elem + ' contextRef="' + ctx +
-               '" unitRef="EUR" decimals="2" xsi:nil="true"/>');
+               '" unitRef="EUR" xsi:nil="true"/>');
       } else {
         L.push('    <de-gaap-ci:' + elem + ' contextRef="' + ctx +
                '" unitRef="EUR" decimals="2">' + betrag(wert) + '</de-gaap-ci:' + elem + '>');
@@ -166,10 +169,45 @@
       emit['B:' + el] = true;
       fakt(el, 'I', wert);
     }
+    /* Rechenregeln der Taxonomie: Ein Oberposten muss der Summe seiner gemeldeten
+     * Unterposten entsprechen. Ist der Wert direkt auf dem Oberposten erfasst
+     * (Buchhaltungsmodus bucht auf römische Ebene), wären die Unterposten 0 und
+     * Arelle meldete calcInconsistency. Solche Unterposten gehen samt Teilbaum
+     * als NIL hinaus - NIL-Fakten zählen in der Summenprüfung nicht mit
+     * (XBRL 2.1 § 5.2.5.2), Mussfelder bleiben trotzdem übermittelt. */
+    var offen = r.bilanz.eingefordertesKapitalOffen || 0;
+    var nil = {};
+    function markiereNil(knoten) {
+      (knoten.kinder || []).forEach(function (k) { nil[k.id] = true; markiereNil(k); });
+    }
+    function pruefeSummen(knoten, werte) {
+      knoten.forEach(function (k) {
+        if (!k.kinder || !k.kinder.length || nil[k.id]) return pruefeSummen(k.kinder || [], werte);
+        var s = 0;
+        k.kinder.forEach(function (c) { if (Taxonomie.bilanzElement(c.id)) s += werte[c.id] || 0; });
+        // § 272 Abs. 1 S. 3 HGB: eingeforderte offene Einlagen stecken in B.II und
+        // werden als eigener Summand (receiv.other.unpaidCapital) gemeldet.
+        if (k.id === 'B.II') s += offen;
+        if (Math.abs((werte[k.id] || 0) - s) >= 0.005) {
+          markiereNil(k);
+          if (k.id === 'B.II') nil.UNPAID = true;
+        }
+        pruefeSummen(k.kinder, werte);
+      });
+    }
+    pruefeSummen(Positionen.AKTIVA, r.bilanz.aktiva);
+    pruefeSummen(Positionen.PASSIVA, r.bilanz.passiva);
+    function bilanzWert(id, werte) { return nil[id] ? null : werte[id]; }
+
     bilanzFakt('AKTIVA_SUMME', r.bilanz.summeAktiva);
     bilanzFakt('PASSIVA_SUMME', r.bilanz.summePassiva);
-    Object.keys(r.bilanz.aktiva).forEach(function (id) { bilanzFakt(id, r.bilanz.aktiva[id]); });
-    Object.keys(r.bilanz.passiva).forEach(function (id) { bilanzFakt(id, r.bilanz.passiva[id]); });
+    Object.keys(r.bilanz.aktiva).forEach(function (id) {
+      bilanzFakt(id, bilanzWert(id, r.bilanz.aktiva));
+    });
+    Object.keys(r.bilanz.passiva).forEach(function (id) {
+      bilanzFakt(id, bilanzWert(id, r.bilanz.passiva));
+    });
+    if (offen > 0) fakt(Taxonomie.KAPITAL.eingefordertOffen, 'I', nil.UNPAID ? null : offen);
 
     var kap = r.bilanz.kapital;
     L.push('    <de-gaap-ci:' + Taxonomie.KAPITAL.eingefordertesKapital +

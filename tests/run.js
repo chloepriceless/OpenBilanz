@@ -911,6 +911,56 @@ test('Taxonomie: guvFakten-Summen rechnen wie die GuV (alle Verfahren)', functio
        nachEl['is.netIncome.otherTaxes']) * 100) / 100, r.guv.jahresergebnis, v + ': Teilergebnisse ergeben Jahresergebnis');
   });
 });
+test('Taxonomie: GKV-Rohergebnis enthält sonstige betriebl. Erträge (Calc-Linkbase 6.9)', function () {
+  // de-gaap-ci-2025-04-01-calculation-incomeStatement.xml: grossTradingProfit =
+  // totalOutput + otherOpRevenue - materialServices (otherOpRevenue ist Summand).
+  var r = Berechnung.berechne({ art: 'JAHRESABSCHLUSS', guvVerfahren: 'GKV',
+    werte: { aktiva: {}, passiva: {}, guv: { 'gkv.1': 10000, 'gkv.2': -500, 'gkv.4': 300, 'gkv.5a': 3000 } } });
+  var n = {};
+  Taxonomie.guvFakten(r.guv.verfahren, r.guv.schema, r.guv.werte).forEach(function (x) { n[x.el] = x.wert; });
+  var G = 'is.netIncome.regular.operatingTC';
+  eq(n[G + '.grossTradingProfit'], n[G + '.grossTradingProfit.totalOutput'] + n[G + '.otherOpRevenue'] -
+    n[G + '.grossTradingProfit.materialServices'], 'Rohergebnis nach Rechenregel');
+});
+
+/* ---- XBRL-Bilanz: Rechenregeln bei Werten auf römischer Ebene ---------- */
+function bilanzXbrl(aktiva, kapital) {
+  return XBRL.erzeugeXBRL({ steuernummer: '1234567890123' }, { art: 'JAHRESABSCHLUSS',
+    stichtag: '2025-12-31', gjVon: '2025-01-01', groessenklasse: 'KLEIN', guvVerfahren: 'GKV',
+    kapital: kapital || { gezeichnet: 25000, eingezahlt: 25000, eingefordertOffen: 0 },
+    werte: { aktiva: aktiva, passiva: {}, guv: {} } }).xml;
+}
+function bsFakt(x, el) {
+  var m = x.match(new RegExp('<de-gaap-ci:' + el.replace(/\./g, '\\.') + ' [^>]*?(/>|>([^<]*)<)'));
+  if (!m) return undefined;
+  return m[1] === '/>' ? 'NIL' : Number(m[2]);
+}
+test('XBRL: Wert nur auf römischer Ebene -> Unterposten NIL statt 0 (calcInconsistency)', function () {
+  var x = bilanzXbrl({ 'B.III': 10000, 'B.II': 5000 });
+  eq(bsFakt(x, 'bs.ass.currAss.securities'), 10000, 'B.III');
+  eq(bsFakt(x, 'bs.ass.currAss.securities.affil'), 'NIL', 'B.III.1');
+  eq(bsFakt(x, 'bs.ass.currAss.securities.other'), 'NIL', 'B.III.2');
+  eq(bsFakt(x, 'bs.ass.currAss.receiv.trade'), 'NIL', 'B.II.1');
+  ok(!/xsi:nil="true"[^>]*decimals|decimals="[^"]*"[^>]*xsi:nil/.test(x), 'NIL ohne decimals (XBRL 4.6.3)');
+});
+test('XBRL: Werte auf Unterposten bleiben, leere Geschwister melden 0', function () {
+  var x = bilanzXbrl({ 'B.III.2': 10000, 'B.II.1': 5000 });
+  eq(bsFakt(x, 'bs.ass.currAss.securities'), 10000, '');
+  eq(bsFakt(x, 'bs.ass.currAss.securities.other'), 10000, '');
+  eq(bsFakt(x, 'bs.ass.currAss.securities.affil'), 0, '');
+  eq(bsFakt(x, 'bs.ass.currAss.receiv.trade'), 5000, '');
+});
+test('XBRL: eingeforderte offene Einlagen als Summand von B.II (receiv.other.unpaidCapital)', function () {
+  var kap = { gezeichnet: 25000, eingezahlt: 20000, eingefordertOffen: 5000 };
+  var x = bilanzXbrl({ 'B.II.1': 5000 }, kap);
+  eq(bsFakt(x, 'bs.ass.currAss.receiv'), 10000, 'B.II inkl. offener Einlagen');
+  eq(bsFakt(x, 'bs.ass.currAss.receiv.trade'), 5000, '');
+  eq(bsFakt(x, 'bs.ass.currAss.receiv.other.unpaidCapital'), 5000, 'eigener Summand');
+  var y = bilanzXbrl({ 'B.II': 4000 }, kap);
+  eq(bsFakt(y, 'bs.ass.currAss.receiv'), 9000, '');
+  eq(bsFakt(y, 'bs.ass.currAss.receiv.other.unpaidCapital'), 'NIL', 'römisch erfasst -> NIL');
+  eq(bilanzXbrl({ 'B.II.1': 5000 }).indexOf('unpaidCapital"'), -1, 'ohne offene Einlagen kein Fakt');
+});
 test('Taxonomie: alle verwendeten Elementnamen stehen in der amtlichen 6.9-XSD', function () {
   // Nur mit lokalem Taxonomie-Paket (tools/setup-taxonomie.sh) und unzip pruefbar.
   var fs = require('fs'), cp = require('child_process'), p = require('path');

@@ -118,7 +118,9 @@
   /* Kapital-Sonderelemente nach § 272 Abs. 1 HGB */
   var KAPITAL = {
     'eingefordertesKapital':  'bs.eqLiab.equity.subscribed.calledIn',
-    'nichtEingefordert':      'bs.eqLiab.equity.subscribed.unpaidCap'
+    'nichtEingefordert':      'bs.eqLiab.equity.subscribed.unpaidCap',
+    // § 272 Abs. 1 S. 3 HGB: eingefordert, nicht eingezahlt - Summand von B.II
+    'eingefordertOffen':      'bs.ass.currAss.receiv.other.unpaidCapital'
   };
 
   /* GuV-Position -> de-gaap-ci-Element. 'duration' = Zeitraum.
