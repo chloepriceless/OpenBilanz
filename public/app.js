@@ -3661,12 +3661,16 @@ function renderBuchhaltung(m) {
     });
     if (!r.ok) { alert('Umbuchung nicht möglich:\n• ' + r.fehler.join('\n• ')); return; }
     // Jede erzeugte Buchung zusätzlich gegen die normale Buchungsprüfung laufen lassen.
+    var hinweise = [];
     for (var i = 0; i < r.buchungen.length; i++) {
       var pr = BuchungsPruefung.pruefe(r.buchungen[i], {
         beginn: a.gjVon, stichtag: a.stichtag, erlaubeEbk: false
       });
       if (!pr.ok) { alert('Umbuchung nicht plausibel:\n• ' + pr.fehler.join('\n• ')); return; }
+      pr.warnungen.forEach(function (w) { if (hinweise.indexOf(w) < 0) hinweise.push(w); });
     }
+    if (hinweise.length && !confirm('Hinweise zur Umbuchung:\n• ' + hinweise.join('\n• ') +
+      '\n\nTrotzdem buchen?')) return;
     a.buchungen.push.apply(a.buchungen, r.buchungen);
     speichereStill().then(function () {
       hinweisToast(r.buchungen.length === 2
