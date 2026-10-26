@@ -2932,6 +2932,12 @@ function bindeKontoDropdowns() {
         el.dataset.kfilled === '1') return;
     var cur = el.value;                     // vorausgewähltes Konto erhalten
     var leer = cur ? '' : '<option value="">— Konto wählen —</option>';
+    // Konto außerhalb des Kontenrahmens (z. B. DATEV-Debitor 10000 aus dem Import)
+    // als eigene Option behalten - sonst leert el.value = cur die Auswahl.
+    if (cur && !SKR04.kontoFinden(cur)) {
+      leer = '<option value="' + esc(cur) + '">' + esc(cur) +
+        ' – nicht im Kontenrahmen</option>';
+    }
     el.innerHTML = leer + kontoOptionenHtml();
     el.value = cur || '';                   // leeres Feld bleibt auf "— Konto wählen —"
     el.dataset.kfilled = '1';
