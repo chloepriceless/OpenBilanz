@@ -1,13 +1,13 @@
 # HANDOVER — OpenBilanz (Pfenni / gmbh-verwaltung)
 
-_Letzte Aktualisierung: 2026-10-25 ~22:45 (Mac, Session „mach weiter von der Übergabe“)._
+_Letzte Aktualisierung: 2026-10-26 ~02:50 (Mac, geplante Codex-Nachprüfung)._
 
 ## Aufgabe & Ziel
 GitHub-Issues #1–#4 von OpenBilanz (github.com/chloepriceless/OpenBilanz) abarbeiten, inkl. Abgleich
 der Gegenprüfungen. Grenze: KEINE echten Buchungen/Geldbewegungen/Firmen-Mail ohne 4-Augen + Christin-OK.
 Push, Issues schließen, Merge nach main und Release nur auf Christin-Go.
 
-## Stand — Branch `fix/github-issues-1-4` (lokal, NICHT gepusht), 329 Tests grün (UTC/Berlin/LA)
+## Stand — Branch `fix/github-issues-1-4` (lokal, NICHT gepusht, 12 Commits), 329 Tests grün (UTC/Berlin/LA)
 Basis: `feat/skr04-glossar-vollabdeckung` (1964015, = origin) → darauf:
 - `5d30935` #2 #3 #4: GuV vollständig in XBRL, GCD-Härtefall-Feldname, Liberation-Download (Vorsession).
 - `31fbcef` GJ-Beginn-Plausi las `a.geschaeftsjahrVon` statt `a.gjVon` (Warnung kam nie).
@@ -20,6 +20,9 @@ Basis: `feat/skr04-glossar-vollabdeckung` (1964015, = origin) → darauf:
 - `2cb85fd` setup-pdf-lib.sh: Lizenzdatei in Vorhanden-Prüfung.
 - `ee43da8` Storno einer Eröffnungsbuchung ohne 9000-Hinweis bearbeitbar.
 - `ac8e403` setup-pdf-lib.sh: nur fehlende Lizenz → nur LICENSE nachladen, offline Warnung statt Abbruch.
+- `821dab0` Test-Zusicherung unpaidCapital wirksam; `7dd0c5d` Handover.
+- `d2409fd` Konto außerhalb des Kontenrahmens (DATEV-Import, z. B. 10000) bleibt im Lazy-Dropdown erhalten
+  (vorher: Bearbeiten scheiterte mit „Soll-Konto fehlt“). Einziger Befund der echten Codex-Prüfung.
 
 ## Gegenprüfung
 Codex im Nutzungslimit bis 26.10. 02:30 → Hook (`.git/codex-reviews/<sha>.md`) prüfte per Claude.
@@ -29,7 +32,9 @@ ec424cd (P3 9000 gefixt; P3 „E2E nicht im Repo“ bewusst offen: Repo ist zero
 e3bd0c0: P3 wirkungslose Testzusicherung → gefixt in nächstem Commit; ungeprüfte Punkte nachgeholt
 (B.II.4 + offene Einlagen, Kleinst/microbilg-Shell: Arelle ohne Befund). **Offen/ungeprüft:** ob ERiC
 NIL-Unterposten in seiner Rechenprüfung wie XBRL 2.1 auslässt — nur mit ERiC testbar.
-Optional nach 02:30: echte Codex-Läufe nachholen (`codex review --base feat/skr04-glossar-vollabdeckung`).
+**26.10. 02:37 echte Codex-Prüfung** (`codex review --base feat/skr04-glossar-vollabdeckung`): 1 Befund (P2,
+Fremdkonto im Dropdown), im Browser reproduziert, gefixt in d2409fd. Sonst keine Einwände.
+Hook-Review (Codex) zu d2409fd: keine Regression.
 
 ## Werkzeuge (Mac)
 - Arelle-venv + entpackte Taxonomie 6.9 aus Vorsession:
