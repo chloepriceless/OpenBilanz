@@ -7,7 +7,7 @@ GitHub-Issues #1–#4 von OpenBilanz (github.com/chloepriceless/OpenBilanz) abar
 der Gegenprüfungen. Grenze: KEINE echten Buchungen/Geldbewegungen/Firmen-Mail ohne 4-Augen + Christin-OK.
 Push, Issues schließen, Merge nach main und Release nur auf Christin-Go.
 
-## Stand — Branch `fix/github-issues-1-4` (lokal, NICHT gepusht, 12 Commits), 329 Tests grün (UTC/Berlin/LA)
+## Stand — Branch `fix/github-issues-1-4` (GEPUSHT 26.10. auf Christin-Go, 13 Commits), 329 Tests grün (UTC/Berlin/LA)
 Basis: `feat/skr04-glossar-vollabdeckung` (1964015, = origin) → darauf:
 - `5d30935` #2 #3 #4: GuV vollständig in XBRL, GCD-Härtefall-Feldname, Liberation-Download (Vorsession).
 - `31fbcef` GJ-Beginn-Plausi las `a.geschaeftsjahrVon` statt `a.gjVon` (Warnung kam nie).
@@ -45,8 +45,13 @@ Hook-Review (Codex) zu d2409fd: keine Regression.
   Onboarding vorher per `markiereOnboardingGesehen(); dialogZu();` wegklicken.
 - Merkel-Eintrag: „OpenBilanz 25.10.2026: Buchung bearbeiten (#1) + E-Bilanz-Calc-Regeln“.
 
+## Erledigt 26.10. (Christin-Go)
+- Branch gepusht; Issues #1–#4 auf GitHub kommentiert (mit Commit-Links) und geschlossen.
+
 ## Offen / GATED auf Christin
-- Push von `fix/github-issues-1-4`, Issues #1–#4 kommentieren/schließen.
+- Merge von `fix/github-issues-1-4` (baut auf `feat/skr04-glossar-vollabdeckung` auf) Richtung main.
+- Pyodide-Download (`tools/setup-pyodide.sh`) ohne SHA-256-Pin — einziger technischer Rest aus dem
+  Release-Review 14.06. (alle anderen 15 Code-Punkte seitdem behoben, siehe git log 88ee3e8..1964015).
 - Weiter offen aus Juni: v2.22.0-Release-Zeremonie (Basis-Branch 32+ Commits vor main) · #13 LICENSE-Copyright ·
   `.planning/RELEASE-REVIEW-2026-06-14-FINDINGS.md` (untracked) committen ja/nein.
 - Feature-Gap (kein Bug): fx.js nicht in UI integriert.
